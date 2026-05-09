@@ -52,3 +52,18 @@
 .transition-smooth {
   @apply transition-all duration-300 ease-in-out;
 }
+
+/* Sidebar Hover Expansion Adjustments */
+[data-sidebar="sidebar"] {
+  @apply transition-[width] duration-300 ease-in-out;
+}
+
+[data-state="collapsed"] [data-sidebar="sidebar"]:hover {
+  width: var(--sidebar-width) !important;
+}
+
+[data-state="collapsed"] [data-sidebar="sidebar"]:hover span {
+  opacity: 1 !important;
+  display: inline-block !important;
+  transition: opacity 0.3s ease-in-out 0.1s;
+}
