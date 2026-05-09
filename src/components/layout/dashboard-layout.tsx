@@ -40,15 +40,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useProfileStore } from "@/lib/store";
 
 const NAV_ITEMS = [
-  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Personal Profile", href: "/dashboard/profile", icon: User },
+  { name: "overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Personal profile", href: "/dashboard/profile", icon: User },
+  { name: "Education", href: "/dashboard/education", icon: GraduationCap },
+  { name: "Projects", href: "/dashboard/projects", icon: FolderCode },
+  { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Job", href: "/dashboard/job", icon: Building2 },
   { name: "Resumes", href: "/dashboard/resumes", icon: Files },
-  { name: "Projects", href: "/dashboard/projects", icon: FolderCode },
-  { name: "Education", href: "/dashboard/education", icon: GraduationCap },
-  { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
-  { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
-  { name: "AI Summary", href: "/dashboard/ai-summary", icon: Sparkles },
+  { name: "Portfolios & Links", href: "/dashboard/links", icon: LinkIcon },
+  { name: "Ai Summary", href: "/dashboard/ai-summary", icon: Sparkles },
   { name: "Portfolio Link", href: "/dashboard/share", icon: Share2 },
 ];
 
