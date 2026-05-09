@@ -23,7 +23,8 @@ import {
   User as UserIcon,
   FolderCode,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,14 +140,14 @@ export default function PublicProfileView() {
             <div className="space-y-5 pb-2">
               <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground drop-shadow-sm leading-[0.9]">{profile.name}</h1>
               <div className="flex flex-wrap gap-y-4 gap-x-10 text-muted-foreground font-bold text-sm md:text-base">
+                {profile.currentJob && profile.currentJob.company && (
+                  <span className="flex items-center gap-2.5">
+                    <Building2 className="w-5 h-5 text-accent" /> {profile.currentJob.role} at {profile.currentJob.company}
+                  </span>
+                )}
                 {profile.address && (
                   <span className="flex items-center gap-2.5">
                     <MapPin className="w-5 h-5 text-primary" /> {profile.address}
-                  </span>
-                )}
-                {profile.gender && (
-                  <span className="flex items-center gap-2.5 uppercase tracking-widest text-xs px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
-                    {profile.gender} {profile.age && `• ${profile.age}`}
                   </span>
                 )}
               </div>
@@ -163,13 +164,23 @@ export default function PublicProfileView() {
             <Card className="glass-card border-white/5 shadow-2xl overflow-hidden">
               <CardContent className="p-8 space-y-8">
                 <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Verified Email</p>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Primary Email</p>
                   <p className="font-bold text-lg text-foreground truncate">{profile.email}</p>
                 </div>
-                {profile.phone && (
+                {profile.secondaryEmail && (
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Primary Phone</p>
-                    <p className="font-bold text-lg text-foreground">{profile.phone}</p>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Secondary Email</p>
+                    <p className="font-bold text-lg text-foreground truncate opacity-70">{profile.secondaryEmail}</p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Primary Phone</p>
+                  <p className="font-bold text-lg text-foreground">{profile.phone}</p>
+                </div>
+                {profile.secondaryPhone && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Secondary Phone</p>
+                    <p className="font-bold text-lg text-foreground opacity-70">{profile.secondaryPhone}</p>
                   </div>
                 )}
                 {profile.website && (

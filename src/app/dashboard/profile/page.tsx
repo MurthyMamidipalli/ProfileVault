@@ -178,8 +178,9 @@ export default function ProfilePage() {
                   className="bg-background/50" 
                 />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Primary Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input 
@@ -187,6 +188,21 @@ export default function ProfilePage() {
                     type="email" 
                     value={profile.email} 
                     onChange={(e) => setProfile({ email: e.target.value })}
+                    className="pl-10 bg-background/50" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="secondaryEmail">Secondary Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    id="secondaryEmail" 
+                    type="email" 
+                    placeholder="e.g. backup@example.com"
+                    value={profile.secondaryEmail || ''} 
+                    onChange={(e) => setProfile({ secondaryEmail: e.target.value })}
                     className="pl-10 bg-background/50" 
                   />
                 </div>
@@ -230,7 +246,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">Primary Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input 
@@ -241,6 +257,21 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="secondaryPhone">Secondary Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    id="secondaryPhone" 
+                    placeholder="e.g. +1 (555) 000-0000"
+                    value={profile.secondaryPhone || ''} 
+                    onChange={(e) => setProfile({ secondaryPhone: e.target.value })}
+                    className="pl-10 bg-background/50" 
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="website">Personal Website</Label>
                 <div className="relative">

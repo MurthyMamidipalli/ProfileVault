@@ -56,10 +56,18 @@ export interface ProjectEntry {
   date?: string;
 }
 
+export interface CurrentJob {
+  company: string;
+  role: string;
+  joiningDate: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
+  secondaryEmail: string;
   phone: string;
+  secondaryPhone: string;
   address: string;
   website: string;
   gender: string;
@@ -72,6 +80,7 @@ export interface UserProfile {
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
+  currentJob: CurrentJob;
   sharedId?: string;
   lastSyncedAt?: string;
 }
@@ -94,6 +103,7 @@ interface ProfileStore {
   removePortfolioLink: (id: string) => void;
   addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
   removeResume: (id: string) => void;
+  updateCurrentJob: (job: Partial<CurrentJob>) => void;
   markSynced: () => void;
 }
 
@@ -104,13 +114,20 @@ const generateId = () => {
 const DEFAULT_PROFILE: UserProfile = {
   name: 'Alex Sterling',
   email: 'alex.sterling@example.com',
+  secondaryEmail: '',
   phone: '+1 (555) 000-0000',
+  secondaryPhone: '',
   address: 'San Francisco, CA',
   website: 'https://alexsterling.dev',
   gender: 'Male',
   age: '28',
   bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
   avatarUrl: '',
+  currentJob: {
+    company: 'TechFlow Systems',
+    role: 'Senior Frontend Engineer',
+    joiningDate: '2020-07-01'
+  },
   education: [
     {
       id: '1',
@@ -239,6 +256,12 @@ export const useProfileStore = create<ProfileStore>()(
           resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
         }
       })),
+      updateCurrentJob: (updates) => set((state) => ({
+        profile: {
+          ...state.profile,
+          currentJob: { ...state.profile.currentJob, ...updates }
+        }
+      })),
       markSynced: () => set((state) => ({
         profile: {
           ...state.profile,
@@ -251,13 +274,11 @@ export const useProfileStore = create<ProfileStore>()(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
-      // Exclude large binary data from localStorage to prevent QuotaExceededError.
-      // These fields will stay in memory but won't bloat the browser's persistent storage.
       partialize: (state) => ({
         ...state,
         profile: {
           ...state.profile,
-          avatarUrl: '', // Don't persist large base64 avatar
+          avatarUrl: '',
           projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
           resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
         }
