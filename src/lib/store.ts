@@ -292,6 +292,7 @@ export const useProfileStore = create<ProfileStore>()(
         ...state,
         profile: {
           ...state.profile,
+          // We keep avatarUrl in localStorage now but ensure it's not oversized
           projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
           resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
         }

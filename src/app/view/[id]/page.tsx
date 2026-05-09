@@ -117,6 +117,7 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary selection:text-primary-foreground">
+      {/* Dynamic Header Section */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
@@ -169,6 +170,7 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-20">
+        {/* Left Column: Fast Facts & Quick Links */}
         <div className="lg:col-span-4 space-y-12">
           <section className="space-y-6">
             <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Identity & Contact</h2>
@@ -206,6 +208,7 @@ export default function PublicProfileView() {
             </Card>
           </section>
 
+          {/* Active Jobs Section in Sidebar */}
           {jobs.length > 0 && (
             <section className="space-y-6">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Key Positions</h2>
@@ -288,6 +291,7 @@ export default function PublicProfileView() {
           )}
         </div>
 
+        {/* Right Column: Deep Professional Story */}
         <div className="lg:col-span-8 space-y-24">
           {profile.bio && (
             <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
