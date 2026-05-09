@@ -31,13 +31,13 @@ import {
   Plus, 
   Loader2, 
   Award, 
-  CheckCircle2, 
   Globe, 
   Laptop, 
   Users, 
   Trash2, 
   Pencil,
-  Clock
+  Clock,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

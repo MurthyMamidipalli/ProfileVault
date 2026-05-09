@@ -285,8 +285,6 @@ export const useProfileStore = create<ProfileStore>()(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       }
-      // Note: Removed partialize to ensure EVERYTHING stays in local storage on refresh.
-      // Users should be mindful of browser storage limits (~5-10MB) for large assets.
     }
   )
 );
