@@ -1,7 +1,14 @@
+
 "use client";
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+
+export interface ProjectLink {
+  id: string;
+  name: string;
+  url: string;
+}
 
 export interface EducationEntry {
   id: string;
@@ -21,6 +28,7 @@ export interface ExperienceEntry {
   startDate: string;
   endDate?: string;
   description?: string;
+  projectLinks?: ProjectLink[];
 }
 
 export interface SocialLink {
@@ -59,7 +67,7 @@ interface ProfileStore {
   addEducation: (entry: Omit<EducationEntry, 'id'>) => void;
   updateEducation: (id: string, entry: Partial<EducationEntry>) => void;
   removeEducation: (id: string) => void;
-  addExperience: (entry: Omit<ExperienceEntry, 'id'>) => void;
+  addExperience: (entry: Omit<ExperienceEntry, 'id' | 'projectLinks'> & { projectLinks?: ProjectLink[] }) => void;
   updateExperience: (id: string, entry: Partial<ExperienceEntry>) => void;
   removeExperience: (id: string) => void;
   addPortfolioLink: (link: Omit<SocialLink, 'id'>) => void;
@@ -98,7 +106,10 @@ const DEFAULT_PROFILE: UserProfile = {
       location: 'Remote',
       startDate: '2020-07-01',
       endDate: 'Present',
-      description: 'Leading the UI modernization project across the enterprise suite.'
+      description: 'Leading the UI modernization project across the enterprise suite.',
+      projectLinks: [
+        { id: 'p1', name: 'UI Library Demo', url: 'https://github.com/techflow/ui-lib' }
+      ]
     }
   ],
   socialLinks: [

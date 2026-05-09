@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useProfileStore, ExperienceEntry } from "@/lib/store";
+import { useProfileStore, ExperienceEntry, ProjectLink } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,18 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Plus, Trash2, Calendar, Pencil, MapPin, Loader2 } from "lucide-react";
+import { 
+  Briefcase, 
+  Plus, 
+  Trash2, 
+  Calendar, 
+  Pencil, 
+  MapPin, 
+  Loader2, 
+  Github, 
+  ExternalLink,
+  Link as LinkIcon
+} from "lucide-react";
 
 export default function ExperiencePage() {
   const { profile, addExperience, removeExperience, updateExperience, _hasHydrated } = useProfileStore();
@@ -32,8 +43,11 @@ export default function ExperiencePage() {
     location: '',
     startDate: '',
     endDate: '',
-    description: ''
+    description: '',
+    projectLinks: []
   });
+
+  const [newLink, setNewLink] = useState({ name: '', url: '' });
 
   useEffect(() => {
     setMounted(true);
@@ -48,7 +62,8 @@ export default function ExperiencePage() {
         location: entry.location || '',
         startDate: entry.startDate,
         endDate: entry.endDate || '',
-        description: entry.description || ''
+        description: entry.description || '',
+        projectLinks: entry.projectLinks || []
       });
     } else {
       setEditingId(null);
@@ -58,10 +73,32 @@ export default function ExperiencePage() {
         location: '',
         startDate: '',
         endDate: '',
-        description: ''
+        description: '',
+        projectLinks: []
       });
     }
     setIsOpen(true);
+  };
+
+  const handleAddProjectLink = () => {
+    if (!newLink.name || !newLink.url) return;
+    const link: ProjectLink = {
+      id: Math.random().toString(36).substring(2, 9),
+      name: newLink.name,
+      url: newLink.url
+    };
+    setFormData({
+      ...formData,
+      projectLinks: [...(formData.projectLinks || []), link]
+    });
+    setNewLink({ name: '', url: '' });
+  };
+
+  const handleRemoveProjectLink = (linkId: string) => {
+    setFormData({
+      ...formData,
+      projectLinks: (formData.projectLinks || []).filter(l => l.id !== linkId)
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -89,7 +126,7 @@ export default function ExperiencePage() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-headline font-bold">Experience</h1>
-          <p className="text-muted-foreground">Document your professional career and career growth.</p>
+          <p className="text-muted-foreground">Document your professional career and showcase your projects.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -98,12 +135,12 @@ export default function ExperiencePage() {
               Add Experience
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] glass-card">
+          <DialogContent className="sm:max-w-[700px] glass-card max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Edit' : 'Add'} Work Experience</DialogTitle>
-              <DialogDescription>Enter the details of your role and responsibilities.</DialogDescription>
+              <DialogDescription>Enter the details of your role and add links to projects you worked on.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Company Name</Label>
@@ -157,6 +194,50 @@ export default function ExperiencePage() {
                     className="resize-none h-32"
                   />
                 </div>
+
+                <div className="col-span-2 space-y-4 pt-4 border-t border-border/50">
+                  <Label className="text-base font-bold">Project Links</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Project Name</Label>
+                      <Input 
+                        placeholder="e.g. GitHub Repo / Demo" 
+                        value={newLink.name}
+                        onChange={e => setNewLink({...newLink, name: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Project URL</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="https://..." 
+                          value={newLink.url}
+                          onChange={e => setNewLink({...newLink, url: e.target.value})}
+                        />
+                        <Button type="button" size="icon" variant="secondary" onClick={handleAddProjectLink}>
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {(formData.projectLinks || []).map((link) => (
+                      <div key={link.id} className="flex items-center justify-between p-2 rounded-md bg-white/5 border border-border/30">
+                        <div className="flex items-center gap-3">
+                          <LinkIcon className="w-4 h-4 text-primary" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{link.name}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">{link.url}</span>
+                          </div>
+                        </div>
+                        <Button size="icon" variant="ghost" type="button" className="h-8 w-8 text-destructive" onClick={() => handleRemoveProjectLink(link.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
@@ -170,8 +251,8 @@ export default function ExperiencePage() {
       <div className="space-y-6">
         {profile.experience.map((exp) => (
           <Card key={exp.id} className="glass-card overflow-hidden group hover:border-accent/50 transition-smooth">
-            <div className="flex flex-col md:flex-row">
-              <div className="p-6 flex-1 space-y-4">
+            <div className="flex flex-col">
+              <div className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <h3 className="text-xl font-bold text-foreground">{exp.title}</h3>
@@ -204,6 +285,26 @@ export default function ExperiencePage() {
                 {exp.description && (
                   <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                     {exp.description}
+                  </div>
+                )}
+                
+                {exp.projectLinks && exp.projectLinks.length > 0 && (
+                  <div className="pt-4 border-t border-border/50">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Project Links</p>
+                    <div className="flex flex-wrap gap-3">
+                      {exp.projectLinks.map((link) => (
+                        <Button key={link.id} variant="outline" size="sm" asChild className="bg-white/5 hover:bg-white/10 h-8">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer">
+                            {link.name.toLowerCase().includes('github') ? (
+                              <Github className="w-3.5 h-3.5 mr-2" />
+                            ) : (
+                              <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                            )}
+                            {link.name}
+                          </a>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
