@@ -278,7 +278,8 @@ export const useProfileStore = create<ProfileStore>()(
         ...state,
         profile: {
           ...state.profile,
-          avatarUrl: '',
+          // We keep avatarUrl to fix the refresh disappearing issue, 
+          // but partialize out heavy project binary data to avoid QuotaExceededError
           projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
           resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
         }
