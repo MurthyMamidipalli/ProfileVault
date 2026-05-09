@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
@@ -26,7 +26,9 @@ import {
   AlertCircle,
   Building2,
   Laptop,
-  Clock
+  Clock,
+  CheckCircle2,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,20 +57,19 @@ export default function PublicProfileView() {
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
-          setError("This vault document exists but the data is corrupt or empty.");
+          setError("Vault data structure is invalid.");
         }
-        setLoading(false);
       } else {
-        setError("Professional vault not found. The profile owner may not have synced their data to the cloud yet.");
-        setLoading(false);
+        setError("Professional vault not found. The profile may be private or not yet synced.");
       }
+      setLoading(false);
     }, async (err) => {
       const permissionError = new FirestorePermissionError({
         path: profileRef.path,
         operation: 'get',
       });
       errorEmitter.emit('permission-error', permissionError);
-      setError("Unable to access the vault server. This could be due to restricted permissions or network issues.");
+      setError("Secure access denied. Check your network or permissions.");
       setLoading(false);
     });
 
@@ -82,8 +83,7 @@ export default function PublicProfileView() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground font-black tracking-widest text-xs uppercase animate-pulse">Accessing Vault</p>
-          <p className="text-[10px] text-muted-foreground/50">Verifying secure cloud connection...</p>
+          <p className="text-muted-foreground font-black tracking-widest text-[10px] uppercase animate-pulse">Accessing Secure Vault</p>
         </div>
       </div>
     );
@@ -91,14 +91,14 @@ export default function PublicProfileView() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-8 animate-in fade-in duration-500">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-8 animate-fade-in">
         <div className="p-8 bg-destructive/5 rounded-full border border-destructive/10">
           <AlertCircle className="w-16 h-16 text-destructive/50" />
         </div>
         <div className="space-y-3">
           <h1 className="text-4xl font-black tracking-tighter text-foreground">Vault Inaccessible</h1>
           <p className="text-muted-foreground max-w-md mx-auto text-lg leading-relaxed">
-            {error || "The requested professional profile is currently offline or inaccessible."}
+            {error}
           </p>
         </div>
         <div className="flex flex-col gap-3 min-w-[240px]">
@@ -117,49 +117,36 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary selection:text-primary-foreground">
-      {/* Dynamic Header Section */}
-      <div className="relative h-[400px] md:h-[500px] overflow-hidden border-b border-border/50">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+      {/* Hero Section with Glassmorphism Overlay */}
+      <div className="relative h-[450px] md:h-[550px] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-accent/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.1),transparent)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         
-        <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-16 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end gap-8 w-full">
-            <div className="relative shrink-0 group">
-              <div className="w-40 h-40 md:w-52 md:h-52 rounded-3xl bg-card border-4 border-background shadow-2xl flex items-center justify-center overflow-hidden transition-smooth group-hover:scale-[1.02]">
+        <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-12 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end gap-10 w-full animate-fade-in">
+            <div className="relative shrink-0">
+              <div className="w-44 h-44 md:w-60 md:h-60 rounded-[2.5rem] bg-card border-4 border-background shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden transition-smooth hover:scale-[1.03]">
                 {profile.avatarUrl ? (
-                  <Image 
-                    src={profile.avatarUrl} 
-                    alt={profile.name} 
-                    fill 
-                    className="object-cover"
-                  />
+                  <Image src={profile.avatarUrl} alt={profile.name} fill className="object-cover" />
                 ) : (
-                  <UserIcon className="w-20 h-20 md:w-28 md:h-28 text-primary/30" />
+                  <UserIcon className="w-24 h-24 text-primary/20" />
                 )}
               </div>
-              <Badge className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground px-5 py-2 text-[10px] font-black border-4 border-background shadow-2xl tracking-[0.2em]">
-                VERIFIED VAULT
+              <Badge className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-6 py-2.5 text-[9px] font-black border-4 border-background shadow-2xl tracking-[0.2em] flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5" /> VERIFIED VAULT
               </Badge>
             </div>
-            <div className="space-y-5 pb-2">
-              <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground drop-shadow-sm leading-[0.9]">{profile.name}</h1>
-              <div className="flex flex-wrap gap-y-4 gap-x-10 text-muted-foreground font-bold text-sm md:text-base">
+            <div className="space-y-6 pb-4">
+              <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-foreground leading-[0.85]">{profile.name}</h1>
+              <div className="flex flex-wrap gap-y-3 gap-x-12 text-muted-foreground font-bold text-sm md:text-lg">
                 {jobs.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-4">
-                      {jobs.slice(0, 2).map((job) => (
-                        <span key={job.id} className="flex items-center gap-2.5">
-                          <Building2 className="w-5 h-5 text-accent" /> {job.role} at {job.company}
-                        </span>
-                      ))}
-                      {jobs.length > 2 && (
-                        <span className="text-xs italic">+{jobs.length - 2} more roles</span>
-                      )}
-                    </div>
-                  </div>
+                  <span className="flex items-center gap-3">
+                    <Building2 className="w-5 h-5 text-accent" /> {jobs[0].role} @ {jobs[0].company}
+                  </span>
                 )}
                 {profile.address && (
-                  <span className="flex items-center gap-2.5">
+                  <span className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-primary" /> {profile.address}
                   </span>
                 )}
@@ -169,37 +156,31 @@ export default function PublicProfileView() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-20">
-        {/* Left Column: Fast Facts & Quick Links */}
-        <div className="lg:col-span-4 space-y-12">
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Identity & Contact</h2>
-            <Card className="glass-card border-white/5 shadow-2xl overflow-hidden">
-              <CardContent className="p-8 space-y-8">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Primary Email</p>
+      <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-20 mt-24">
+        {/* Left Sidebar */}
+        <div className="lg:col-span-4 space-y-16 animate-fade-in">
+          <section className="space-y-8">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Contact Network</h2>
+            <Card className="glass-card overflow-hidden">
+              <CardContent className="p-8 space-y-10">
+                <div className="group">
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3 group-hover:text-primary transition-smooth">Direct Email</p>
                   <p className="font-bold text-lg text-foreground truncate">{profile.email}</p>
                 </div>
                 {profile.secondaryEmail && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Secondary Email</p>
-                    <p className="font-bold text-lg text-foreground truncate opacity-70">{profile.secondaryEmail}</p>
+                  <div className="group opacity-70">
+                    <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3">Backup Email</p>
+                    <p className="font-bold text-lg text-foreground truncate">{profile.secondaryEmail}</p>
                   </div>
                 )}
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Primary Phone</p>
+                <div className="group">
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3 group-hover:text-primary transition-smooth">Phone Line</p>
                   <p className="font-bold text-lg text-foreground">{profile.phone}</p>
                 </div>
-                {profile.secondaryPhone && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Secondary Phone</p>
-                    <p className="font-bold text-lg text-foreground opacity-70">{profile.secondaryPhone}</p>
-                  </div>
-                )}
                 {profile.website && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Professional HQ</p>
-                    <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-lg text-primary hover:underline block truncate">
+                  <div className="group">
+                    <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3 group-hover:text-accent transition-smooth">Digital HQ</p>
+                    <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-lg text-accent hover:underline block truncate">
                       {profile.website.replace(/^https?:\/\//, '')}
                     </a>
                   </div>
@@ -208,41 +189,32 @@ export default function PublicProfileView() {
             </Card>
           </section>
 
-          {/* Active Jobs Section in Sidebar */}
           {jobs.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Key Positions</h2>
-              <div className="space-y-4">
+            <section className="space-y-8">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Active Roles</h2>
+              <div className="space-y-5">
                 {jobs.map((job) => (
-                  <Card key={job.id} className="glass-card border-white/5 overflow-hidden group">
-                    <CardHeader className="p-4 pb-1">
-                      <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-primary" />
-                        {job.role}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-1 space-y-3">
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5" />
-                          {job.company}
-                        </p>
-                        <p className="text-[10px] font-bold text-muted-foreground/50 flex items-center gap-1.5 uppercase tracking-wider">
-                          <Clock className="w-3 h-3" />
-                          {job.joiningDate ? new Date(job.joiningDate).getFullYear() : 'Start'} — {job.endDate ? new Date(job.endDate).getFullYear() : 'Present'}
-                        </p>
+                  <Card key={job.id} className="glass-card group hover:border-primary/30 transition-smooth">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-sm flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-primary" />
+                            {job.role}
+                          </h4>
+                          <p className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5" />
+                            {job.company}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                        <Clock className="w-3 h-3" />
+                        {new Date(job.joiningDate).getFullYear()} — {job.endDate ? new Date(job.endDate).getFullYear() : 'PRESENT'}
                       </div>
                       <div className="flex gap-2">
-                        {job.employmentType && (
-                          <Badge variant="secondary" className="text-[8px] h-4 px-1.5 uppercase font-black tracking-tighter">
-                            {job.employmentType}
-                          </Badge>
-                        )}
-                        {job.workSetting && (
-                          <Badge variant="outline" className="text-[8px] h-4 px-1.5 uppercase font-black tracking-tighter border-accent/20 text-accent">
-                            {job.workSetting}
-                          </Badge>
-                        )}
+                        {job.employmentType && <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black">{job.employmentType}</Badge>}
+                        {job.workSetting && <Badge variant="outline" className="text-[8px] h-4 uppercase font-black border-accent/20 text-accent">{job.workSetting}</Badge>}
                       </div>
                     </CardContent>
                   </Card>
@@ -251,8 +223,8 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">External Portfolios</h2>
+          <section className="space-y-8">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Portfolio Index</h2>
             <div className="grid grid-cols-1 gap-4">
               {profile.portfolioLinks?.map((link) => (
                 <a 
@@ -260,88 +232,63 @@ export default function PublicProfileView() {
                   href={link.url} 
                   target="_blank" 
                   rel="noopener"
-                  className="group flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-xl"
+                  className="group flex items-center justify-between p-6 rounded-2xl bg-white/[0.01] border border-white/5 hover:border-accent/40 hover:bg-accent/5 transition-all"
                 >
                   <div className="flex items-center gap-5">
-                    <div className="p-3 rounded-xl bg-white/5 text-muted-foreground group-hover:text-primary transition-smooth">
+                    <div className="p-3 rounded-xl bg-white/5 text-muted-foreground group-hover:text-accent transition-smooth">
                       <LinkIcon className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm uppercase tracking-widest text-foreground">{link.platform}</span>
+                    <span className="font-bold text-xs uppercase tracking-widest text-foreground">{link.platform}</span>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-smooth" />
+                  <ExternalLink className="w-4 h-4 text-muted-foreground/20 group-hover:text-accent transition-smooth" />
                 </a>
               ))}
             </div>
           </section>
-
-          {profile.resumes && profile.resumes.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Credentials</h2>
-              <div className="space-y-3">
-                {profile.resumes.map((res) => (
-                  <Button key={res.id} asChild variant="outline" className="w-full justify-start h-14 bg-white/5 border-white/5 hover:bg-white/10 font-bold group">
-                    <a href={res.url} target="_blank" rel="noopener">
-                      <FileText className="w-5 h-5 mr-4 text-primary group-hover:scale-110 transition-smooth" />
-                      {res.name}
-                    </a>
-                  </Button>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
 
-        {/* Right Column: Deep Professional Story */}
-        <div className="lg:col-span-8 space-y-24">
+        {/* Main Content Area */}
+        <div className="lg:col-span-8 space-y-24 animate-fade-in [animation-delay:200ms]">
           {profile.bio && (
-            <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Executive Summary</h2>
-              <p className="text-3xl md:text-5xl font-medium leading-[1.3] text-foreground/90 italic font-serif">
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Executive Summary</h2>
+              <p className="text-4xl md:text-6xl font-medium leading-[1.2] text-foreground/90 italic font-serif tracking-tight">
                 "{profile.bio}"
               </p>
             </section>
           )}
 
-          <Separator className="opacity-10" />
+          <Separator className="opacity-5" />
 
           {profile.projects && profile.projects.length > 0 && (
-            <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Featured Projects</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <section className="space-y-14">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Signature Works</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 {profile.projects.map((proj) => (
-                  <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-smooth shadow-2xl">
+                  <Card key={proj.id} className="glass-card border-none bg-white/[0.01] overflow-hidden group hover:bg-white/[0.03] transition-smooth">
                     {proj.imageUrl && (
-                      <div className="relative h-60 w-full border-b border-white/5 overflow-hidden">
-                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-110 transition-smooth duration-700" />
+                      <div className="relative h-64 w-full border-b border-white/5 overflow-hidden">
+                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-110 transition-smooth duration-1000" />
                       </div>
                     )}
                     <CardHeader className="p-8 space-y-4">
                       <div className="space-y-2">
                         <h3 className="text-2xl font-black tracking-tight text-foreground">{proj.title}</h3>
                         {proj.date && (
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-black tracking-[0.2em] uppercase">
+                          <div className="flex items-center gap-2 text-[9px] text-muted-foreground font-black tracking-[0.2em] uppercase">
                             <Calendar className="w-3.5 h-3.5" />
                             {new Date(proj.date).getFullYear()}
                           </div>
                         )}
                       </div>
-                      <p className="text-muted-foreground leading-relaxed text-sm font-medium">
+                      <p className="text-muted-foreground leading-relaxed text-sm font-medium line-clamp-4">
                         {proj.description}
                       </p>
-                      <div className="flex flex-wrap gap-3 pt-4">
+                      <div className="flex flex-wrap gap-4 pt-4">
                          {proj.url && (
-                           <Button asChild size="sm" variant="secondary" className="h-9 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold">
+                           <Button asChild size="sm" variant="secondary" className="h-9 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground font-bold">
                              <a href={proj.url} target="_blank" rel="noopener">
-                               <ExternalLink className="w-4 h-4 mr-2" />
-                               Live Demo
-                             </a>
-                           </Button>
-                         )}
-                         {proj.documentUrl && (
-                           <Button asChild size="sm" variant="outline" className="h-9 border-accent/20 text-accent hover:bg-accent hover:text-accent-foreground font-bold">
-                             <a href={proj.documentUrl} target="_blank" rel="noopener">
-                               <FileText className="w-4 h-4 mr-2" />
-                               View PDF
+                               <ExternalLink className="w-4 h-4 mr-2" /> Live Project
                              </a>
                            </Button>
                          )}
@@ -353,47 +300,35 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          <Separator className="opacity-10" />
+          <Separator className="opacity-5" />
 
           {profile.experience && profile.experience.length > 0 && (
-            <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Career Trajectory</h2>
-              <div className="space-y-16">
+            <section className="space-y-16">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Career Timeline</h2>
+              <div className="space-y-20">
                 {profile.experience.map((exp) => (
-                  <div key={exp.id} className="relative pl-12 border-l-4 border-primary/10">
-                    <div className="absolute top-0 left-[-11px] w-5 h-5 rounded-full bg-primary border-4 border-background shadow-[0_0_20px_rgba(var(--primary),0.6)]" />
-                    <div className="space-y-8">
-                      <div className="space-y-3">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <h3 className="text-4xl font-black tracking-tighter text-foreground">{exp.title}</h3>
-                          <Badge variant="secondary" className="w-fit bg-primary/10 text-primary border-none font-black tracking-widest text-[10px] px-4 py-1.5">
+                  <div key={exp.id} className="relative pl-14 border-l-4 border-primary/10 group">
+                    <div className="absolute top-0 left-[-12px] w-5 h-5 rounded-full bg-primary border-4 border-background shadow-[0_0_30px_rgba(var(--primary),0.8)] group-hover:scale-125 transition-smooth" />
+                    <div className="space-y-10">
+                      <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                          <h3 className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">{exp.title}</h3>
+                          <Badge className="w-fit bg-primary/10 text-primary border-none font-black tracking-[0.2em] text-[10px] px-5 py-2">
                             {exp.startDate.split('-')[0]} — {exp.endDate ? exp.endDate.split('-')[0] : 'PRESENT'}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-2xl font-bold text-primary">
+                        <div className="flex items-center gap-5 text-2xl font-bold text-accent">
                           <span>{exp.company}</span>
                           {exp.location && (
-                            <span className="text-muted-foreground text-sm font-medium tracking-widest uppercase">/ {exp.location}</span>
+                            <span className="text-muted-foreground text-xs font-black tracking-[0.3em] uppercase opacity-40">/ {exp.location}</span>
                           )}
                         </div>
                       </div>
                       
                       {exp.description && (
-                        <p className="text-muted-foreground leading-relaxed text-xl font-medium whitespace-pre-line max-w-3xl">
+                        <p className="text-muted-foreground leading-relaxed text-xl font-medium whitespace-pre-line max-w-4xl opacity-80">
                           {exp.description}
                         </p>
-                      )}
-
-                      {exp.projectLinks && exp.projectLinks.length > 0 && (
-                        <div className="flex flex-wrap gap-4 pt-4">
-                          {exp.projectLinks.map(link => (
-                            <Badge key={link.id} variant="outline" className="px-5 py-2 bg-white/5 text-primary border-primary/20 hover:bg-primary hover:text-primary-foreground transition-smooth cursor-pointer">
-                              <a href={link.url} target="_blank" rel="noopener" className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-[0.2em]">
-                                {link.name} <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                            </Badge>
-                          ))}
-                        </div>
                       )}
                     </div>
                   </div>
@@ -402,30 +337,30 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          <Separator className="opacity-10" />
+          <Separator className="opacity-5" />
 
           {profile.education && profile.education.length > 0 && (
-            <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Academic History</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <section className="space-y-14">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60">Academic Pedigree</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 {profile.education.map((edu) => (
-                  <Card key={edu.id} className="glass-card border-none bg-white/[0.02] shadow-2xl hover:bg-white/[0.04] transition-smooth group p-8">
-                    <CardHeader className="p-0 pb-8 flex flex-row items-center gap-6">
-                      <div className="p-5 bg-primary/10 rounded-2xl text-primary shrink-0 group-hover:scale-110 transition-smooth">
-                        <GraduationCap className="w-8 h-8" />
+                  <Card key={edu.id} className="glass-card border-none bg-white/[0.01] shadow-2xl hover:bg-white/[0.03] transition-smooth group p-10">
+                    <CardHeader className="p-0 pb-10 flex flex-row items-center gap-8">
+                      <div className="p-6 bg-primary/10 rounded-3xl text-primary shrink-0 group-hover:scale-110 transition-smooth">
+                        <GraduationCap className="w-10 h-10" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <CardTitle className="text-2xl font-black tracking-tight text-foreground leading-tight">{edu.degree}</CardTitle>
-                        <p className="text-sm text-primary font-bold tracking-wider">{edu.institution}</p>
+                        <p className="text-sm text-primary font-bold tracking-widest uppercase">{edu.institution}</p>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-0 space-y-6">
-                      <div className="text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase flex items-center gap-3">
+                    <CardContent className="p-0 space-y-8">
+                      <div className="text-[9px] font-black tracking-[0.4em] text-muted-foreground/40 uppercase flex items-center gap-4">
                         <Calendar className="w-4 h-4" />
                         {edu.startDate.split('-')[0]} — {edu.endDate ? edu.endDate.split('-')[0] : 'PRESENT'}
                       </div>
                       {edu.description && (
-                        <p className="text-muted-foreground italic leading-relaxed font-medium pl-6 border-l-2 border-primary/20 text-sm">
+                        <p className="text-muted-foreground italic leading-relaxed font-medium pl-8 border-l-2 border-primary/20 text-sm opacity-70">
                           {edu.description}
                         </p>
                       )}
@@ -438,20 +373,20 @@ export default function PublicProfileView() {
         </div>
       </div>
 
-      <footer className="mt-40 py-24 border-t border-border/50 text-center space-y-10 bg-white/[0.01]">
-        <div className="space-y-4">
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.5em]">Authentic Profile Vault</p>
-          <div className="flex items-center justify-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/30">
-              <FolderCode className="w-7 h-7 text-primary-foreground" />
+      <footer className="mt-48 py-32 border-t border-border/50 text-center space-y-12 bg-white/[0.01]">
+        <div className="space-y-6">
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.6em] opacity-30">Encrypted Profile Infrastructure</p>
+          <div className="flex items-center justify-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-[0_10px_40px_rgba(var(--primary),0.4)]">
+              <FolderCode className="w-8 h-8 text-primary-foreground" />
             </div>
-            <span className="font-headline font-black text-4xl tracking-tighter text-foreground">
+            <span className="font-headline font-black text-5xl tracking-tighter text-foreground">
               Profile<span className="text-primary">Vault</span>
             </span>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-widest">
-          &copy; {new Date().getFullYear()} ProfileVault Infrastructure • All Rights Reserved
+        <p className="text-[10px] text-muted-foreground/20 font-bold uppercase tracking-[0.3em]">
+          &copy; {new Date().getFullYear()} ProfileVault Core Infrastructure • Securing Identity
         </p>
       </footer>
     </div>

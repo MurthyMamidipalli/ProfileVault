@@ -52,9 +52,6 @@ const NAV_ITEMS = [
   { name: "Portfolio Link", href: "/dashboard/share", icon: Share2 },
 ];
 
-/**
- * Inner component to access Sidebar context
- */
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -74,28 +71,28 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full bg-background overflow-hidden">
       <Sidebar 
         collapsible="icon" 
-        className="border-r border-border/50 group-data-[state=collapsed]:hover:w-[16rem] transition-all duration-300 ease-in-out"
+        className="border-r border-border/50 group-data-[state=collapsed]:hover:w-[16rem] transition-all duration-300 ease-in-out z-50"
         onMouseEnter={() => !isMobile && setOpen(true)}
         onMouseLeave={() => !isMobile && setOpen(false)}
       >
-        <SidebarHeader className="h-16 flex items-center px-4 border-b border-border/50">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <Vault className="w-5 h-5 text-primary-foreground" />
+        <SidebarHeader className="h-20 flex items-center px-6 border-b border-border/50">
+          <Link href="/dashboard" className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+              <Vault className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className={cn(
-              "font-headline font-bold text-lg tracking-tight transition-opacity duration-300",
-              state === "collapsed" ? "opacity-0 w-0" : "opacity-100"
+              "font-headline font-bold text-xl tracking-tighter transition-all duration-300",
+              state === "collapsed" ? "opacity-0 w-0 scale-95" : "opacity-100 scale-100"
             )}>
               ProfileVault
             </span>
           </Link>
         </SidebarHeader>
-        <SidebarContent className="py-4">
-          <SidebarMenu>
+        <SidebarContent className="py-6 px-3">
+          <SidebarMenu className="gap-2">
             {NAV_ITEMS.map((item) => (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton 
@@ -103,13 +100,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                   isActive={pathname === item.href}
                   tooltip={item.name}
                   className={cn(
-                    "transition-smooth h-11 px-4",
-                    pathname === item.href ? "bg-primary/10 text-primary" : "hover:bg-accent/10 hover:text-accent"
+                    "transition-smooth h-12 px-4 rounded-xl",
+                    pathname === item.href 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                      : "hover:bg-primary/10 hover:text-primary"
                   )}
                 >
                   <Link href={item.href}>
                     <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
+                    <span className="font-semibold">{item.name}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -117,60 +116,60 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="border-t border-border/50 p-4">
-          <SidebarMenu>
+          <SidebarMenu className="gap-2">
             <SidebarMenuItem>
               <SidebarMenuButton 
                 asChild 
                 isActive={pathname === "/dashboard/settings"}
                 tooltip="Settings"
                 className={cn(
-                  "h-10 px-4 transition-smooth",
-                  pathname === "/dashboard/settings" ? "bg-primary/10 text-primary" : "hover:bg-accent/10 hover:text-accent"
+                  "h-11 px-4 transition-smooth rounded-xl",
+                  pathname === "/dashboard/settings" ? "bg-accent/10 text-accent" : "hover:bg-accent/10 hover:text-accent"
                 )}
               >
                 <Link href="/dashboard/settings">
                   <Settings className="w-5 h-5" />
-                  <span>Settings</span>
+                  <span className="font-semibold">Settings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton 
                 onClick={handleLogout}
-                className="h-10 px-4 text-destructive hover:bg-destructive/10 transition-smooth"
+                className="h-11 px-4 text-destructive hover:bg-destructive/10 transition-smooth rounded-xl"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Log out</span>
+                <span className="font-semibold">Log out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="h-16 flex items-center justify-between px-6 border-b border-border/50 sticky top-0 z-10 bg-background/80 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <SidebarTrigger />
-            <div className="h-6 w-px bg-border/50" />
-            <h2 className="font-headline font-semibold text-foreground">
+      <SidebarInset className="relative">
+        <header className="h-20 flex items-center justify-between px-8 border-b border-border/50 sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+          <div className="flex items-center gap-6">
+            <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-smooth h-10 w-10" />
+            <div className="h-8 w-px bg-border/50 hidden md:block" />
+            <h2 className="font-headline font-black text-xl tracking-tight text-foreground hidden sm:block">
               {NAV_ITEMS.find(item => item.href === pathname)?.name || 
                (pathname === "/dashboard/settings" ? "Settings" : "Dashboard")}
             </h2>
           </div>
-          <div className="flex items-center gap-4">
-             <div className="text-sm font-medium text-muted-foreground hidden sm:block">
+          <div className="flex items-center gap-6">
+             <div className="text-sm font-bold text-muted-foreground hidden lg:block tracking-tight">
                {profile.name}
              </div>
-             <Link href="/dashboard/profile" className="transition-smooth hover:scale-105 active:scale-95">
-               <Avatar className="w-9 h-9 border border-border group-hover:border-primary">
+             <Link href="/dashboard/profile" className="transition-smooth hover:scale-110 active:scale-95">
+               <Avatar className="w-10 h-10 border-2 border-primary/20 hover:border-primary transition-smooth shadow-lg">
                   <AvatarImage src={profile.avatarUrl} className="object-cover" />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                    {profile.name?.charAt(0) || <User className="w-4 h-4" />}
+                  <AvatarFallback className="bg-primary/20 text-primary text-sm font-black">
+                    {profile.name?.charAt(0) || "U"}
                   </AvatarFallback>
                </Avatar>
              </Link>
           </div>
         </header>
-        <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-8 max-w-7xl mx-auto w-full animate-fade-in">
           {children}
         </main>
       </SidebarInset>

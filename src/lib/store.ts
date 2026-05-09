@@ -156,13 +156,10 @@ const DEFAULT_PROFILE: UserProfile = {
     }
   ],
   projects: [],
-  socialLinks: [
-    { id: '1', platform: 'LinkedIn', url: 'https://linkedin.com/in/alexsterling' },
-    { id: '2', platform: 'Twitter', url: 'https://twitter.com/alexsterling' }
-  ],
+  socialLinks: [],
   portfolioLinks: [
-    { id: '1', platform: 'Personal Portfolio', url: 'https://alexsterling.dev' },
-    { id: '2', platform: 'GitHub', url: 'https://github.com/asterling' }
+    { id: '1', platform: 'GitHub', url: 'https://github.com' },
+    { id: '2', platform: 'LinkedIn', url: 'https://linkedin.com' }
   ],
   resumes: []
 };
@@ -292,7 +289,8 @@ export const useProfileStore = create<ProfileStore>()(
         ...state,
         profile: {
           ...state.profile,
-          // We keep avatarUrl in localStorage now but ensure it's not oversized
+          // Optimization: Persist basic data and avatar, but clear heavy transient base64 fields 
+          // to avoid QuotaExceededError in localStorage. Cloud sync is the source of truth for these.
           projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
           resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
         }
