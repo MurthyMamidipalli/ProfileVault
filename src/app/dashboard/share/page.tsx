@@ -10,10 +10,11 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
-import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function SharePage() {
-  const { profile, setProfile, _hasHydrated } = useProfileStore();
+  const { profile, setProfile, markSynced, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
@@ -22,7 +23,6 @@ export default function SharePage() {
 
   useEffect(() => {
     setMounted(true);
-    // Auto-generate a sharedId if it doesn't exist when the user visits this page
     if (_hasHydrated && !profile.sharedId) {
       const newId = Math.random().toString(36).substring(2, 12);
       setProfile({ sharedId: newId });
@@ -38,16 +38,15 @@ export default function SharePage() {
     const data = {
       profileData: profile,
       updatedAt: serverTimestamp(),
-      // In a real app we'd track the actual creation date, 
-      // but for this prototype we'll use the sync timestamp.
-      createdAt: serverTimestamp() 
+      createdAt: profile.lastSyncedAt ? undefined : serverTimestamp() 
     };
 
     setDoc(profileRef, data, { merge: true })
       .then(() => {
+        markSynced();
         toast({
           title: "Vault Synced",
-          description: "Your public profile is now up to date with your latest changes.",
+          description: "Your public profile is now live and updated.",
         });
       })
       .catch(async (err) => {
@@ -83,6 +82,8 @@ export default function SharePage() {
     );
   }
 
+  const isSynced = !!profile.lastSyncedAt;
+
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex flex-col gap-2">
@@ -94,6 +95,19 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
+        {!isSynced && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4 animate-pulse">
+            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-500">Action Required: Profile Not Synced</p>
+              <p className="text-xs text-amber-500/80">Your public link exists, but it will show an error until you sync your data for the first time.</p>
+            </div>
+            <Button size="sm" onClick={handleSync} disabled={isPublishing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
+              Sync Now
+            </Button>
+          </div>
+        )}
+
         <Card className="glass-card border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-12 -mr-8 -mt-8 bg-primary/10 rounded-full blur-3xl" />
           <CardHeader>
@@ -107,12 +121,27 @@ export default function SharePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <div className="p-6 bg-accent/5 border border-accent/20 rounded-xl space-y-5">
+              <div className={cn(
+                "p-6 border rounded-xl space-y-5 transition-smooth",
+                isSynced ? "bg-accent/5 border-accent/20" : "bg-muted/50 border-border"
+              )}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-widest text-accent">Active Share Link</span>
-                  <span className="flex items-center gap-1.5 text-xs text-green-400 font-bold">
-                    <CheckCircle2 className="w-4 h-4" />
-                    LIVE & ACCESSIBLE
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Share Link Status</span>
+                  <span className={cn(
+                    "flex items-center gap-1.5 text-xs font-bold",
+                    isSynced ? "text-green-400" : "text-muted-foreground"
+                  )}>
+                    {isSynced ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        LIVE & ACCESSIBLE
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        AWAITING FIRST SYNC
+                      </>
+                    )}
                   </span>
                 </div>
                 
@@ -133,7 +162,7 @@ export default function SharePage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <Button asChild variant="outline" size="lg" className="font-medium" disabled={!shareUrl}>
+                  <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
                     <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Preview Public Page
@@ -142,11 +171,14 @@ export default function SharePage() {
                   <Button 
                     onClick={handleSync} 
                     disabled={isPublishing || !shareUrl} 
-                    variant="ghost" 
-                    className="text-muted-foreground hover:text-foreground"
+                    variant={isSynced ? "ghost" : "default"}
+                    className={cn(
+                      !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20",
+                      isSynced && "text-muted-foreground hover:text-foreground"
+                    )}
                   >
                     {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                    Sync Data to Public Version
+                    {isSynced ? 'Update Public Profile' : 'Sync Profile Now'}
                   </Button>
                 </div>
               </div>
@@ -156,9 +188,12 @@ export default function SharePage() {
             <div className="flex gap-4 items-start">
               <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-sm font-bold">Privacy Note</p>
+                <p className="text-sm font-bold">Privacy & Security</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Only the data you sync to the cloud is visible on your public page. Private documents are only accessible if they are specifically included in your public portfolio.
+                  {profile.lastSyncedAt 
+                    ? `Last synced on ${new Date(profile.lastSyncedAt).toLocaleString()}. `
+                    : "Your profile has not been synced to the cloud yet. "}
+                  Only the data you sync is visible publicly. Your private documents are secure.
                 </p>
               </div>
             </div>
