@@ -62,15 +62,20 @@ export default function SharePage() {
 
     const profileRef = doc(db, "shared-profiles", currentId);
     
-    const syncData = {
+    // Construct sync data without any 'undefined' values
+    const syncData: any = {
       profileData: JSON.parse(JSON.stringify({
         ...profile,
         sharedId: currentId,
         ownerId: user.uid
       })),
       updatedAt: serverTimestamp(),
-      createdAt: profile.lastSyncedAt ? undefined : serverTimestamp(),
     };
+
+    // Only set createdAt if it doesn't already exist on the local profile status
+    if (!profile.lastSyncedAt) {
+      syncData.createdAt = serverTimestamp();
+    }
 
     setDoc(profileRef, syncData, { merge: true })
       .then(() => {
