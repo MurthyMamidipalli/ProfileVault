@@ -10,7 +10,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useFirestore, useAuth, useUser } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
+import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
 import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, LogIn, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firebaseConfig } from "@/firebase/config";
@@ -41,7 +41,7 @@ export default function SharePage() {
       toast({
         variant: "destructive",
         title: "Configuration Required",
-        description: "Your Firebase project is still being provisioned. Please wait a moment or check your setup."
+        description: "Your Firebase project is still being provisioned."
       });
       return;
     }
@@ -49,7 +49,7 @@ export default function SharePage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      toast({ title: "Authenticated", description: "You can now sync your profile to the cloud." });
+      toast({ title: "Authenticated", description: "You can now sync your profile." });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -59,12 +59,12 @@ export default function SharePage() {
     }
   };
 
-  const handleSync = async () => {
+  const handleSync = () => {
     if (isConfigMissing) {
       toast({
         variant: "destructive",
         title: "Configuration Missing",
-        description: "Firebase project is not fully configured yet. Please check your setup."
+        description: "Firebase project is not fully configured yet."
       });
       return;
     }
@@ -72,62 +72,49 @@ export default function SharePage() {
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please sign in with Google to securely sync your profile."
+        description: "Please sign in with Google to sync your profile."
       });
       return;
     }
 
-    if (!db) {
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: "Could not connect to the vault server."
-      });
-      return;
-    }
+    if (!db) return;
 
     setIsSyncing(true);
     
-    try {
-      const currentId = profile.sharedId || Math.random().toString(36).substring(2, 12);
-      if (!profile.sharedId) setProfile({ sharedId: currentId });
+    const currentId = profile.sharedId || Math.random().toString(36).substring(2, 12);
+    if (!profile.sharedId) setProfile({ sharedId: currentId });
 
-      const profileRef = doc(db, "shared-profiles", currentId);
-      
-      const syncData = {
-        profileData: JSON.parse(JSON.stringify({
-          ...profile,
-          sharedId: currentId,
-          ownerId: user.uid
-        })),
-        updatedAt: serverTimestamp(),
-        createdAt: profile.lastSyncedAt ? undefined : serverTimestamp(),
-      };
+    const profileRef = doc(db, "shared-profiles", currentId);
+    
+    const syncData = {
+      profileData: JSON.parse(JSON.stringify({
+        ...profile,
+        sharedId: currentId,
+        ownerId: user.uid
+      })),
+      updatedAt: serverTimestamp(),
+      createdAt: profile.lastSyncedAt ? undefined : serverTimestamp(),
+    };
 
-      await setDoc(profileRef, syncData, { merge: true });
-      markSynced();
-      toast({
-        title: "Profile Synced",
-        description: "Your professional vault is now live and secure in the cloud.",
-      });
-    } catch (err: any) {
-      if (err.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-          path: `shared-profiles/${profile.sharedId}`,
-          operation: 'write',
-          requestResourceData: profile
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      } else {
+    // Non-blocking mutation as per guidelines
+    setDoc(profileRef, syncData, { merge: true })
+      .then(() => {
+        markSynced();
         toast({
-          variant: "destructive",
-          title: "Sync Failed",
-          description: err.message || "An unexpected error occurred."
+          title: "Profile Synced",
+          description: "Your portfolio is now live and updated.",
         });
-      }
-    } finally {
-      setIsSyncing(false);
-    }
+        setIsSyncing(false);
+      })
+      .catch(async (err: any) => {
+        const permissionError = new FirestorePermissionError({
+          path: profileRef.path,
+          operation: 'write',
+          requestResourceData: syncData
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        setIsSyncing(false);
+      });
   };
 
   const shareUrl = typeof window !== 'undefined' && profile.sharedId 
@@ -159,7 +146,7 @@ export default function SharePage() {
           Portfolio Link
           <Share2 className="w-6 h-6 text-primary" />
         </h1>
-        <p className="text-muted-foreground">Host your professional vault in the cloud and share your unique portfolio link with recruiters and peers.</p>
+        <p className="text-muted-foreground">Host your professional vault in the cloud and share your unique portfolio link with the world.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
@@ -169,7 +156,7 @@ export default function SharePage() {
               <Settings className="w-8 h-8 text-destructive animate-spin" />
               <div>
                 <p className="font-bold text-foreground">System Setup in Progress</p>
-                <p className="text-sm text-muted-foreground">We are provisioning your secure cloud infrastructure. This usually takes less than a minute.</p>
+                <p className="text-sm text-muted-foreground">We are provisioning your cloud infrastructure. This usually takes a moment.</p>
               </div>
             </div>
             <Button disabled className="opacity-50">Waiting for setup...</Button>
@@ -182,7 +169,7 @@ export default function SharePage() {
               <Shield className="w-8 h-8 text-primary" />
               <div>
                 <p className="font-bold text-foreground">Secure Synchronization</p>
-                <p className="text-sm text-muted-foreground">Sign in to securely own and update your public profile link.</p>
+                <p className="text-sm text-muted-foreground">Sign in to securely own and update your public portfolio link.</p>
               </div>
             </div>
             <Button onClick={handleSignIn} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
@@ -196,8 +183,8 @@ export default function SharePage() {
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
             <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-500">Ready to Go Live</p>
-              <p className="text-xs text-muted-foreground">Your data is ready. Click "Sync Now" to publish your vault.</p>
+              <p className="text-sm font-bold text-amber-500">Action Required</p>
+              <p className="text-xs text-muted-foreground">Your profile is not yet live. Click sync to publish it.</p>
             </div>
             <Button size="sm" onClick={handleSync} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
               {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
@@ -213,7 +200,7 @@ export default function SharePage() {
               Public Portfolio URL
             </CardTitle>
             <CardDescription>
-              Your professional identity is hosted at this permanent address.
+              Your professional identity address. Share this with recruiters.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -228,16 +215,16 @@ export default function SharePage() {
                   isSynced ? "text-accent" : "text-muted-foreground"
                 )}>
                   {isSynced ? (
-                    <><CheckCircle2 className="w-4 h-4" /> LIVE & UPDATED</>
+                    <><CheckCircle2 className="w-4 h-4" /> LIVE</>
                   ) : (
-                    <><RefreshCw className="w-4 h-4" /> AWAITING INITIAL SYNC</>
+                    <><RefreshCw className="w-4 h-4" /> AWAITING SYNC</>
                   )}
                 </span>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
-                  {shareUrl || "Generating your link..."}
+                  {shareUrl || "Generating ID..."}
                 </div>
                 <Button 
                   onClick={handleCopy} 
@@ -255,7 +242,7 @@ export default function SharePage() {
                 <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced || isConfigMissing}>
                   <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview Portfolio
+                    Preview
                   </a>
                 </Button>
                 <Button 
@@ -268,22 +255,14 @@ export default function SharePage() {
                   )}
                 >
                   {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  {isSynced ? 'Push Latest Changes' : 'Sync Profile Now'}
+                  {isSynced ? 'Sync Changes' : 'Sync Profile Now'}
                 </Button>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="bg-white/5 border-t border-border/50 p-6">
-            <div className="flex gap-4 items-start">
-              <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-foreground">Authenticated Sync</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your public profile is only updated when you click Sync while signed in.
-                  {profile.lastSyncedAt && ` Last synced: ${new Date(profile.lastSyncedAt).toLocaleString()}`}
-                </p>
-              </div>
-            </div>
+          <CardFooter className="bg-white/5 border-t border-border/50 p-6 text-xs text-muted-foreground">
+            <Shield className="w-4 h-4 mr-2 inline" />
+            Authenticated writes only. Public read access allowed for anyone with the unique link.
           </CardFooter>
         </Card>
       </div>

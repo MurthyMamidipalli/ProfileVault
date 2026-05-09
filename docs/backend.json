@@ -26,7 +26,7 @@
   },
   "firestore": {
     "/shared-profiles/{profileId}": {
-      "schema": { "$ref": "#/entities/SharedProfile" },
+      "schema": { "$ref": "#/backend/entities/SharedProfile" },
       "description": "Publicly shared professional profiles. Accessible by anyone with the unique ID."
     }
   }

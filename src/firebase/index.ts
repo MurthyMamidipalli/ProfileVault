@@ -8,6 +8,7 @@ import { firebaseConfig } from './config';
  * Note: Firestore Security Rules for this project are automatically updated 
  * whenever backend.json or this file is modified. 
  * Path /shared-profiles/{id} supports public read and authenticated owner write.
+ * Last Updated: Triggering fresh rules deployment for Portfolio Link.
  */
 
 export function initializeFirebase() {
