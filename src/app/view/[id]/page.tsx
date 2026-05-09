@@ -3,8 +3,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getFirestore, doc, onSnapshot } from "firebase/firestore";
-import { getFirebaseApp } from "@/firebase/provider";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 import { UserProfile } from "@/lib/store";
 import { 
   Loader2, 
@@ -27,15 +29,14 @@ import { Badge } from "@/components/ui/badge";
 
 export default function PublicProfileView() {
   const { id } = useParams();
+  const db = useFirestore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !db) return;
 
-    const app = getFirebaseApp();
-    const db = getFirestore(app);
     const profileRef = doc(db, "shared-profiles", id as string);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
@@ -46,14 +47,18 @@ export default function PublicProfileView() {
         setError("Profile not found.");
         setLoading(false);
       }
-    }, (err) => {
-      console.error(err);
+    }, async (err) => {
+      const permissionError = new FirestorePermissionError({
+        path: profileRef.path,
+        operation: 'get',
+      });
+      errorEmitter.emit('permission-error', permissionError);
       setError("Failed to load profile.");
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [id]);
+  }, [id, db]);
 
   if (loading) {
     return (

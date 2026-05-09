@@ -6,13 +6,16 @@ import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { getFirebaseApp } from "@/firebase/provider";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield } from "lucide-react";
 
 export default function SharePage() {
   const { profile, setProfile, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
+  const db = useFirestore();
   const [mounted, setMounted] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [copying, setCopying] = useState(false);
@@ -22,38 +25,37 @@ export default function SharePage() {
   }, []);
 
   const handlePublish = async () => {
+    if (!db) return;
     setIsPublishing(true);
-    try {
-      const app = getFirebaseApp();
-      const db = getFirestore(app);
-      
-      // Generate a permanent share ID if we don't have one
-      const shareId = profile.sharedId || Math.random().toString(36).substring(2, 12);
-      
-      const profileRef = doc(db, "shared-profiles", shareId);
-      
-      await setDoc(profileRef, {
-        profileData: profile,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp() // Simplified for now
-      }, { merge: true });
+    
+    const shareId = profile.sharedId || Math.random().toString(36).substring(2, 12);
+    const profileRef = doc(db, "shared-profiles", shareId);
+    
+    const data = {
+      profileData: profile,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+    };
 
-      setProfile({ sharedId: shareId });
-      
-      toast({
-        title: "Profile Published",
-        description: "Your profile is now live and shareable.",
+    setDoc(profileRef, data, { merge: true })
+      .then(() => {
+        setProfile({ sharedId: shareId });
+        toast({
+          title: "Profile Published",
+          description: "Your profile is now live and shareable.",
+        });
+      })
+      .catch(async (err) => {
+        const permissionError = new FirestorePermissionError({
+          path: profileRef.path,
+          operation: 'write',
+          requestResourceData: data
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsPublishing(false);
       });
-    } catch (error) {
-      console.error(error);
-      toast({
-        variant: "destructive",
-        title: "Publication Failed",
-        description: "Could not publish your profile at this time.",
-      });
-    } finally {
-      setIsPublishing(false);
-    }
   };
 
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/view/${profile.sharedId}` : '';
