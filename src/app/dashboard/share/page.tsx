@@ -23,6 +23,7 @@ export default function SharePage() {
 
   useEffect(() => {
     setMounted(true);
+    // Ensure a stable sharedId is generated once and saved to the store
     if (_hasHydrated && !profile.sharedId) {
       const newId = Math.random().toString(36).substring(2, 12);
       setProfile({ sharedId: newId });
@@ -34,7 +35,7 @@ export default function SharePage() {
       toast({
         variant: "destructive",
         title: "Configuration Error",
-        description: "Firestore connection or Shared ID is missing."
+        description: "Firestore connection or Shared ID is missing. Please try again."
       });
       return;
     }
@@ -43,18 +44,19 @@ export default function SharePage() {
     
     const profileRef = doc(db, "shared-profiles", profile.sharedId);
     
-    // Create a clean, serializable object
+    // Create a clean, serializable object for sync
     const syncData = {
       profileData: JSON.parse(JSON.stringify(profile)),
       updatedAt: serverTimestamp(),
+      publicId: profile.sharedId // redundantly store for verification
     };
 
     setDoc(profileRef, syncData, { merge: true })
       .then(() => {
         markSynced();
         toast({
-          title: "Success",
-          description: "Your professional portfolio has been synced to the cloud.",
+          title: "Profile Synced",
+          description: "Your professional vault is now live and updated in the cloud.",
         });
       })
       .catch(async (err) => {
@@ -64,11 +66,6 @@ export default function SharePage() {
           requestResourceData: syncData
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-          variant: "destructive",
-          title: "Sync Error",
-          description: "Permissions denied or network failure. Ensure you are online."
-        });
       })
       .finally(() => {
         setIsSyncing(false);
@@ -83,7 +80,7 @@ export default function SharePage() {
     if (!shareUrl) return;
     setCopying(true);
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Copied", description: "Portfolio link copied to clipboard." });
+    toast({ title: "Copied", description: "Link copied to clipboard." });
     setTimeout(() => setCopying(false), 2000);
   };
 
@@ -109,14 +106,14 @@ export default function SharePage() {
 
       <div className="grid grid-cols-1 gap-8">
         {!isSynced && (
-          <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-4">
-            <AlertTriangle className="w-6 h-6 text-primary shrink-0" />
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
+            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-primary">Portfolio Not Yet Synced</p>
-              <p className="text-xs text-muted-foreground">Your link is generated but won't show your data until you perform your first sync.</p>
+              <p className="text-sm font-bold text-amber-500">Not Synced to Cloud</p>
+              <p className="text-xs text-muted-foreground">Your public URL exists, but it currently leads to an empty page. Click "Sync" to go live.</p>
             </div>
-            <Button size="sm" onClick={handleSync} disabled={isSyncing}>
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Data Now"}
+            <Button size="sm" onClick={handleSync} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
+              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
             </Button>
           </div>
         )}
@@ -126,10 +123,10 @@ export default function SharePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Globe className="w-5 h-5 text-accent" />
-              Public Portfolio Access
+              Public Portfolio URL
             </CardTitle>
             <CardDescription>
-              Your identity is securely hosted at a permanent, shareable URL.
+              Your identity is hosted at a permanent, shareable address.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -138,22 +135,22 @@ export default function SharePage() {
               isSynced ? "bg-accent/5 border-accent/20" : "bg-muted/50 border-border"
             )}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">URL Status</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Status</span>
                 <span className={cn(
                   "flex items-center gap-1.5 text-xs font-bold",
                   isSynced ? "text-accent" : "text-muted-foreground"
                 )}>
                   {isSynced ? (
-                    <><CheckCircle2 className="w-4 h-4" /> ACTIVE & ONLINE</>
+                    <><CheckCircle2 className="w-4 h-4" /> LIVE & UPDATED</>
                   ) : (
-                    <><RefreshCw className="w-4 h-4" /> AWAITING SYNC</>
+                    <><RefreshCw className="w-4 h-4" /> AWAITING INITIAL SYNC</>
                   )}
                 </span>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
-                  {shareUrl || "Generating ID..."}
+                  {shareUrl || "Preparing link..."}
                 </div>
                 <Button 
                   onClick={handleCopy} 
@@ -171,7 +168,7 @@ export default function SharePage() {
                 <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
                   <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview Live Profile
+                    Preview Portfolio
                   </a>
                 </Button>
                 <Button 
@@ -184,7 +181,7 @@ export default function SharePage() {
                   )}
                 >
                   {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  {isSynced ? 'Push Latest Updates' : 'Sync Profile to Cloud'}
+                  {isSynced ? 'Push Latest Changes' : 'Sync Profile Now'}
                 </Button>
               </div>
             </div>
@@ -193,10 +190,10 @@ export default function SharePage() {
             <div className="flex gap-4 items-start">
               <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-sm font-bold text-foreground">Data Privacy Note</p>
+                <p className="text-sm font-bold text-foreground">Cloud Sync Security</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Only the data you manually sync is stored in the cloud. Changes made in your dashboard remain local until you click the sync button. 
-                  {profile.lastSyncedAt && ` Last updated: ${new Date(profile.lastSyncedAt).toLocaleString()}`}
+                  Your public profile is only updated when you click Sync. This gives you full control over when changes become visible to the public. 
+                  {profile.lastSyncedAt && ` Last synced: ${new Date(profile.lastSyncedAt).toLocaleString()}`}
                 </p>
               </div>
             </div>

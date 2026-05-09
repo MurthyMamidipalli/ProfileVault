@@ -50,20 +50,22 @@ export default function PublicProfileView() {
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
-          setError("This vault exists but contains no profile data.");
+          setError("This vault document exists but the data is corrupt or empty.");
         }
         setLoading(false);
       } else {
-        setError("Professional vault not found. It may not have been synced yet.");
+        // This is the most common state if Sync hasn't been clicked
+        setError("Professional vault not found. The profile owner may not have synced their data to the cloud yet.");
         setLoading(false);
       }
     }, async (err) => {
+      // Log for developer context but use standard error UI
       const permissionError = new FirestorePermissionError({
         path: profileRef.path,
         operation: 'get',
       });
       errorEmitter.emit('permission-error', permissionError);
-      setError("Unable to access vault server. Please check your connection.");
+      setError("Unable to access the vault server. This could be due to restricted permissions or network issues.");
       setLoading(false);
     });
 
@@ -77,8 +79,8 @@ export default function PublicProfileView() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground font-black tracking-widest text-xs uppercase animate-pulse">Connecting to ProfileVault</p>
-          <p className="text-[10px] text-muted-foreground/50">Establishing secure cloud connection...</p>
+          <p className="text-muted-foreground font-black tracking-widest text-xs uppercase animate-pulse">Accessing Vault</p>
+          <p className="text-[10px] text-muted-foreground/50">Verifying secure cloud connection...</p>
         </div>
       </div>
     );
@@ -93,7 +95,7 @@ export default function PublicProfileView() {
         <div className="space-y-3">
           <h1 className="text-4xl font-black tracking-tighter text-foreground">Vault Inaccessible</h1>
           <p className="text-muted-foreground max-w-md mx-auto text-lg leading-relaxed">
-            {error || "The requested professional profile is currently offline or does not exist."}
+            {error || "The requested professional profile is currently offline or inaccessible."}
           </p>
         </div>
         <div className="flex flex-col gap-3 min-w-[240px]">
@@ -101,7 +103,7 @@ export default function PublicProfileView() {
             Retry Connection
           </Button>
           <Button asChild variant="ghost" className="text-muted-foreground">
-            <a href="/">Go to Homepage</a>
+            <a href="/">Go to Home</a>
           </Button>
         </div>
       </div>
@@ -113,7 +115,6 @@ export default function PublicProfileView() {
       {/* Header Section */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/vault-bg/1200/400')] bg-cover bg-center opacity-10 grayscale mix-blend-soft-light" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         
         <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-16 relative z-10">
@@ -123,7 +124,7 @@ export default function PublicProfileView() {
                 <UserIcon className="w-20 h-20 md:w-28 md:h-28 text-primary/30" />
               </div>
               <Badge className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground px-5 py-2 text-[10px] font-black border-4 border-background shadow-2xl tracking-[0.2em]">
-                VERIFIED
+                VERIFIED VAULT
               </Badge>
             </div>
             <div className="space-y-5 pb-2">
@@ -149,11 +150,11 @@ export default function PublicProfileView() {
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-12">
           <section className="space-y-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Contact Network</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Identity & Contact</h2>
             <Card className="glass-card border-white/5 shadow-2xl overflow-hidden">
               <CardContent className="p-8 space-y-8">
                 <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Professional Email</p>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Verified Email</p>
                   <p className="font-bold text-lg text-foreground truncate">{profile.email}</p>
                 </div>
                 {profile.phone && (
@@ -164,7 +165,7 @@ export default function PublicProfileView() {
                 )}
                 {profile.website && (
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Digital HQ</p>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/50 mb-2">Professional HQ</p>
                     <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-lg text-primary hover:underline block truncate">
                       {profile.website.replace(/^https?:\/\//, '')}
                     </a>
@@ -175,7 +176,7 @@ export default function PublicProfileView() {
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Portfolio Links</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">External Portfolios</h2>
             <div className="grid grid-cols-1 gap-4">
               {profile.portfolioLinks?.map((link) => (
                 <a 
@@ -199,7 +200,7 @@ export default function PublicProfileView() {
 
           {profile.resumes && profile.resumes.length > 0 && (
             <section className="space-y-6">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Documents</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Credentials</h2>
               <div className="space-y-3">
                 {profile.resumes.map((res) => (
                   <Button key={res.id} asChild variant="outline" className="w-full justify-start h-14 bg-white/5 border-white/5 hover:bg-white/10 font-bold group">
@@ -218,7 +219,7 @@ export default function PublicProfileView() {
         <div className="lg:col-span-8 space-y-24">
           {profile.bio && (
             <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Professional Summary</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Executive Summary</h2>
               <p className="text-3xl md:text-5xl font-medium leading-[1.3] text-foreground/90 italic font-serif">
                 "{profile.bio}"
               </p>
@@ -230,7 +231,7 @@ export default function PublicProfileView() {
           {/* Projects */}
           {profile.projects && profile.projects.length > 0 && (
             <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Selected Projects</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Featured Projects</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {profile.projects.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-smooth shadow-2xl">
@@ -257,7 +258,7 @@ export default function PublicProfileView() {
                            <Button asChild size="sm" variant="secondary" className="h-9 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold">
                              <a href={proj.url} target="_blank" rel="noopener">
                                <ExternalLink className="w-4 h-4 mr-2" />
-                               Live Link
+                               Live Demo
                              </a>
                            </Button>
                          )}
@@ -265,7 +266,7 @@ export default function PublicProfileView() {
                            <Button asChild size="sm" variant="outline" className="h-9 border-accent/20 text-accent hover:bg-accent hover:text-accent-foreground font-bold">
                              <a href={proj.documentUrl} target="_blank" rel="noopener">
                                <FileText className="w-4 h-4 mr-2" />
-                               Case Study
+                               View PDF
                              </a>
                            </Button>
                          )}
@@ -282,7 +283,7 @@ export default function PublicProfileView() {
           {/* Experience */}
           {profile.experience && profile.experience.length > 0 && (
             <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Work History</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Career Trajectory</h2>
               <div className="space-y-16">
                 {profile.experience.map((exp) => (
                   <div key={exp.id} className="relative pl-12 border-l-4 border-primary/10">
@@ -332,7 +333,7 @@ export default function PublicProfileView() {
           {/* Education */}
           {profile.education && profile.education.length > 0 && (
             <section className="space-y-12">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Qualifications</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Academic History</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {profile.education.map((edu) => (
                   <Card key={edu.id} className="glass-card border-none bg-white/[0.02] shadow-2xl hover:bg-white/[0.04] transition-smooth group p-8">
@@ -366,7 +367,7 @@ export default function PublicProfileView() {
 
       <footer className="mt-40 py-24 border-t border-border/50 text-center space-y-10 bg-white/[0.01]">
         <div className="space-y-4">
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.5em]">Authentic Portfolio Vault</p>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.5em]">Authentic Profile Vault</p>
           <div className="flex items-center justify-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/30">
               <FolderCode className="w-7 h-7 text-primary-foreground" />
