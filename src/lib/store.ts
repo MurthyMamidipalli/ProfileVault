@@ -71,6 +71,8 @@ export interface UserProfile {
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
+  sharedId?: string;
+  lastSyncedAt?: string;
 }
 
 interface ProfileStore {
@@ -91,6 +93,7 @@ interface ProfileStore {
   removePortfolioLink: (id: string) => void;
   addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
   removeResume: (id: string) => void;
+  markSynced: () => void;
 }
 
 const generateId = () => {
@@ -234,6 +237,12 @@ export const useProfileStore = create<ProfileStore>()(
           resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
         }
       })),
+      markSynced: () => set((state) => ({
+        profile: {
+          ...state.profile,
+          lastSyncedAt: new Date().toISOString()
+        }
+      }))
     }),
     { 
       name: 'profile-vault-storage',

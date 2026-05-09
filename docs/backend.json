@@ -1,8 +1,33 @@
 
 {
-  "entities": {},
+  "entities": {
+    "SharedProfile": {
+      "title": "SharedProfile",
+      "description": "A publicly accessible professional profile snapshot.",
+      "type": "object",
+      "properties": {
+        "profileData": {
+          "type": "object",
+          "description": "The full user profile data."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
   "auth": {
     "providers": ["google.com"]
   },
-  "firestore": {}
+  "firestore": {
+    "/shared-profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/SharedProfile" },
+      "description": "Publicly shared professional profiles."
+    }
+  }
 }

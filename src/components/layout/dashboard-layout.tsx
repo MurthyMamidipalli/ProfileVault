@@ -25,7 +25,8 @@ import {
   LogOut,
   Vault,
   Files,
-  FolderCode
+  FolderCode,
+  Share2
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
   { name: "AI Summary", href: "/dashboard/ai-summary", icon: Sparkles },
+  { name: "Portfolio Link", href: "/dashboard/share", icon: Share2 },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -47,7 +49,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const handleLogout = () => {
-    // For a prototype, we'll just redirect to the home page
     router.push("/");
   };
 
