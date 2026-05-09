@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,11 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function ResumesPage() {
-  const { profile, addResume, removeResume } = useProfileStore();
+  const { profile, addResume, removeResume, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [mounted, setMounted] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -42,6 +43,18 @@ export default function ResumesPage() {
   const [linkData, setLinkData] = useState({ name: '', url: '' });
   const [uploadData, setUploadData] = useState({ name: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const maxDocuments = 10;
   const currentCount = profile.resumes.length;
@@ -77,7 +90,9 @@ export default function ResumesPage() {
         return;
       }
       setSelectedFile(file);
-      setUploadData({ name: file.name });
+      if (!uploadData.name) {
+        setUploadData({ name: file.name });
+      }
     }
   };
 
@@ -118,7 +133,7 @@ export default function ResumesPage() {
     } catch (error) {
       console.error(error);
       setIsUploading(false);
-      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred during upload." });
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred." });
     }
   };
 
@@ -253,7 +268,7 @@ export default function ResumesPage() {
       {isLimitReached && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
           <AlertCircle className="w-4 h-4" />
-          You have reached the maximum limit of {maxDocuments} documents. Remove old files to add new ones.
+          You have reached the maximum limit of {maxDocuments} documents.
         </div>
       )}
 
@@ -278,14 +293,12 @@ export default function ResumesPage() {
                 <h3 className="font-bold truncate" title={doc.name}>{doc.name}</h3>
                 <p className="text-xs text-muted-foreground">Added on {doc.uploadDate}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button asChild variant="secondary" size="sm" className="w-full text-xs bg-white/5 hover:bg-white/10">
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3 h-3 mr-2" />
-                    {doc.type === 'file' ? 'View Document' : 'Open Link'}
-                  </a>
-                </Button>
-              </div>
+              <Button asChild variant="secondary" size="sm" className="w-full text-xs bg-white/5 hover:bg-white/10">
+                <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3 mr-2" />
+                  {doc.type === 'file' ? 'View Document' : 'Open Link'}
+                </a>
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -298,12 +311,8 @@ export default function ResumesPage() {
             <div className="space-y-1">
               <p className="text-lg font-semibold">No Resumes Found</p>
               <p className="text-sm text-muted-foreground max-w-xs">
-                Upload your first CV or link your LinkedIn/Indeed resume to get started.
+                Upload your first CV or link your online resumes.
               </p>
-            </div>
-            <div className="flex gap-2">
-               <Button variant="outline" onClick={() => setIsLinkDialogOpen(true)}>Add Link</Button>
-               <Button onClick={() => setIsUploadDialogOpen(true)}>Upload PDF</Button>
             </div>
           </div>
         )}

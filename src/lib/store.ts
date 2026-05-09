@@ -2,7 +2,7 @@
 "use client";
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface EducationEntry {
   id: string;
@@ -54,6 +54,8 @@ export interface UserProfile {
 
 interface ProfileStore {
   profile: UserProfile;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
   addEducation: (entry: Omit<EducationEntry, 'id'>) => void;
   updateEducation: (id: string, entry: Partial<EducationEntry>) => void;
@@ -68,9 +70,6 @@ interface ProfileStore {
 }
 
 const generateId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
@@ -83,7 +82,7 @@ export const useProfileStore = create<ProfileStore>()(
         phone: '+1 (555) 000-0000',
         address: 'San Francisco, CA',
         website: 'https://alexsterling.dev',
-        bio: '',
+        bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
         education: [
           {
             id: '1',
@@ -116,6 +115,8 @@ export const useProfileStore = create<ProfileStore>()(
         ],
         resumes: []
       },
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       setProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
       addEducation: (entry) => set((state) => ({
         profile: {
@@ -182,6 +183,11 @@ export const useProfileStore = create<ProfileStore>()(
         }
       }))
     }),
-    { name: 'profile-vault-storage' }
+    { 
+      name: 'profile-vault-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      }
+    }
   )
 );
