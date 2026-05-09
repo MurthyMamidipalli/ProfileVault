@@ -11,7 +11,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useFirestore, useAuth, useUser } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
-import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, LogIn } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, LogIn, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -26,6 +26,8 @@ export default function SharePage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [copying, setCopying] = useState(false);
 
+  const isConfigMissing = !firebaseConfig.apiKey || firebaseConfig.apiKey === "PLACEHOLDER";
+
   useEffect(() => {
     setMounted(true);
     if (_hasHydrated && !profile.sharedId) {
@@ -35,6 +37,15 @@ export default function SharePage() {
   }, [_hasHydrated, profile.sharedId, setProfile]);
 
   const handleSignIn = async () => {
+    if (isConfigMissing) {
+      toast({
+        variant: "destructive",
+        title: "Configuration Required",
+        description: "Your Firebase project is still being provisioned. Please wait a moment or check your setup."
+      });
+      return;
+    }
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -49,7 +60,7 @@ export default function SharePage() {
   };
 
   const handleSync = async () => {
-    if (firebaseConfig.apiKey === "PLACEHOLDER") {
+    if (isConfigMissing) {
       toast({
         variant: "destructive",
         title: "Configuration Missing",
@@ -152,7 +163,20 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {!user && (
+        {isConfigMissing && (
+          <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Settings className="w-8 h-8 text-destructive animate-spin" />
+              <div>
+                <p className="font-bold text-foreground">System Setup in Progress</p>
+                <p className="text-sm text-muted-foreground">We are provisioning your secure cloud infrastructure. This usually takes less than a minute.</p>
+              </div>
+            </div>
+            <Button disabled className="opacity-50">Waiting for setup...</Button>
+          </div>
+        )}
+
+        {!isConfigMissing && !user && (
           <div className="p-6 bg-primary/10 border border-primary/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Shield className="w-8 h-8 text-primary" />
@@ -220,7 +244,7 @@ export default function SharePage() {
                   size="lg" 
                   variant="secondary" 
                   className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0"
-                  disabled={!shareUrl}
+                  disabled={!shareUrl || isConfigMissing}
                 >
                   {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copying ? 'Copied' : 'Copy URL'}
@@ -228,7 +252,7 @@ export default function SharePage() {
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
+                <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced || isConfigMissing}>
                   <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Preview Portfolio
@@ -236,7 +260,7 @@ export default function SharePage() {
                 </Button>
                 <Button 
                   onClick={handleSync} 
-                  disabled={isSyncing || !shareUrl || !user} 
+                  disabled={isSyncing || !shareUrl || !user || isConfigMissing} 
                   variant={isSynced ? "ghost" : "default"}
                   className={cn(
                     !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:bg-primary/90",
