@@ -1,20 +1,12 @@
-
 /**
  * Firebase Configuration
- * 
- * To get your configuration:
- * 1. Go to the Firebase Console (https://console.firebase.google.com/)
- * 2. Select your project.
- * 3. Click the gear icon (Project Settings) > General.
- * 4. Scroll down to "Your apps" and select your Web app (or create one).
- * 5. Copy the 'firebaseConfig' object and paste the values below.
  */
 
 export const firebaseConfig = {
-  apiKey: "PLACEHOLDER",
-  authDomain: "PLACEHOLDER",
-  projectId: "PLACEHOLDER",
-  storageBucket: "PLACEHOLDER",
-  messagingSenderId: "PLACEHOLDER",
-  appId: "PLACEHOLDER"
+  apiKey: "AIzaSyDyKggsKTHI0VXpnP3YCJmuHfwQpXeN13A",
+  authDomain: "studio-2055125914-43efd.firebaseapp.com",
+  projectId: "studio-2055125914-43efd",
+  storageBucket: "studio-2055125914-43efd.firebasestorage.app",
+  messagingSenderId: "166703634125",
+  appId: "1:166703634125:web:1df0518cbe062a2313fb84"
 };
