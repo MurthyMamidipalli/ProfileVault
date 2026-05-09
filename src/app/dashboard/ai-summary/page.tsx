@@ -25,11 +25,11 @@ export default function AISummaryPage() {
   }, [_hasHydrated, profile.bio]);
 
   const handleGenerate = async () => {
-    if (profile.education.length === 0 && profile.experience.length === 0) {
+    if (profile.education.length === 0 && profile.experience.length === 0 && (profile.projects || []).length === 0) {
       toast({
         variant: "destructive",
         title: "Incomplete Profile",
-        description: "Please add some education or experience details first so the AI can summarize them."
+        description: "Please add some education, experience, or projects first so the AI can summarize them."
       });
       return;
     }
@@ -52,6 +52,11 @@ export default function AISummaryPage() {
           startDate: e.startDate,
           endDate: e.endDate,
           description: e.description
+        })),
+        projects: (profile.projects || []).map(p => ({
+          title: p.title,
+          description: p.description,
+          url: p.url
         }))
       });
       setGeneratedSummary(result.summary);
@@ -101,7 +106,7 @@ export default function AISummaryPage() {
               Generator
             </CardTitle>
             <CardDescription>
-              Our AI will analyze your {profile.education.length} education and {profile.experience.length} experience entries to craft the perfect bio.
+              Our AI will analyze your {profile.education.length} education, {profile.experience.length} experience, and {(profile.projects || []).length} project entries to craft the perfect bio.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -143,7 +148,7 @@ export default function AISummaryPage() {
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-4">
             <p className="text-xs text-muted-foreground italic">
-              Tip: The more detailed your experience and education descriptions are, the better the AI can summarize your unique skills.
+              Tip: The more detailed your experience and project descriptions are, the better the AI can summarize your unique skills.
             </p>
           </CardFooter>
         </Card>

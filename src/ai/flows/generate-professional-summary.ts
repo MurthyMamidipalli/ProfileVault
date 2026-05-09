@@ -1,6 +1,7 @@
+
 'use server';
 /**
- * @fileOverview A Genkit flow for generating a professional summary or bio based on user's education and experience details.
+ * @fileOverview A Genkit flow for generating a professional summary or bio based on user's education, experience, and projects.
  *
  * - generateProfessionalSummary - A function that handles the professional summary generation process.
  * - GenerateProfessionalSummaryInput - The input type for the generateProfessionalSummary function.
@@ -28,9 +29,16 @@ const ExperienceEntrySchema = z.object({
   description: z.string().optional().describe('A brief description of responsibilities and achievements.'),
 });
 
+const ProjectEntrySchema = z.object({
+  title: z.string().describe('The title of the project.'),
+  description: z.string().describe('A description of the project and your role.'),
+  url: z.string().optional().describe('Link to the project.'),
+});
+
 const GenerateProfessionalSummaryInputSchema = z.object({
   education: z.array(EducationEntrySchema).describe('A list of education entries for the user.').default([]),
   experience: z.array(ExperienceEntrySchema).describe('A list of professional experience entries for the user.').default([]),
+  projects: z.array(ProjectEntrySchema).describe('A list of projects worked on by the user.').default([]),
 });
 export type GenerateProfessionalSummaryInput = z.infer<typeof GenerateProfessionalSummaryInputSchema>;
 
@@ -47,7 +55,7 @@ const professionalSummaryPrompt = ai.definePrompt({
   name: 'professionalSummaryPrompt',
   input: { schema: GenerateProfessionalSummaryInputSchema },
   output: { schema: GenerateProfessionalSummaryOutputSchema },
-  prompt: `You are an AI assistant tasked with generating a concise and impactful professional summary or bio based on a user's education and experience details.
+  prompt: `You are an AI assistant tasked with generating a concise and impactful professional summary or bio based on a user's education, experience, and projects.
 Focus on highlighting key skills, achievements, and career goals.
 The summary should be engaging, professional, and ideally 3-5 sentences long. Ensure the output is only the summary text.
 
@@ -81,6 +89,20 @@ Experience:
 {{/each}}
 {{else}}
 No experience details provided.
+{{/if}}
+
+Projects:
+{{#if projects.length}}
+{{#each projects}}
+- Title: {{this.title}}
+- Description: {{this.description}}
+{{#if this.url}}
+- URL: {{this.url}}
+{{/if}}
+
+{{/each}}
+{{else}}
+No projects provided.
 {{/if}}
 
 ---END OF USER DATA---

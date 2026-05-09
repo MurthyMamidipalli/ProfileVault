@@ -20,12 +20,14 @@ import {
   Github, 
   ExternalLink,
   Calendar,
-  User as UserIcon
+  User as UserIcon,
+  FolderCode
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export default function PublicProfileView() {
   const { id } = useParams();
@@ -227,6 +229,45 @@ export default function PublicProfileView() {
 
           <Separator className="bg-border/30" />
 
+          {/* Projects Section */}
+          {profile.projects && profile.projects.length > 0 && (
+            <section className="space-y-12">
+              <h2 className="text-xs font-black uppercase tracking-[0.3em] text-primary/80">Featured Work</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {profile.projects.map((proj) => (
+                  <Card key={proj.id} className="glass-card border-none bg-white/[0.03] overflow-hidden group hover:bg-white/[0.05] transition-smooth">
+                    {proj.imageUrl && (
+                      <div className="relative h-48 w-full border-b border-white/5">
+                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
+                      </div>
+                    )}
+                    <CardHeader className="p-6">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                         <h3 className="text-xl font-black tracking-tight">{proj.title}</h3>
+                         {proj.url && (
+                           <a href={proj.url} target="_blank" rel="noopener" className="text-primary hover:text-accent transition-colors">
+                             <ExternalLink className="w-5 h-5" />
+                           </a>
+                         )}
+                      </div>
+                      {proj.date && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold mb-4">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{new Date(proj.date).getFullYear()}</span>
+                        </div>
+                      )}
+                      <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+                        {proj.description}
+                      </p>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <Separator className="bg-border/30" />
+
           {profile.experience && profile.experience.length > 0 && (
             <section className="space-y-12">
               <h2 className="text-xs font-black uppercase tracking-[0.3em] text-primary/80">Professional Timeline</h2>
@@ -313,7 +354,7 @@ export default function PublicProfileView() {
           <p className="text-muted-foreground text-xs font-black uppercase tracking-[0.4em]">Verified Vault Signature</p>
           <div className="flex items-center justify-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <UserIcon className="w-6 h-6 text-primary-foreground" />
+              <FolderCode className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="font-headline font-black text-3xl tracking-tighter">
               Profile<span className="text-primary">Vault</span>

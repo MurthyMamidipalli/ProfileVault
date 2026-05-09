@@ -45,6 +45,15 @@ export interface ResumeDocument {
   uploadDate: string;
 }
 
+export interface ProjectEntry {
+  id: string;
+  title: string;
+  description: string;
+  url?: string;
+  imageUrl?: string;
+  date?: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -56,6 +65,7 @@ export interface UserProfile {
   bio: string;
   education: EducationEntry[];
   experience: ExperienceEntry[];
+  projects: ProjectEntry[];
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
@@ -73,6 +83,9 @@ interface ProfileStore {
   addExperience: (entry: Omit<ExperienceEntry, 'id' | 'projectLinks'> & { projectLinks?: ProjectLink[] }) => void;
   updateExperience: (id: string, entry: Partial<ExperienceEntry>) => void;
   removeExperience: (id: string) => void;
+  addProject: (entry: Omit<ProjectEntry, 'id'>) => void;
+  updateProject: (id: string, entry: Partial<ProjectEntry>) => void;
+  removeProject: (id: string) => void;
   addPortfolioLink: (link: Omit<SocialLink, 'id'>) => void;
   removePortfolioLink: (id: string) => void;
   addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
@@ -117,6 +130,7 @@ const DEFAULT_PROFILE: UserProfile = {
       ]
     }
   ],
+  projects: [],
   socialLinks: [
     { id: '1', platform: 'LinkedIn', url: 'https://linkedin.com/in/alexsterling' },
     { id: '2', platform: 'Twitter', url: 'https://twitter.com/alexsterling' }
@@ -171,6 +185,24 @@ export const useProfileStore = create<ProfileStore>()(
         profile: {
           ...state.profile,
           experience: (state.profile.experience || []).filter((e) => e.id !== id)
+        }
+      })),
+      addProject: (entry) => set((state) => ({
+        profile: {
+          ...state.profile,
+          projects: [...(state.profile.projects || []), { ...entry, id: generateId() }]
+        }
+      })),
+      updateProject: (id, entry) => set((state) => ({
+        profile: {
+          ...state.profile,
+          projects: (state.profile.projects || []).map((p) => p.id === id ? { ...p, ...entry } : p)
+        }
+      })),
+      removeProject: (id) => set((state) => ({
+        profile: {
+          ...state.profile,
+          projects: (state.profile.projects || []).filter((p) => p.id !== id)
         }
       })),
       addPortfolioLink: (link) => set((state) => ({

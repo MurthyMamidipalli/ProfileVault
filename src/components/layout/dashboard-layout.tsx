@@ -25,7 +25,8 @@ import {
   LogOut,
   Vault,
   Files,
-  Share2
+  Share2,
+  FolderCode
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Personal Profile", href: "/dashboard/profile", icon: User },
   { name: "Resumes", href: "/dashboard/resumes", icon: Files },
+  { name: "Projects", href: "/dashboard/projects", icon: FolderCode },
   { name: "Education", href: "/dashboard/education", icon: GraduationCap },
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
