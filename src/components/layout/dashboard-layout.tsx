@@ -25,7 +25,6 @@ import {
   LogOut,
   Vault,
   Files,
-  Share2,
   FolderCode
 } from "lucide-react";
 import Link from "next/link";
@@ -41,7 +40,6 @@ const NAV_ITEMS = [
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
   { name: "AI Summary", href: "/dashboard/ai-summary", icon: Sparkles },
-  { name: "Share & Public Profile", href: "/dashboard/share", icon: Share2 },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
