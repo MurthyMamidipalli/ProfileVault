@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -95,18 +94,18 @@ export default function LinksPage() {
             {profile.portfolioLinks.map((link) => {
               const Icon = PLATFORM_ICONS[link.platform] || PLATFORM_ICONS.Default;
               return (
-                <Card key={link.id} className="glass-card hover:border-primary/30 transition-smooth group">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 rounded-lg bg-white/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-smooth">
+                <Card key={link.id} className="glass-card hover:border-primary/30 transition-smooth group overflow-hidden">
+                  <CardContent className="p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="p-2.5 rounded-lg bg-white/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-smooth shrink-0">
                         <Icon className="w-5 h-5" />
                       </div>
-                      <div className="max-w-[150px] sm:max-w-none">
-                        <p className="font-semibold text-sm">{link.platform}</p>
-                        <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm truncate">{link.platform}</p>
+                        <p className="text-xs text-muted-foreground truncate" title={link.url}>{link.url}</p>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 shrink-0">
                       <Button asChild size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-accent">
                         <a href={link.url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4" />
