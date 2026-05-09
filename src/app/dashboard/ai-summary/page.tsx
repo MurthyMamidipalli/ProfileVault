@@ -152,21 +152,6 @@ export default function AISummaryPage() {
             </p>
           </CardFooter>
         </Card>
-
-        {generatedSummary && (
-          <Card className="glass-card bg-accent/5 border-accent/20">
-            <CardHeader>
-              <CardTitle className="text-sm uppercase tracking-widest text-accent font-bold">Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-6 bg-background/40 rounded-lg border border-white/5">
-                <p className="italic text-muted-foreground leading-relaxed">
-                  {generatedSummary}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
