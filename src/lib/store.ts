@@ -1,4 +1,3 @@
-
 "use client";
 
 import { create } from 'zustand';
@@ -73,103 +72,107 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+const DEFAULT_PROFILE: UserProfile = {
+  name: 'Alex Sterling',
+  email: 'alex.sterling@example.com',
+  phone: '+1 (555) 000-0000',
+  address: 'San Francisco, CA',
+  website: 'https://alexsterling.dev',
+  bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
+  education: [
+    {
+      id: '1',
+      institution: 'Stanford University',
+      degree: 'Master of Science',
+      fieldOfStudy: 'Computer Science',
+      startDate: '2018-09-01',
+      endDate: '2020-06-15',
+      description: 'Focus on Human-Computer Interaction and AI.'
+    }
+  ],
+  experience: [
+    {
+      id: '1',
+      company: 'TechFlow Systems',
+      title: 'Senior Frontend Engineer',
+      location: 'Remote',
+      startDate: '2020-07-01',
+      endDate: 'Present',
+      description: 'Leading the UI modernization project across the enterprise suite.'
+    }
+  ],
+  socialLinks: [
+    { id: '1', platform: 'LinkedIn', url: 'https://linkedin.com/in/alexsterling' },
+    { id: '2', platform: 'Twitter', url: 'https://twitter.com/alexsterling' }
+  ],
+  portfolioLinks: [
+    { id: '1', platform: 'Personal Portfolio', url: 'https://alexsterling.dev' },
+    { id: '2', platform: 'GitHub', url: 'https://github.com/asterling' }
+  ],
+  resumes: []
+};
+
 export const useProfileStore = create<ProfileStore>()(
   persist(
     (set) => ({
-      profile: {
-        name: 'Alex Sterling',
-        email: 'alex.sterling@example.com',
-        phone: '+1 (555) 000-0000',
-        address: 'San Francisco, CA',
-        website: 'https://alexsterling.dev',
-        bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
-        education: [
-          {
-            id: '1',
-            institution: 'Stanford University',
-            degree: 'Master of Science',
-            fieldOfStudy: 'Computer Science',
-            startDate: '2018-09-01',
-            endDate: '2020-06-15',
-            description: 'Focus on Human-Computer Interaction and AI.'
-          }
-        ],
-        experience: [
-          {
-            id: '1',
-            company: 'TechFlow Systems',
-            title: 'Senior Frontend Engineer',
-            location: 'Remote',
-            startDate: '2020-07-01',
-            endDate: 'Present',
-            description: 'Leading the UI modernization project across the enterprise suite.'
-          }
-        ],
-        socialLinks: [
-          { id: '1', platform: 'LinkedIn', url: 'https://linkedin.com/in/alexsterling' },
-          { id: '2', platform: 'Twitter', url: 'https://twitter.com/alexsterling' }
-        ],
-        portfolioLinks: [
-          { id: '1', platform: 'Personal Portfolio', url: 'https://alexsterling.dev' },
-          { id: '2', platform: 'GitHub', url: 'https://github.com/asterling' }
-        ],
-        resumes: []
-      },
+      profile: DEFAULT_PROFILE,
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
-      setProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
+      setProfile: (updates) => set((state) => ({ 
+        profile: { ...DEFAULT_PROFILE, ...state.profile, ...updates } 
+      })),
       addEducation: (entry) => set((state) => ({
         profile: {
           ...state.profile,
-          education: [...state.profile.education, { ...entry, id: generateId() }]
+          education: [...(state.profile.education || []), { ...entry, id: generateId() }]
         }
       })),
       updateEducation: (id, entry) => set((state) => ({
         profile: {
           ...state.profile,
-          education: state.profile.education.map((e) => e.id === id ? { ...e, ...entry } : e)
+          education: (state.profile.education || []).map((e) => e.id === id ? { ...e, ...entry } : e)
         }
       })),
       removeEducation: (id) => set((state) => ({
         profile: {
           ...state.profile,
-          education: state.profile.education.filter((e) => e.id !== id)
+          education: (state.profile.education || []).filter((e) => e.id !== id)
         }
       })),
       addExperience: (entry) => set((state) => ({
         profile: {
           ...state.profile,
-          experience: [...state.profile.experience, { ...entry, id: generateId() }]
+          experience: [...(state.profile.experience || []), { ...entry, id: generateId() }]
         }
       })),
       updateExperience: (id, entry) => set((state) => ({
         profile: {
           ...state.profile,
-          experience: state.profile.experience.map((e) => e.id === id ? { ...e, ...entry } : e)
+          experience: (state.profile.experience || []).map((e) => e.id === id ? { ...e, ...entry } : e)
         }
       })),
       removeExperience: (id) => set((state) => ({
         profile: {
           ...state.profile,
-          experience: state.profile.experience.filter((e) => e.id !== id)
+          experience: (state.profile.experience || []).filter((e) => e.id !== id)
         }
       })),
       addPortfolioLink: (link) => set((state) => ({
         profile: {
           ...state.profile,
-          portfolioLinks: [...state.profile.portfolioLinks, { ...link, id: generateId() }]
+          portfolioLinks: [...(state.profile.portfolioLinks || []), { ...link, id: generateId() }]
         }
       })),
       removePortfolioLink: (id) => set((state) => ({
         profile: {
           ...state.profile,
-          portfolioLinks: state.profile.portfolioLinks.filter((l) => l.id !== id)
+          portfolioLinks: (state.profile.portfolioLinks || []).filter((l) => l.id !== id)
         }
       })),
       addResume: (resume) => set((state) => ({
         profile: {
           ...state.profile,
-          resumes: [...state.profile.resumes, { 
+          resumes: [...(state.profile.resumes || []), { 
             ...resume, 
             id: generateId(),
             uploadDate: new Date().toISOString().split('T')[0]
@@ -179,7 +182,7 @@ export const useProfileStore = create<ProfileStore>()(
       removeResume: (id) => set((state) => ({
         profile: {
           ...state.profile,
-          resumes: state.profile.resumes.filter((r) => r.id !== id)
+          resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
         }
       }))
     }),

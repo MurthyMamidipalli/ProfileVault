@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -56,8 +55,10 @@ export default function ResumesPage() {
     );
   }
 
+  // Safe access to resumes list with fallback to empty array
+  const resumesList = profile?.resumes || [];
   const maxDocuments = 10;
-  const currentCount = profile.resumes.length;
+  const currentCount = resumesList.length;
   const isLimitReached = currentCount >= maxDocuments;
 
   const handleAddLink = (e: React.FormEvent) => {
@@ -273,7 +274,7 @@ export default function ResumesPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {profile.resumes.map((doc) => (
+        {resumesList.map((doc) => (
           <Card key={doc.id} className="glass-card group hover:border-primary/40 transition-smooth">
             <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -303,7 +304,7 @@ export default function ResumesPage() {
           </Card>
         ))}
 
-        {profile.resumes.length === 0 && (
+        {resumesList.length === 0 && (
           <div className="col-span-full py-24 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-border rounded-xl bg-white/5">
             <div className="p-4 bg-secondary rounded-full">
               <FileSearch className="w-8 h-8 text-muted-foreground" />
