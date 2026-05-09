@@ -27,8 +27,8 @@ export default function JobPage() {
     setTimeout(() => {
       setIsSaving(false);
       toast({
-        title: "Employment Details Updated",
-        description: "Your current job information has been saved.",
+        title: "Job Details Updated",
+        description: "Your job information has been saved.",
       });
     }, 500);
   };
@@ -41,11 +41,14 @@ export default function JobPage() {
     );
   }
 
+  // Fallback for currentJob to prevent crash if rehydrated state is missing it
+  const currentJob = profile.currentJob || { company: '', role: '', joiningDate: '' };
+
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
-          Present Employment
+          Job
           <Briefcase className="w-7 h-7 text-primary" />
         </h1>
         <p className="text-muted-foreground">Manage your current professional status and primary role.</p>
@@ -69,7 +72,7 @@ export default function JobPage() {
                         id="company" 
                         required
                         placeholder="e.g. Acme Corp" 
-                        value={profile.currentJob.company}
+                        value={currentJob.company}
                         onChange={e => updateCurrentJob({ company: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
@@ -83,7 +86,7 @@ export default function JobPage() {
                         id="role" 
                         required
                         placeholder="e.g. Senior Software Engineer" 
-                        value={profile.currentJob.role}
+                        value={currentJob.role}
                         onChange={e => updateCurrentJob({ role: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
@@ -97,7 +100,7 @@ export default function JobPage() {
                         id="joiningDate" 
                         type="date"
                         required
-                        value={profile.currentJob.joiningDate}
+                        value={currentJob.joiningDate}
                         onChange={e => updateCurrentJob({ joiningDate: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
@@ -124,12 +127,12 @@ export default function JobPage() {
               <div className="p-4 rounded-lg bg-background/40 border border-white/5 space-y-2">
                 <p className="text-xs text-muted-foreground font-medium uppercase">Current Status</p>
                 <div className="space-y-1">
-                  <p className="font-bold text-foreground">{profile.currentJob.role || "N/A"}</p>
-                  <p className="text-sm text-primary font-medium">{profile.currentJob.company || "N/A"}</p>
+                  <p className="font-bold text-foreground">{currentJob.role || "N/A"}</p>
+                  <p className="text-sm text-primary font-medium">{currentJob.company || "N/A"}</p>
                 </div>
                 <div className="pt-2 flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
-                  <span>Joined {profile.currentJob.joiningDate ? new Date(profile.currentJob.joiningDate).toLocaleDateString() : 'N/A'}</span>
+                  <span>Joined {currentJob.joiningDate ? new Date(currentJob.joiningDate).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground italic leading-relaxed">
