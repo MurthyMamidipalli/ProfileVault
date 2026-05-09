@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 
 export default function PublicProfileView() {
@@ -55,12 +56,10 @@ export default function PublicProfileView() {
         }
         setLoading(false);
       } else {
-        // This is the most common state if Sync hasn't been clicked
         setError("Professional vault not found. The profile owner may not have synced their data to the cloud yet.");
         setLoading(false);
       }
     }, async (err) => {
-      // Log for developer context but use standard error UI
       const permissionError = new FirestorePermissionError({
         path: profileRef.path,
         operation: 'get',
@@ -122,7 +121,16 @@ export default function PublicProfileView() {
           <div className="flex flex-col md:flex-row md:items-end gap-8 w-full">
             <div className="relative shrink-0 group">
               <div className="w-40 h-40 md:w-52 md:h-52 rounded-3xl bg-card border-4 border-background shadow-2xl flex items-center justify-center overflow-hidden transition-smooth group-hover:scale-[1.02]">
-                <UserIcon className="w-20 h-20 md:w-28 md:h-28 text-primary/30" />
+                {profile.avatarUrl ? (
+                  <Image 
+                    src={profile.avatarUrl} 
+                    alt={profile.name} 
+                    fill 
+                    className="object-cover"
+                  />
+                ) : (
+                  <UserIcon className="w-20 h-20 md:w-28 md:h-28 text-primary/30" />
+                )}
               </div>
               <Badge className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground px-5 py-2 text-[10px] font-black border-4 border-background shadow-2xl tracking-[0.2em]">
                 VERIFIED VAULT

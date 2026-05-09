@@ -65,6 +65,7 @@ export interface UserProfile {
   gender: string;
   age: string;
   bio: string;
+  avatarUrl?: string;
   education: EducationEntry[];
   experience: ExperienceEntry[];
   projects: ProjectEntry[];
@@ -109,6 +110,7 @@ const DEFAULT_PROFILE: UserProfile = {
   gender: 'Male',
   age: '28',
   bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
+  avatarUrl: '',
   education: [
     {
       id: '1',

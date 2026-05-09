@@ -14,6 +14,7 @@ import {
   SidebarTrigger,
   SidebarInset
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   User, 
   GraduationCap, 
@@ -34,6 +35,7 @@ import { useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useProfileStore } from "@/lib/store";
 
 const NAV_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -52,6 +54,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
+  const { profile } = useProfileStore();
 
   const handleLogout = async () => {
     try {
@@ -141,10 +144,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-4">
                <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-                 Welcome back
+                 {profile.name}
                </div>
-               <Link href="/dashboard/profile" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-border hover:border-primary transition-smooth">
-                 <User className="w-4 h-4 text-primary" />
+               <Link href="/dashboard/profile" className="transition-smooth hover:scale-105 active:scale-95">
+                 <Avatar className="w-9 h-9 border border-border group-hover:border-primary">
+                    <AvatarImage src={profile.avatarUrl} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {profile.name?.charAt(0) || <User className="w-4 h-4" />}
+                    </AvatarFallback>
+                 </Avatar>
                </Link>
             </div>
           </header>
