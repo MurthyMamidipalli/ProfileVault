@@ -51,6 +51,8 @@ export interface UserProfile {
   phone: string;
   address: string;
   website: string;
+  gender: string;
+  age: string;
   bio: string;
   education: EducationEntry[];
   experience: ExperienceEntry[];
@@ -86,6 +88,8 @@ const DEFAULT_PROFILE: UserProfile = {
   phone: '+1 (555) 000-0000',
   address: 'San Francisco, CA',
   website: 'https://alexsterling.dev',
+  gender: 'Male',
+  age: '28',
   bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
   education: [
     {

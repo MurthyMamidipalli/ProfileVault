@@ -8,8 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, User, Mail, Phone, MapPin, Globe, Loader2 } from "lucide-react";
+import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Cake, Users } from "lucide-react";
 
 export default function ProfilePage() {
   const { profile, setProfile, _hasHydrated } = useProfileStore();
@@ -75,6 +82,44 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <div className="relative">
+                <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
+                <Select 
+                  value={profile.gender || "Prefer not to say"} 
+                  onValueChange={(value) => setProfile({ gender: value })}
+                >
+                  <SelectTrigger className="pl-10 bg-background/50">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Non-binary">Non-binary</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="age">Age</Label>
+              <div className="relative">
+                <Cake className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  id="age" 
+                  type="number"
+                  placeholder="e.g. 25"
+                  value={profile.age || ""} 
+                  onChange={(e) => setProfile({ age: e.target.value })}
+                  className="pl-10 bg-background/50" 
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">
