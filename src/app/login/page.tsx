@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -9,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Vault, LogIn, Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Vault, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { firebaseConfig } from "@/firebase/config";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +25,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
+  const isConfigMissing = !firebaseConfig.apiKey || firebaseConfig.apiKey === "PLACEHOLDER";
+
   useEffect(() => {
     if (user && !loading) {
       router.push("/dashboard");
@@ -31,6 +35,15 @@ export default function LoginPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isConfigMissing) {
+      toast({
+        variant: "destructive",
+        title: "Setup Incomplete",
+        description: "Firebase project is not yet configured. Please check your console.",
+      });
+      return;
+    }
+
     setIsAuthenticating(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -71,6 +84,15 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {isConfigMissing && (
+            <div className="mb-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-500 font-medium">
+                System setup in progress. Please wait for Firebase provisioning to complete.
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -84,6 +106,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-background/50" 
+                  disabled={isConfigMissing}
                 />
               </div>
             </div>
@@ -99,11 +122,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 bg-background/50" 
+                  disabled={isConfigMissing}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                  disabled={isConfigMissing}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -112,7 +137,7 @@ export default function LoginPage() {
             <Button 
               type="submit"
               className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={isAuthenticating}
+              disabled={isAuthenticating || isConfigMissing}
             >
               {isAuthenticating ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
