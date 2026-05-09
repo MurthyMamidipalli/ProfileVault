@@ -284,17 +284,9 @@ export const useProfileStore = create<ProfileStore>()(
       name: 'profile-vault-storage',
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
-      },
-      partialize: (state) => ({
-        ...state,
-        profile: {
-          ...state.profile,
-          // Optimization: Persist basic data and avatar, but clear heavy transient base64 fields 
-          // to avoid QuotaExceededError in localStorage. Cloud sync is the source of truth for these.
-          projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
-          resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
-        }
-      } as any)
+      }
+      // Note: Removed partialize to ensure EVERYTHING stays in local storage on refresh.
+      // Users should be mindful of browser storage limits (~5-10MB) for large assets.
     }
   )
 );
