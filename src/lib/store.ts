@@ -250,7 +250,18 @@ export const useProfileStore = create<ProfileStore>()(
       name: 'profile-vault-storage',
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
-      }
+      },
+      // Exclude large binary data from localStorage to prevent QuotaExceededError.
+      // These fields will stay in memory but won't bloat the browser's persistent storage.
+      partialize: (state) => ({
+        ...state,
+        profile: {
+          ...state.profile,
+          avatarUrl: '', // Don't persist large base64 avatar
+          projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
+          resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
+        }
+      } as any)
     }
   )
 );

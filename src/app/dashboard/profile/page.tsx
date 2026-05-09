@@ -17,7 +17,9 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Cake, Users, Camera, Trash2 } from "lucide-react";
+import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Cake, Users, Camera, Trash2, AlertCircle } from "lucide-react";
+
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 export default function ProfilePage() {
   const { profile, setProfile, _hasHydrated } = useProfileStore();
@@ -45,12 +47,35 @@ export default function ProfilePage() {
         toast({ variant: "destructive", title: "Invalid File", description: "Please upload an image." });
         return;
       }
+      
+      if (file.size > MAX_FILE_SIZE) {
+        toast({ 
+          variant: "destructive", 
+          title: "File Too Large", 
+          description: "Please select an image smaller than 1MB to ensure smooth performance." 
+        });
+        return;
+      }
+
       setIsUploading(true);
       const reader = new FileReader();
       reader.onload = (event) => {
-        setProfile({ avatarUrl: event.target?.result as string });
+        try {
+          setProfile({ avatarUrl: event.target?.result as string });
+          toast({ title: "Avatar Updated", description: "Your profile picture has been updated locally." });
+        } catch (err) {
+          toast({ 
+            variant: "destructive", 
+            title: "Storage Error", 
+            description: "The image is still too large for local storage. Please try an even smaller image." 
+          });
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      reader.onerror = () => {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not read the file." });
         setIsUploading(false);
-        toast({ title: "Avatar Updated", description: "Your profile picture has been updated." });
       };
       reader.readAsDataURL(file);
     }
@@ -74,6 +99,13 @@ export default function ProfilePage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold">Personal Profile</h1>
         <p className="text-muted-foreground">Manage your basic identity and contact information.</p>
+      </div>
+
+      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground">
+          <strong>Tip:</strong> Large images and documents are stored in memory and cleared on refresh unless you <strong>Sync</strong> them to the cloud in the <strong>Portfolio Link</strong> section.
+        </p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -102,7 +134,7 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-3 text-center sm:text-left">
                 <h4 className="font-bold">Profile Picture</h4>
-                <p className="text-sm text-muted-foreground">Upload a professional headshot for your vault.</p>
+                <p className="text-sm text-muted-foreground">Upload a professional headshot (Max 1MB).</p>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                   <input 
                     type="file" 
