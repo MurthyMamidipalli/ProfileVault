@@ -30,6 +30,14 @@ export interface SocialLink {
   url: string;
 }
 
+export interface ResumeDocument {
+  id: string;
+  name: string;
+  type: 'file' | 'link';
+  url: string;
+  uploadDate: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -41,6 +49,7 @@ export interface UserProfile {
   experience: ExperienceEntry[];
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
+  resumes: ResumeDocument[];
 }
 
 interface ProfileStore {
@@ -54,6 +63,8 @@ interface ProfileStore {
   removeExperience: (id: string) => void;
   addPortfolioLink: (link: Omit<SocialLink, 'id'>) => void;
   removePortfolioLink: (id: string) => void;
+  addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
+  removeResume: (id: string) => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -95,7 +106,8 @@ export const useProfileStore = create<ProfileStore>()(
         portfolioLinks: [
           { id: '1', platform: 'Personal Portfolio', url: 'https://alexsterling.dev' },
           { id: '2', platform: 'GitHub', url: 'https://github.com/asterling' }
-        ]
+        ],
+        resumes: []
       },
       setProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
       addEducation: (entry) => set((state) => ({
@@ -144,6 +156,22 @@ export const useProfileStore = create<ProfileStore>()(
         profile: {
           ...state.profile,
           portfolioLinks: state.profile.portfolioLinks.filter((l) => l.id !== id)
+        }
+      })),
+      addResume: (resume) => set((state) => ({
+        profile: {
+          ...state.profile,
+          resumes: [...state.profile.resumes, { 
+            ...resume, 
+            id: crypto.randomUUID(),
+            uploadDate: new Date().toISOString().split('T')[0]
+          }]
+        }
+      })),
+      removeResume: (id) => set((state) => ({
+        profile: {
+          ...state.profile,
+          resumes: state.profile.resumes.filter((r) => r.id !== id)
         }
       }))
     }),

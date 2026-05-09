@@ -23,7 +23,8 @@ import {
   LayoutDashboard, 
   Settings, 
   LogOut,
-  Vault
+  Vault,
+  Files
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Personal Profile", href: "/dashboard/profile", icon: User },
+  { name: "Resumes", href: "/dashboard/resumes", icon: Files },
   { name: "Education", href: "/dashboard/education", icon: GraduationCap },
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
@@ -105,7 +107,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-4">
                <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-                 Welcome back, Alex
+                 Welcome back
                </div>
                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-border">
                  <User className="w-4 h-4 text-primary" />
