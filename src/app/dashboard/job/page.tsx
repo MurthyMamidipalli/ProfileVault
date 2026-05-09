@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Calendar, Building2, Save, Loader2, Award, CheckCircle2, Globe } from "lucide-react";
+import { Briefcase, Calendar, Building2, Save, Loader2, Award, CheckCircle2, Globe, Laptop, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function JobPage() {
@@ -17,11 +24,12 @@ export default function JobPage() {
   const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Local state for the form so it doesn't update the store instantly
   const [formData, setFormData] = useState<CurrentJob>({
     company: '',
     role: '',
-    joiningDate: ''
+    joiningDate: '',
+    employmentType: 'Full-time',
+    workSetting: 'Remote'
   });
 
   useEffect(() => {
@@ -35,10 +43,8 @@ export default function JobPage() {
     e.preventDefault();
     setIsSaving(true);
     
-    // Update the global store
     updateCurrentJob(formData);
     
-    // Feedback delay
     setTimeout(() => {
       setIsSaving(false);
       toast({
@@ -76,7 +82,7 @@ export default function JobPage() {
                 <Award className="w-5 h-5 text-primary" />
                 Edit Job Details
               </CardTitle>
-              <CardDescription>Enter information about your current position. This will be displayed on your public portfolio.</CardDescription>
+              <CardDescription>Enter information about your current position. These options help define your professional standing.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-6">
@@ -120,6 +126,48 @@ export default function JobPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>Employment Type</Label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
+                      <Select 
+                        value={formData.employmentType} 
+                        onValueChange={(value) => setFormData({ ...formData, employmentType: value })}
+                      >
+                        <SelectTrigger className="pl-10 bg-background/50">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Full-time">Full-time</SelectItem>
+                          <SelectItem value="Part-time">Part-time</SelectItem>
+                          <SelectItem value="Contract">Contract</SelectItem>
+                          <SelectItem value="Freelance">Freelance</SelectItem>
+                          <SelectItem value="Internship">Internship</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Work Setting</Label>
+                    <div className="relative">
+                      <Laptop className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
+                      <Select 
+                        value={formData.workSetting} 
+                        onValueChange={(value) => setFormData({ ...formData, workSetting: value })}
+                      >
+                        <SelectTrigger className="pl-10 bg-background/50">
+                          <SelectValue placeholder="Select setting" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Remote">Remote</SelectItem>
+                          <SelectItem value="Hybrid">Hybrid</SelectItem>
+                          <SelectItem value="On-site">On-site</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={isSaving} className="min-w-[140px] font-bold">
@@ -154,6 +202,19 @@ export default function JobPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2 pt-1">
+                {profile.currentJob?.employmentType && (
+                  <div className="px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold uppercase tracking-wider border border-border">
+                    {profile.currentJob.employmentType}
+                  </div>
+                )}
+                {profile.currentJob?.workSetting && (
+                  <div className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider border border-accent/20">
+                    {profile.currentJob.workSetting}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span>Joined {profile.currentJob?.joiningDate ? new Date(profile.currentJob.joiningDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Join Date"}</span>

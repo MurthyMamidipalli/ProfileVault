@@ -24,7 +24,8 @@ import {
   FolderCode,
   FileText,
   AlertCircle,
-  Building2
+  Building2,
+  Laptop
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +114,6 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary selection:text-primary-foreground">
-      {/* Header Section */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
@@ -141,9 +141,21 @@ export default function PublicProfileView() {
               <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground drop-shadow-sm leading-[0.9]">{profile.name}</h1>
               <div className="flex flex-wrap gap-y-4 gap-x-10 text-muted-foreground font-bold text-sm md:text-base">
                 {profile.currentJob && profile.currentJob.company && (
-                  <span className="flex items-center gap-2.5">
-                    <Building2 className="w-5 h-5 text-accent" /> {profile.currentJob.role} at {profile.currentJob.company}
-                  </span>
+                  <div className="flex flex-col gap-2">
+                    <span className="flex items-center gap-2.5">
+                      <Building2 className="w-5 h-5 text-accent" /> {profile.currentJob.role} at {profile.currentJob.company}
+                    </span>
+                    <div className="flex gap-2">
+                      {profile.currentJob.employmentType && (
+                        <Badge variant="outline" className="text-[10px] border-primary/20 text-primary font-black uppercase tracking-widest">{profile.currentJob.employmentType}</Badge>
+                      )}
+                      {profile.currentJob.workSetting && (
+                        <Badge variant="outline" className="text-[10px] border-accent/20 text-accent font-black uppercase tracking-widest flex gap-1 items-center">
+                          <Laptop className="w-3 h-3" /> {profile.currentJob.workSetting}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 )}
                 {profile.address && (
                   <span className="flex items-center gap-2.5">
@@ -157,7 +169,6 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-20">
-        {/* Sidebar */}
         <div className="lg:col-span-4 space-y-12">
           <section className="space-y-6">
             <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Identity & Contact</h2>
@@ -235,7 +246,6 @@ export default function PublicProfileView() {
           )}
         </div>
 
-        {/* Content Area */}
         <div className="lg:col-span-8 space-y-24">
           {profile.bio && (
             <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
@@ -248,7 +258,6 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-10" />
 
-          {/* Projects */}
           {profile.projects && profile.projects.length > 0 && (
             <section className="space-y-12">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Featured Projects</h2>
@@ -300,7 +309,6 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-10" />
 
-          {/* Experience */}
           {profile.experience && profile.experience.length > 0 && (
             <section className="space-y-12">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Career Trajectory</h2>
@@ -350,7 +358,6 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-10" />
 
-          {/* Education */}
           {profile.education && profile.education.length > 0 && (
             <section className="space-y-12">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Academic History</h2>

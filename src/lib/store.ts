@@ -60,6 +60,8 @@ export interface CurrentJob {
   company: string;
   role: string;
   joiningDate: string;
+  employmentType?: string;
+  workSetting?: string;
 }
 
 export interface UserProfile {
@@ -126,7 +128,9 @@ const DEFAULT_PROFILE: UserProfile = {
   currentJob: {
     company: '',
     role: '',
-    joiningDate: ''
+    joiningDate: '',
+    employmentType: 'Full-time',
+    workSetting: 'Remote'
   },
   education: [
     {
@@ -278,8 +282,6 @@ export const useProfileStore = create<ProfileStore>()(
         ...state,
         profile: {
           ...state.profile,
-          // We keep avatarUrl to fix the refresh disappearing issue, 
-          // but partialize out heavy project binary data to avoid QuotaExceededError
           projects: state.profile.projects?.map(p => ({ ...p, imageUrl: '', documentUrl: '' })) || [],
           resumes: state.profile.resumes?.map(r => r.type === 'file' ? { ...r, url: '' } : r) || []
         }
