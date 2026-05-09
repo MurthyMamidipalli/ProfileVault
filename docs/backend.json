@@ -1,0 +1,38 @@
+
+{
+  "entities": {
+    "SharedProfile": {
+      "title": "Shared Profile",
+      "description": "A publicly visible version of a user's professional profile.",
+      "type": "object",
+      "properties": {
+        "profileData": {
+          "type": "object",
+          "description": "The full user profile data including education, experience, and links."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this profile."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["profileData", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/shared-profiles/{profileId}": {
+      "schema": "#/entities/SharedProfile",
+      "description": "Publicly shared profile data."
+    }
+  }
+}

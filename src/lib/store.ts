@@ -59,6 +59,7 @@ export interface UserProfile {
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
+  sharedId?: string;
 }
 
 interface ProfileStore {

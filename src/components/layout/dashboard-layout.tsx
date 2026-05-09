@@ -24,7 +24,8 @@ import {
   Settings, 
   LogOut,
   Vault,
-  Files
+  Files,
+  Share2
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Portfolio & Links", href: "/dashboard/links", icon: LinkIcon },
   { name: "AI Summary", href: "/dashboard/ai-summary", icon: Sparkles },
+  { name: "Share & Public Profile", href: "/dashboard/share", icon: Share2 },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
