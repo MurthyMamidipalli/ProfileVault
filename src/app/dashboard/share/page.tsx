@@ -18,7 +18,7 @@ export default function SharePage() {
   const { toast } = useToast();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [copying, setCopying] = useState(false);
 
   useEffect(() => {
@@ -33,52 +33,45 @@ export default function SharePage() {
     if (!db || !profile.sharedId) {
       toast({
         variant: "destructive",
-        title: "Sync Error",
-        description: "Firestore is not initialized or shared ID is missing."
+        title: "Configuration Error",
+        description: "Firestore connection or Shared ID is missing."
       });
       return;
     }
 
-    setIsPublishing(true);
+    setIsSyncing(true);
     
     const profileRef = doc(db, "shared-profiles", profile.sharedId);
     
-    // We create a clean object for Firestore
-    const data = {
-      profileData: JSON.parse(JSON.stringify(profile)), // Ensure no non-serializable data
+    // Create a clean, serializable object
+    const syncData = {
+      profileData: JSON.parse(JSON.stringify(profile)),
       updatedAt: serverTimestamp(),
-      createdAt: profile.lastSyncedAt ? null : serverTimestamp() 
     };
 
-    // Remove the createdAt field if it's already synced to avoid overwriting with serverTimestamp
-    if (profile.lastSyncedAt) {
-      delete data.createdAt;
-    }
-
-    setDoc(profileRef, data, { merge: true })
+    setDoc(profileRef, syncData, { merge: true })
       .then(() => {
         markSynced();
         toast({
-          title: "Vault Synced",
-          description: "Your public profile is now live and updated.",
+          title: "Success",
+          description: "Your professional portfolio has been synced to the cloud.",
         });
       })
       .catch(async (err) => {
-        console.error("Firestore sync error:", err);
         const permissionError = new FirestorePermissionError({
           path: profileRef.path,
           operation: 'write',
-          requestResourceData: data
+          requestResourceData: syncData
         });
         errorEmitter.emit('permission-error', permissionError);
         toast({
           variant: "destructive",
-          title: "Sync Failed",
-          description: err.message || "You might not have permission to write to this path."
+          title: "Sync Error",
+          description: "Permissions denied or network failure. Ensure you are online."
         });
       })
       .finally(() => {
-        setIsPublishing(false);
+        setIsSyncing(false);
       });
   };
 
@@ -90,7 +83,7 @@ export default function SharePage() {
     if (!shareUrl) return;
     setCopying(true);
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Link Copied", description: "Profile URL copied to clipboard." });
+    toast({ title: "Copied", description: "Portfolio link copied to clipboard." });
     setTimeout(() => setCopying(false), 2000);
   };
 
@@ -107,23 +100,23 @@ export default function SharePage() {
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
+        <h1 className="text-3xl font-headline font-bold flex items-center gap-3 text-foreground">
           Portfolio Link
           <Share2 className="w-6 h-6 text-primary" />
         </h1>
-        <p className="text-muted-foreground">Sync your professional vault to the cloud and share your unique portfolio link with the world.</p>
+        <p className="text-muted-foreground">Host your professional vault in the cloud and share your unique portfolio link with recruiters and peers.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
         {!isSynced && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
-            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-4">
+            <AlertTriangle className="w-6 h-6 text-primary shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-500">Action Required: Profile Not Synced</p>
-              <p className="text-xs text-amber-500/80">Your public link exists, but it will show an error until you sync your data for the first time.</p>
+              <p className="text-sm font-bold text-primary">Portfolio Not Yet Synced</p>
+              <p className="text-xs text-muted-foreground">Your link is generated but won't show your data until you perform your first sync.</p>
             </div>
-            <Button size="sm" onClick={handleSync} disabled={isPublishing} className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-lg">
-              {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
+            <Button size="sm" onClick={handleSync} disabled={isSyncing}>
+              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Data Now"}
             </Button>
           </div>
         )}
@@ -131,76 +124,68 @@ export default function SharePage() {
         <Card className="glass-card border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-12 -mr-8 -mt-8 bg-primary/10 rounded-full blur-3xl" />
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
               <Globe className="w-5 h-5 text-accent" />
-              Public Hosting
+              Public Portfolio Access
             </CardTitle>
             <CardDescription>
-              Your professional identity is hosted at a secure, permanent URL.
+              Your identity is securely hosted at a permanent, shareable URL.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className={cn(
-                "p-6 border rounded-xl space-y-5 transition-smooth",
-                isSynced ? "bg-accent/5 border-accent/20" : "bg-muted/50 border-border"
-              )}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Share Link Status</span>
-                  <span className={cn(
-                    "flex items-center gap-1.5 text-xs font-bold",
-                    isSynced ? "text-green-400" : "text-muted-foreground"
-                  )}>
-                    {isSynced ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        LIVE & ACCESSIBLE
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        AWAITING FIRST SYNC
-                      </>
-                    )}
-                  </span>
+            <div className={cn(
+              "p-6 border rounded-xl space-y-5 transition-smooth",
+              isSynced ? "bg-accent/5 border-accent/20" : "bg-muted/50 border-border"
+            )}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">URL Status</span>
+                <span className={cn(
+                  "flex items-center gap-1.5 text-xs font-bold",
+                  isSynced ? "text-accent" : "text-muted-foreground"
+                )}>
+                  {isSynced ? (
+                    <><CheckCircle2 className="w-4 h-4" /> ACTIVE & ONLINE</>
+                  ) : (
+                    <><RefreshCw className="w-4 h-4" /> AWAITING SYNC</>
+                  )}
+                </span>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
+                  {shareUrl || "Generating ID..."}
                 </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all">
-                    {shareUrl || "Generating link..."}
-                  </div>
-                  <Button 
-                    onClick={handleCopy} 
-                    size="lg" 
-                    variant="secondary" 
-                    className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0"
-                    disabled={!shareUrl}
-                  >
-                    {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                    {copying ? 'Copied' : 'Copy Link'}
-                  </Button>
-                </div>
+                <Button 
+                  onClick={handleCopy} 
+                  size="lg" 
+                  variant="secondary" 
+                  className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0"
+                  disabled={!shareUrl}
+                >
+                  {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                  {copying ? 'Copied' : 'Copy URL'}
+                </Button>
+              </div>
 
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
-                    <a href={shareUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Preview Public Page
-                    </a>
-                  </Button>
-                  <Button 
-                    onClick={handleSync} 
-                    disabled={isPublishing || !shareUrl} 
-                    variant={isSynced ? "ghost" : "default"}
-                    className={cn(
-                      !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20",
-                      isSynced && "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                    {isSynced ? 'Update Public Profile' : 'Sync Profile Now'}
-                  </Button>
-                </div>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
+                  <a href={shareUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Preview Live Profile
+                  </a>
+                </Button>
+                <Button 
+                  onClick={handleSync} 
+                  disabled={isSyncing || !shareUrl} 
+                  variant={isSynced ? "ghost" : "default"}
+                  className={cn(
+                    !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:bg-primary/90",
+                    isSynced && "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  {isSynced ? 'Push Latest Updates' : 'Sync Profile to Cloud'}
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -208,12 +193,10 @@ export default function SharePage() {
             <div className="flex gap-4 items-start">
               <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-sm font-bold">Privacy & Security</p>
+                <p className="text-sm font-bold text-foreground">Data Privacy Note</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {profile.lastSyncedAt 
-                    ? `Last synced on ${new Date(profile.lastSyncedAt).toLocaleString()}. `
-                    : "Your profile has not been synced to the cloud yet. "}
-                  Only the data you manually sync is visible publicly. Use the sync button to push updates.
+                  Only the data you manually sync is stored in the cloud. Changes made in your dashboard remain local until you click the sync button. 
+                  {profile.lastSyncedAt && ` Last updated: ${new Date(profile.lastSyncedAt).toLocaleString()}`}
                 </p>
               </div>
             </div>
