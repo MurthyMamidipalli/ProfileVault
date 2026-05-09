@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProfileStore } from "@/lib/store";
 import { generateProfessionalSummary } from "@/ai/flows/generate-professional-summary";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, Copy, RefreshCw, CheckCircle2 } from "lucide-react";
 
 export default function AISummaryPage() {
-  const { profile, setProfile } = useProfileStore();
+  const { profile, setProfile, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [generatedSummary, setGeneratedSummary] = useState(profile.bio || '');
+  const [generatedSummary, setGeneratedSummary] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+    if (_hasHydrated) {
+      setGeneratedSummary(profile.bio || '');
+    }
+  }, [_hasHydrated, profile.bio]);
 
   const handleGenerate = async () => {
     if (profile.education.length === 0 && profile.experience.length === 0) {
@@ -65,6 +73,14 @@ export default function AISummaryPage() {
     navigator.clipboard.writeText(generatedSummary);
     toast({ title: "Copied", description: "Copied to clipboard." });
   };
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">

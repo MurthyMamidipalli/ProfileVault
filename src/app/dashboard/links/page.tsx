@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,8 @@ import {
   Twitter, 
   Linkedin, 
   ExternalLink,
-  Code
+  Code,
+  Loader2
 } from "lucide-react";
 
 const PLATFORM_ICONS: Record<string, any> = {
@@ -28,10 +30,15 @@ const PLATFORM_ICONS: Record<string, any> = {
 };
 
 export default function LinksPage() {
-  const { profile, addPortfolioLink, removePortfolioLink } = useProfileStore();
+  const { profile, addPortfolioLink, removePortfolioLink, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [platform, setPlatform] = useState('');
   const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +48,14 @@ export default function LinksPage() {
     setUrl('');
     toast({ title: "Link Added", description: `Saved your ${platform} link.` });
   };
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">

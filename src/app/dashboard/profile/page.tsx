@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useEffect, useState } from "react";
 import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Save, User, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { Save, User, Mail, Phone, MapPin, Globe, Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
-  const { profile, setProfile } = useProfileStore();
+  const { profile, setProfile, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +27,14 @@ export default function ProfilePage() {
       description: "Your personal details have been saved successfully.",
     });
   };
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

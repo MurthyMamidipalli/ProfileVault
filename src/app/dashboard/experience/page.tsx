@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProfileStore, ExperienceEntry } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,12 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Plus, Trash2, Calendar, Pencil, MapPin } from "lucide-react";
+import { Briefcase, Plus, Trash2, Calendar, Pencil, MapPin, Loader2 } from "lucide-react";
 
 export default function ExperiencePage() {
-  const { profile, addExperience, removeExperience, updateExperience } = useProfileStore();
+  const { profile, addExperience, removeExperience, updateExperience, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<ExperienceEntry, 'id'>>({
@@ -33,6 +34,10 @@ export default function ExperiencePage() {
     endDate: '',
     description: ''
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleOpen = (entry?: ExperienceEntry) => {
     if (entry) {
@@ -70,6 +75,14 @@ export default function ExperiencePage() {
     }
     setIsOpen(false);
   };
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
