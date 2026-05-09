@@ -28,25 +28,31 @@ import {
   Upload, 
   Image as ImageIcon,
   Calendar,
-  X
+  X,
+  FileText,
+  Paperclip
 } from "lucide-react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export default function ProjectsPage() {
   const { profile, addProject, updateProject, removeProject, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [formData, setFormData] = useState<Omit<ProjectEntry, 'id'>>({
     title: '',
     description: '',
     url: '',
     imageUrl: '',
+    documentUrl: '',
+    documentName: '',
     date: ''
   });
 
@@ -62,6 +68,8 @@ export default function ProjectsPage() {
         description: entry.description,
         url: entry.url || '',
         imageUrl: entry.imageUrl || '',
+        documentUrl: entry.documentUrl || '',
+        documentName: entry.documentName || '',
         date: entry.date || ''
       });
     } else {
@@ -71,33 +79,51 @@ export default function ProjectsPage() {
         description: '',
         url: '',
         imageUrl: '',
+        documentUrl: '',
+        documentName: '',
         date: ''
       });
     }
     setIsOpen(true);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        toast({ 
-          variant: "destructive", 
-          title: "Invalid File Type", 
-          description: "Please upload an image file." 
-        });
+        toast({ variant: "destructive", title: "Invalid File", description: "Please upload an image." });
         return;
       }
-      
-      setIsUploading(true);
+      setIsProcessing(true);
       const reader = new FileReader();
       reader.onload = (event) => {
         setFormData({ ...formData, imageUrl: event.target?.result as string });
-        setIsUploading(false);
+        setIsProcessing(false);
       };
-      reader.onerror = () => {
-        toast({ variant: "destructive", title: "Error", description: "Could not read image file." });
-        setIsUploading(false);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        toast({ variant: "destructive", title: "Invalid File", description: "Please upload a PDF document." });
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "File too large", description: "PDF must be under 2MB for storage limits." });
+        return;
+      }
+      setIsProcessing(true);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFormData({ 
+          ...formData, 
+          documentUrl: event.target?.result as string,
+          documentName: file.name
+        });
+        setIsProcessing(false);
       };
       reader.readAsDataURL(file);
     }
@@ -139,12 +165,12 @@ export default function ProjectsPage() {
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] glass-card max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[650px] glass-card max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Edit' : 'Add'} Project</DialogTitle>
-              <DialogDescription>Provide details about your project and optionally upload a cover image.</DialogDescription>
+              <DialogDescription>Provide details about your project, upload a cover image, or attach a PDF document.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label>Project Title</Label>
@@ -166,7 +192,7 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Project URL (Optional)</Label>
+                    <Label>Live URL (Optional)</Label>
                     <Input 
                       type="url"
                       placeholder="https://github.com/..." 
@@ -180,58 +206,60 @@ export default function ProjectsPage() {
                   <Label>Description</Label>
                   <Textarea 
                     required
-                    placeholder="Describe what you built, the technologies used, and your impact..." 
+                    placeholder="Describe what you built and the impact it had..." 
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
-                    className="resize-none h-32"
+                    className="resize-none h-24"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Cover Image (Optional)</Label>
-                  <div className="flex flex-col gap-4">
-                    {formData.imageUrl ? (
-                      <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border">
-                        <Image 
-                          src={formData.imageUrl} 
-                          alt="Project Preview" 
-                          fill 
-                          className="object-cover" 
-                        />
-                        <Button 
-                          type="button" 
-                          size="icon" 
-                          variant="destructive" 
-                          className="absolute top-2 right-2 h-8 w-8"
-                          onClick={() => setFormData({...formData, imageUrl: ''})}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth"
-                      >
-                        <input 
-                          type="file" 
-                          ref={fileInputRef} 
-                          onChange={handleFileChange} 
-                          className="hidden" 
-                          accept="image/*"
-                        />
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">Click to upload project cover image</p>
-                        <p className="text-xs text-muted-foreground/50 mt-1">PNG, JPG, or WEBP supported.</p>
-                      </div>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Cover Image</Label>
+                    <div 
+                      onClick={() => imageInputRef.current?.click()}
+                      className={cn(
+                        "relative border-2 border-dashed border-border rounded-lg h-32 flex flex-col items-center justify-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth overflow-hidden",
+                        formData.imageUrl && "border-primary/50"
+                      )}
+                    >
+                      <input type="file" ref={imageInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+                      {formData.imageUrl ? (
+                        <Image src={formData.imageUrl} alt="Preview" fill className="object-cover opacity-50" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-muted-foreground mb-1" />
+                      )}
+                      <span className="text-xs font-medium z-10">{formData.imageUrl ? "Change Image" : "Upload Image"}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Project Document (PDF)</Label>
+                    <div 
+                      onClick={() => docInputRef.current?.click()}
+                      className={cn(
+                        "border-2 border-dashed border-border rounded-lg h-32 flex flex-col items-center justify-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth",
+                        formData.documentUrl && "border-accent/50 bg-accent/5"
+                      )}
+                    >
+                      <input type="file" ref={docInputRef} onChange={handleDocChange} className="hidden" accept=".pdf" />
+                      {formData.documentUrl ? (
+                        <>
+                          <FileText className="w-6 h-6 text-accent mb-1" />
+                          <span className="text-[10px] text-accent font-bold truncate max-w-[120px]">{formData.documentName}</span>
+                        </>
+                      ) : (
+                        <Paperclip className="w-6 h-6 text-muted-foreground mb-1" />
+                      )}
+                      <span className="text-xs font-medium">{formData.documentUrl ? "Change PDF" : "Attach PDF"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={isUploading}>
-                  {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                <Button type="submit" disabled={isProcessing}>
+                  {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {editingId ? 'Save Changes' : 'Add Project'}
                 </Button>
               </DialogFooter>
@@ -243,16 +271,20 @@ export default function ProjectsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((proj) => (
           <Card key={proj.id} className="glass-card overflow-hidden group flex flex-col hover:border-accent/40 transition-smooth">
-            {proj.imageUrl && (
-              <div className="relative h-48 w-full border-b border-border">
+            <div className="relative h-48 w-full border-b border-border bg-muted/20">
+              {proj.imageUrl ? (
                 <Image 
                   src={proj.imageUrl} 
                   alt={proj.title} 
                   fill 
                   className="object-cover group-hover:scale-105 transition-smooth" 
                 />
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <FolderCode className="w-12 h-12 text-muted-foreground/30" />
+                </div>
+              )}
+            </div>
             <CardHeader className="p-5 pb-2">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -279,14 +311,24 @@ export default function ProjectsPage() {
                 {proj.description}
               </p>
               
-              {proj.url && (
-                <Button asChild variant="secondary" size="sm" className="w-full bg-white/5 hover:bg-white/10 mt-auto">
-                  <a href={proj.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                    View Live Project
-                  </a>
-                </Button>
-              )}
+              <div className="space-y-2 mt-auto">
+                {proj.url && (
+                  <Button asChild variant="secondary" size="sm" className="w-full bg-white/5 hover:bg-white/10">
+                    <a href={proj.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                      View Live Project
+                    </a>
+                  </Button>
+                )}
+                {proj.documentUrl && (
+                  <Button asChild variant="outline" size="sm" className="w-full border-accent/20 text-accent hover:bg-accent/5">
+                    <a href={proj.documentUrl} target="_blank" rel="noopener noreferrer">
+                      <FileText className="w-3.5 h-3.5 mr-2" />
+                      View Project PDF
+                    </a>
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -297,15 +339,8 @@ export default function ProjectsPage() {
               <div className="p-4 bg-secondary rounded-full">
                 <FolderCode className="w-8 h-8 text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <p className="text-lg font-semibold">No Projects Found</p>
-                <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  Start showcasing your work by adding your first project entry.
-                </p>
-              </div>
-              <Button onClick={() => handleOpen()} variant="outline" className="mt-2">
-                Add Project Now
-              </Button>
+              <p className="text-lg font-semibold">No Projects Found</p>
+              <Button onClick={() => handleOpen()} variant="outline">Add Project Now</Button>
             </div>
           </div>
         )}

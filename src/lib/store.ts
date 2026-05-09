@@ -51,6 +51,8 @@ export interface ProjectEntry {
   description: string;
   url?: string;
   imageUrl?: string;
+  documentUrl?: string;
+  documentName?: string;
   date?: string;
 }
 

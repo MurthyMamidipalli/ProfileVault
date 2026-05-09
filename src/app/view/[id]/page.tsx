@@ -21,7 +21,8 @@ import {
   ExternalLink,
   Calendar,
   User as UserIcon,
-  FolderCode
+  FolderCode,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -244,11 +245,6 @@ export default function PublicProfileView() {
                     <CardHeader className="p-6">
                       <div className="flex items-center justify-between gap-2 mb-2">
                          <h3 className="text-xl font-black tracking-tight">{proj.title}</h3>
-                         {proj.url && (
-                           <a href={proj.url} target="_blank" rel="noopener" className="text-primary hover:text-accent transition-colors">
-                             <ExternalLink className="w-5 h-5" />
-                           </a>
-                         )}
                       </div>
                       {proj.date && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold mb-4">
@@ -256,9 +252,27 @@ export default function PublicProfileView() {
                           <span>{new Date(proj.date).getFullYear()}</span>
                         </div>
                       )}
-                      <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+                      <p className="text-sm text-muted-foreground leading-relaxed font-medium mb-6">
                         {proj.description}
                       </p>
+                      <div className="flex flex-wrap gap-2">
+                         {proj.url && (
+                           <Button asChild size="sm" variant="secondary" className="h-8 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold">
+                             <a href={proj.url} target="_blank" rel="noopener">
+                               <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                               View Live
+                             </a>
+                           </Button>
+                         )}
+                         {proj.documentUrl && (
+                           <Button asChild size="sm" variant="outline" className="h-8 border-accent/20 text-accent hover:bg-accent hover:text-accent-foreground font-bold">
+                             <a href={proj.documentUrl} target="_blank" rel="noopener">
+                               <FileText className="w-3.5 h-3.5 mr-2" />
+                               View Case Study
+                             </a>
+                           </Button>
+                         )}
+                      </div>
                     </CardHeader>
                   </Card>
                 ))}
