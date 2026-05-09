@@ -87,7 +87,6 @@ export default function JobPage() {
                       <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="company" 
-                        required
                         placeholder="e.g. Acme Corp" 
                         value={formData.company}
                         onChange={e => setFormData({ ...formData, company: e.target.value })}
@@ -101,7 +100,6 @@ export default function JobPage() {
                       <Award className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="role" 
-                        required
                         placeholder="e.g. Senior Software Engineer" 
                         value={formData.role}
                         onChange={e => setFormData({ ...formData, role: e.target.value })}
@@ -116,7 +114,6 @@ export default function JobPage() {
                       <Input 
                         id="joiningDate" 
                         type="date"
-                        required
                         value={formData.joiningDate}
                         onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
                         className="pl-10 bg-background/50"
