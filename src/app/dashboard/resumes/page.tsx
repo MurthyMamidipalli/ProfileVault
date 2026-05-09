@@ -25,7 +25,8 @@ import {
   Upload, 
   Link as LinkIcon,
   FileSearch,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,9 +37,11 @@ export default function ResumesPage() {
   
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [linkData, setLinkData] = useState({ name: '', url: '' });
   const [uploadData, setUploadData] = useState({ name: '' });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const maxDocuments = 10;
   const currentCount = profile.resumes.length;
@@ -65,25 +68,58 @@ export default function ResumesPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type !== 'application/pdf') {
+        toast({ 
+          variant: "destructive", 
+          title: "Invalid File Type", 
+          description: "Please upload a PDF document." 
+        });
+        return;
+      }
+      setSelectedFile(file);
       setUploadData({ name: file.name });
     }
   };
 
-  const handleMockUpload = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLimitReached) {
-       toast({ variant: "destructive", title: "Limit Reached", description: "You have reached the maximum of 10 documents." });
-       return;
+    if (isLimitReached) return;
+    if (!selectedFile) {
+      toast({ variant: "destructive", title: "No file selected", description: "Please choose a PDF to upload." });
+      return;
     }
-    
-    addResume({
-      name: uploadData.name || "Resume_Upload.pdf",
-      url: "#", 
-      type: 'file'
-    });
-    setUploadData({ name: '' });
-    setIsUploadDialogOpen(false);
-    toast({ title: "Document Uploaded", description: "Resume document added to your vault." });
+
+    setIsUploading(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        
+        addResume({
+          name: uploadData.name || selectedFile.name,
+          url: dataUrl,
+          type: 'file'
+        });
+
+        toast({ title: "Upload Success", description: `${selectedFile.name} has been added to your vault.` });
+        setIsUploading(false);
+        setIsUploadDialogOpen(false);
+        setUploadData({ name: '' });
+        setSelectedFile(null);
+      };
+
+      reader.onerror = () => {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not read the file." });
+        setIsUploading(false);
+      };
+
+      reader.readAsDataURL(selectedFile);
+    } catch (error) {
+      console.error(error);
+      setIsUploading(false);
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred during upload." });
+    }
   };
 
   const triggerFileSelect = () => {
@@ -152,15 +188,15 @@ export default function ResumesPage() {
             <DialogTrigger asChild>
               <Button disabled={isLimitReached} className="flex items-center gap-2">
                 <Upload className="w-4 h-4" />
-                Upload Doc
+                Upload PDF
               </Button>
             </DialogTrigger>
             <DialogContent className="glass-card">
               <DialogHeader>
                 <DialogTitle>Upload Resume Document</DialogTitle>
-                <DialogDescription>Select a PDF or Word document from your device.</DialogDescription>
+                <DialogDescription>Select a PDF from your device to store in your vault.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleMockUpload} className="space-y-4 pt-4">
+              <form onSubmit={handleUploadSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Document Name (Display Label)</Label>
                   <Input 
@@ -172,23 +208,41 @@ export default function ResumesPage() {
                 </div>
                 <div 
                   onClick={triggerFileSelect}
-                  className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth"
+                  className={cn(
+                    "border-2 border-dashed border-border rounded-lg p-8 text-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth",
+                    selectedFile && "border-primary/50 bg-primary/5"
+                  )}
                 >
                    <input 
                      type="file" 
                      ref={fileInputRef} 
                      onChange={handleFileChange} 
                      className="hidden" 
-                     accept=".pdf,.doc,.docx"
+                     accept=".pdf"
                    />
-                   <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                   <p className="text-sm text-muted-foreground">
-                     {uploadData.name ? `Selected: ${uploadData.name}` : "Click to select file"}
+                   {selectedFile ? (
+                     <FileText className="w-8 h-8 mx-auto text-primary mb-2" />
+                   ) : (
+                     <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                   )}
+                   <p className="text-sm font-medium">
+                     {selectedFile ? selectedFile.name : "Click to select PDF"}
                    </p>
-                   <p className="text-xs text-muted-foreground/50 mt-1">PDF, DOCX up to 5MB (Simulation)</p>
+                   <p className="text-xs text-muted-foreground/50 mt-1">
+                     Only PDF files are supported in this vault.
+                   </p>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={!uploadData.name}>Complete Upload</Button>
+                  <Button type="submit" disabled={!selectedFile || isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Store in Vault'
+                    )}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -249,7 +303,7 @@ export default function ResumesPage() {
             </div>
             <div className="flex gap-2">
                <Button variant="outline" onClick={() => setIsLinkDialogOpen(true)}>Add Link</Button>
-               <Button onClick={() => setIsUploadDialogOpen(true)}>Upload File</Button>
+               <Button onClick={() => setIsUploadDialogOpen(true)}>Upload PDF</Button>
             </div>
           </div>
         )}
