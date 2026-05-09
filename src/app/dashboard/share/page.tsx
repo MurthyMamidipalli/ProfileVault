@@ -7,79 +7,116 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { useFirestore, useAuth, useUser } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
-import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { firebaseConfig } from "@/firebase/config";
 
 export default function SharePage() {
   const { profile, setProfile, markSynced, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
   const db = useFirestore();
+  const auth = useAuth();
+  const { user, loading: authLoading } = useUser();
+  
   const [mounted, setMounted] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Ensure a stable sharedId is generated once and saved to the store
     if (_hasHydrated && !profile.sharedId) {
       const newId = Math.random().toString(36).substring(2, 12);
       setProfile({ sharedId: newId });
     }
   }, [_hasHydrated, profile.sharedId, setProfile]);
 
+  const handleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      toast({ title: "Authenticated", description: "You can now sync your profile to the cloud." });
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Sign In Failed", 
+        description: error.message || "Could not authenticate with Google." 
+      });
+    }
+  };
+
   const handleSync = async () => {
-    if (!db) {
+    if (firebaseConfig.apiKey === "PLACEHOLDER") {
       toast({
         variant: "destructive",
-        title: "Connection Error",
-        description: "Firestore is not initialized. Please check your connection."
+        title: "Configuration Missing",
+        description: "Firebase project is not fully configured yet. Please check your setup."
       });
       return;
     }
 
-    // Ensure we have an ID before syncing
-    let currentId = profile.sharedId;
-    if (!currentId) {
-      currentId = Math.random().toString(36).substring(2, 12);
-      setProfile({ sharedId: currentId });
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in with Google to securely sync your profile."
+      });
+      return;
+    }
+
+    if (!db) {
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Could not connect to the vault server."
+      });
+      return;
     }
 
     setIsSyncing(true);
     
-    const profileRef = doc(db, "shared-profiles", currentId);
-    
-    // Create a clean, serializable object for sync
-    const syncData = {
-      profileData: JSON.parse(JSON.stringify({
-        ...profile,
-        sharedId: currentId // Ensure the ID is inside the payload too
-      })),
-      updatedAt: serverTimestamp(),
-      publicId: currentId
-    };
+    try {
+      const currentId = profile.sharedId || Math.random().toString(36).substring(2, 12);
+      if (!profile.sharedId) setProfile({ sharedId: currentId });
 
-    setDoc(profileRef, syncData, { merge: true })
-      .then(() => {
-        markSynced();
-        toast({
-          title: "Profile Synced",
-          description: "Your professional vault is now live and updated in the cloud.",
-        });
-      })
-      .catch(async (err) => {
+      const profileRef = doc(db, "shared-profiles", currentId);
+      
+      const syncData = {
+        profileData: JSON.parse(JSON.stringify({
+          ...profile,
+          sharedId: currentId,
+          ownerId: user.uid
+        })),
+        updatedAt: serverTimestamp(),
+        createdAt: profile.lastSyncedAt ? undefined : serverTimestamp(),
+      };
+
+      await setDoc(profileRef, syncData, { merge: true });
+      markSynced();
+      toast({
+        title: "Profile Synced",
+        description: "Your professional vault is now live and secure in the cloud.",
+      });
+    } catch (err: any) {
+      if (err.code === 'permission-denied') {
         const permissionError = new FirestorePermissionError({
-          path: profileRef.path,
+          path: `shared-profiles/${profile.sharedId}`,
           operation: 'write',
-          requestResourceData: syncData
+          requestResourceData: profile
         });
         errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsSyncing(false);
-      });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Sync Failed",
+          description: err.message || "An unexpected error occurred."
+        });
+      }
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const shareUrl = typeof window !== 'undefined' && profile.sharedId 
@@ -94,7 +131,7 @@ export default function SharePage() {
     setTimeout(() => setCopying(false), 2000);
   };
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted || !_hasHydrated || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -115,12 +152,28 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {!isSynced && (
+        {!user && (
+          <div className="p-6 bg-primary/10 border border-primary/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Shield className="w-8 h-8 text-primary" />
+              <div>
+                <p className="font-bold text-foreground">Secure Synchronization</p>
+                <p className="text-sm text-muted-foreground">Sign in to securely own and update your public profile link.</p>
+              </div>
+            </div>
+            <Button onClick={handleSignIn} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign in with Google
+            </Button>
+          </div>
+        )}
+
+        {user && !isSynced && (
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
             <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-500">Not Synced to Cloud</p>
-              <p className="text-xs text-muted-foreground">Your public URL exists, but it currently leads to an empty page. Click "Sync" to go live.</p>
+              <p className="text-sm font-bold text-amber-500">Ready to Go Live</p>
+              <p className="text-xs text-muted-foreground">Your data is ready. Click "Sync Now" to publish your vault.</p>
             </div>
             <Button size="sm" onClick={handleSync} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
               {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
@@ -136,7 +189,7 @@ export default function SharePage() {
               Public Portfolio URL
             </CardTitle>
             <CardDescription>
-              Your identity is hosted at a permanent, shareable address.
+              Your professional identity is hosted at this permanent address.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -160,7 +213,7 @@ export default function SharePage() {
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
-                  {shareUrl || "Preparing link..."}
+                  {shareUrl || "Generating your link..."}
                 </div>
                 <Button 
                   onClick={handleCopy} 
@@ -183,7 +236,7 @@ export default function SharePage() {
                 </Button>
                 <Button 
                   onClick={handleSync} 
-                  disabled={isSyncing || !shareUrl} 
+                  disabled={isSyncing || !shareUrl || !user} 
                   variant={isSynced ? "ghost" : "default"}
                   className={cn(
                     !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:bg-primary/90",
@@ -200,9 +253,9 @@ export default function SharePage() {
             <div className="flex gap-4 items-start">
               <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-sm font-bold text-foreground">Cloud Sync Security</p>
+                <p className="text-sm font-bold text-foreground">Authenticated Sync</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your public profile is only updated when you click Sync. This gives you full control over when changes become visible to the public. 
+                  Your public profile is only updated when you click Sync while signed in.
                   {profile.lastSyncedAt && ` Last synced: ${new Date(profile.lastSyncedAt).toLocaleString()}`}
                 </p>
               </div>

@@ -5,9 +5,9 @@ import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * Note: Firestore Security Rules for this project are automatically generated 
- * based on the backend.json schema. Paths like /shared-profiles/{id} 
- * marked as "Publicly shared" allow public read access.
+ * Note: Firestore Security Rules for this project are automatically updated 
+ * whenever backend.json or this file is modified. 
+ * Path /shared-profiles/{id} supports public read and authenticated owner write.
  */
 
 export function initializeFirebase() {
