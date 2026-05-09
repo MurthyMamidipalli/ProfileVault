@@ -30,16 +30,30 @@ export default function SharePage() {
   }, [_hasHydrated, profile.sharedId, setProfile]);
 
   const handleSync = async () => {
-    if (!db || !profile.sharedId) return;
+    if (!db || !profile.sharedId) {
+      toast({
+        variant: "destructive",
+        title: "Sync Error",
+        description: "Firestore is not initialized or shared ID is missing."
+      });
+      return;
+    }
+
     setIsPublishing(true);
     
     const profileRef = doc(db, "shared-profiles", profile.sharedId);
     
+    // We create a clean object for Firestore
     const data = {
-      profileData: profile,
+      profileData: JSON.parse(JSON.stringify(profile)), // Ensure no non-serializable data
       updatedAt: serverTimestamp(),
-      createdAt: profile.lastSyncedAt ? undefined : serverTimestamp() 
+      createdAt: profile.lastSyncedAt ? null : serverTimestamp() 
     };
+
+    // Remove the createdAt field if it's already synced to avoid overwriting with serverTimestamp
+    if (profile.lastSyncedAt) {
+      delete data.createdAt;
+    }
 
     setDoc(profileRef, data, { merge: true })
       .then(() => {
@@ -50,12 +64,18 @@ export default function SharePage() {
         });
       })
       .catch(async (err) => {
+        console.error("Firestore sync error:", err);
         const permissionError = new FirestorePermissionError({
           path: profileRef.path,
           operation: 'write',
           requestResourceData: data
         });
         errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: "destructive",
+          title: "Sync Failed",
+          description: err.message || "You might not have permission to write to this path."
+        });
       })
       .finally(() => {
         setIsPublishing(false);
@@ -88,22 +108,22 @@ export default function SharePage() {
     <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
-          Share & Public Profile
+          Portfolio Link
           <Share2 className="w-6 h-6 text-primary" />
         </h1>
-        <p className="text-muted-foreground">Manage your public presence and share your professional vault with the world.</p>
+        <p className="text-muted-foreground">Sync your professional vault to the cloud and share your unique portfolio link with the world.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
         {!isSynced && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4 animate-pulse">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
             <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-bold text-amber-500">Action Required: Profile Not Synced</p>
               <p className="text-xs text-amber-500/80">Your public link exists, but it will show an error until you sync your data for the first time.</p>
             </div>
-            <Button size="sm" onClick={handleSync} disabled={isPublishing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
-              Sync Now
+            <Button size="sm" onClick={handleSync} disabled={isPublishing} className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-lg">
+              {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
             </Button>
           </div>
         )}
@@ -116,7 +136,7 @@ export default function SharePage() {
               Public Hosting
             </CardTitle>
             <CardDescription>
-              Your identity is hosted at a secure, permanent URL. Sync your data to make your latest achievements visible.
+              Your professional identity is hosted at a secure, permanent URL.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -193,7 +213,7 @@ export default function SharePage() {
                   {profile.lastSyncedAt 
                     ? `Last synced on ${new Date(profile.lastSyncedAt).toLocaleString()}. `
                     : "Your profile has not been synced to the cloud yet. "}
-                  Only the data you sync is visible publicly. Your private documents are secure.
+                  Only the data you manually sync is visible publicly. Use the sync button to push updates.
                 </p>
               </div>
             </div>
