@@ -31,24 +31,34 @@ export default function SharePage() {
   }, [_hasHydrated, profile.sharedId, setProfile]);
 
   const handleSync = async () => {
-    if (!db || !profile.sharedId) {
+    if (!db) {
       toast({
         variant: "destructive",
-        title: "Configuration Error",
-        description: "Firestore connection or Shared ID is missing. Please try again."
+        title: "Connection Error",
+        description: "Firestore is not initialized. Please check your connection."
       });
       return;
     }
 
+    // Ensure we have an ID before syncing
+    let currentId = profile.sharedId;
+    if (!currentId) {
+      currentId = Math.random().toString(36).substring(2, 12);
+      setProfile({ sharedId: currentId });
+    }
+
     setIsSyncing(true);
     
-    const profileRef = doc(db, "shared-profiles", profile.sharedId);
+    const profileRef = doc(db, "shared-profiles", currentId);
     
     // Create a clean, serializable object for sync
     const syncData = {
-      profileData: JSON.parse(JSON.stringify(profile)),
+      profileData: JSON.parse(JSON.stringify({
+        ...profile,
+        sharedId: currentId // Ensure the ID is inside the payload too
+      })),
       updatedAt: serverTimestamp(),
-      publicId: profile.sharedId // redundantly store for verification
+      publicId: currentId
     };
 
     setDoc(profileRef, syncData, { merge: true })

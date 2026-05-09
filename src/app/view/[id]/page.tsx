@@ -32,7 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 export default function PublicProfileView() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const db = useFirestore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db) return;
 
-    const profileRef = doc(db, "shared-profiles", id as string);
+    const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
