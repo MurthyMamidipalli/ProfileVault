@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, Copy, RefreshCw, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function AISummaryPage() {
   const { profile, setProfile, _hasHydrated } = useProfileStore();
@@ -37,13 +38,13 @@ export default function AISummaryPage() {
 
     setLoading(true);
     try {
-      // We map active jobs into experience for the AI prompt to understand the current role better
+      // Map active jobs into experience for the AI prompt
       const activeJobsAsExperience = jobs.map(j => ({
         company: j.company,
         title: j.role,
         startDate: j.joiningDate,
-        endDate: 'Present',
-        description: `Current ${j.employmentType} role (${j.workSetting}).`
+        endDate: j.endDate || 'Present',
+        description: `Role type: ${j.employmentType}. Setting: ${j.workSetting}.`
       }));
 
       const result = await generateProfessionalSummary({
@@ -119,13 +120,13 @@ export default function AISummaryPage() {
               Generator
             </CardTitle>
             <CardDescription>
-              Our AI will analyze your {profile.education.length} education, {profile.experience.length} experience, {(profile.jobs || []).length} active jobs, and {(profile.projects || []).length} project entries to craft the perfect bio.
+              Our AI will analyze your {profile.education.length} education, {profile.experience.length} experience, {(profile.jobs || []).length} job roles, and {(profile.projects || []).length} projects to craft the perfect bio.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="relative">
               <div className="absolute top-2 right-2 z-10">
-                <Badge variant="outline" className="bg-background/80 backdrop-blur-sm border-accent/30 text-accent">AI POWERED</Badge>
+                <div className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-accent/30 text-accent bg-background/80 backdrop-blur-sm">AI POWERED</div>
               </div>
               <Textarea 
                 value={generatedSummary}
@@ -164,23 +165,11 @@ export default function AISummaryPage() {
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-4">
             <p className="text-xs text-muted-foreground italic">
-              Tip: The more detailed your experience and project descriptions are, the better the AI can summarize your unique skills.
+              Tip: The more detailed your experience and job descriptions are, the better the AI can summarize your unique skills.
             </p>
           </CardFooter>
         </Card>
       </div>
     </div>
   );
-}
-
-function Badge({ children, variant = "default", className }: { children: React.ReactNode, variant?: "default" | "outline", className?: string }) {
-  return (
-    <div className={cn(
-      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
-      variant === "outline" ? "border-border text-foreground" : "bg-primary text-primary-foreground border-transparent",
-      className
-    )}>
-      {children}
-    </div>
-  )
 }

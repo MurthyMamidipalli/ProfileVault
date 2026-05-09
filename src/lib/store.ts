@@ -61,6 +61,7 @@ export interface JobEntry {
   company: string;
   role: string;
   joiningDate: string;
+  endDate?: string;
   employmentType?: string;
   workSetting?: string;
 }

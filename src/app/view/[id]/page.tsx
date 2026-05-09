@@ -25,7 +25,8 @@ import {
   FileText,
   AlertCircle,
   Building2,
-  Laptop
+  Laptop,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +113,7 @@ export default function PublicProfileView() {
     );
   }
 
-  const activeJobs = profile.jobs || [];
+  const jobs = profile.jobs || [];
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary selection:text-primary-foreground">
@@ -142,16 +143,16 @@ export default function PublicProfileView() {
             <div className="space-y-5 pb-2">
               <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground drop-shadow-sm leading-[0.9]">{profile.name}</h1>
               <div className="flex flex-wrap gap-y-4 gap-x-10 text-muted-foreground font-bold text-sm md:text-base">
-                {activeJobs.length > 0 && (
+                {jobs.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap gap-4">
-                      {activeJobs.slice(0, 2).map((job) => (
+                      {jobs.slice(0, 2).map((job) => (
                         <span key={job.id} className="flex items-center gap-2.5">
                           <Building2 className="w-5 h-5 text-accent" /> {job.role} at {job.company}
                         </span>
                       ))}
-                      {activeJobs.length > 2 && (
-                        <span className="text-xs italic">+{activeJobs.length - 2} more roles</span>
+                      {jobs.length > 2 && (
+                        <span className="text-xs italic">+{jobs.length - 2} more roles</span>
                       )}
                     </div>
                   </div>
@@ -205,11 +206,11 @@ export default function PublicProfileView() {
             </Card>
           </section>
 
-          {activeJobs.length > 0 && (
+          {jobs.length > 0 && (
             <section className="space-y-6">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Current Positions</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Key Positions</h2>
               <div className="space-y-4">
-                {activeJobs.map((job) => (
+                {jobs.map((job) => (
                   <Card key={job.id} className="glass-card border-white/5 overflow-hidden group">
                     <CardHeader className="p-4 pb-1">
                       <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -217,11 +218,17 @@ export default function PublicProfileView() {
                         {job.role}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-1 space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5" />
-                        {job.company}
-                      </p>
+                    <CardContent className="p-4 pt-1 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5" />
+                          {job.company}
+                        </p>
+                        <p className="text-[10px] font-bold text-muted-foreground/50 flex items-center gap-1.5 uppercase tracking-wider">
+                          <Clock className="w-3 h-3" />
+                          {job.joiningDate ? new Date(job.joiningDate).getFullYear() : 'Start'} — {job.endDate ? new Date(job.endDate).getFullYear() : 'Present'}
+                        </p>
+                      </div>
                       <div className="flex gap-2">
                         {job.employmentType && (
                           <Badge variant="secondary" className="text-[8px] h-4 px-1.5 uppercase font-black tracking-tighter">
