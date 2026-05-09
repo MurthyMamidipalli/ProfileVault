@@ -28,13 +28,14 @@ export default function SharePage() {
     if (!db) return;
     setIsPublishing(true);
     
+    // Use existing sharedId or generate a new one if not present
     const shareId = profile.sharedId || Math.random().toString(36).substring(2, 12);
     const profileRef = doc(db, "shared-profiles", shareId);
     
     const data = {
       profileData: profile,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp()
+      createdAt: profile.sharedId ? serverTimestamp() : serverTimestamp() // Simplified for prototype
     };
 
     setDoc(profileRef, data, { merge: true })
@@ -42,7 +43,7 @@ export default function SharePage() {
         setProfile({ sharedId: shareId });
         toast({
           title: "Profile Published",
-          description: "Your profile is now live and shareable.",
+          description: "Your professional vault is now live and shareable.",
         });
       })
       .catch(async (err) => {
@@ -58,12 +59,15 @@ export default function SharePage() {
       });
   };
 
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/view/${profile.sharedId}` : '';
+  const shareUrl = typeof window !== 'undefined' && profile.sharedId 
+    ? `${window.location.origin}/view/${profile.sharedId}` 
+    : '';
 
   const handleCopy = () => {
+    if (!shareUrl) return;
     setCopying(true);
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Link Copied", description: "URL copied to clipboard." });
+    toast({ title: "Link Copied", description: "Profile URL copied to clipboard." });
     setTimeout(() => setCopying(false), 2000);
   };
 
@@ -82,7 +86,7 @@ export default function SharePage() {
           Share & Public Profile
           <Share2 className="w-6 h-6 text-primary" />
         </h1>
-        <p className="text-muted-foreground">Turn your professional data into a beautiful public landing page.</p>
+        <p className="text-muted-foreground">Turn your professional data into a beautiful public landing page for recruiters and partners.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
@@ -91,58 +95,58 @@ export default function SharePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="w-5 h-5 text-accent" />
-              Web Hosting
+              Public Hosting
             </CardTitle>
             <CardDescription>
-              Publish your profile to a secure, permanent URL. Anyone with the link can view your credentials.
+              Publish your identity to a secure, permanent URL. This makes your credentials visible to anyone with the link.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {!profile.sharedId ? (
-              <div className="p-8 text-center bg-white/5 rounded-xl border border-dashed border-border flex flex-col items-center gap-4">
-                <div className="p-4 bg-secondary rounded-full">
-                  <Globe className="w-8 h-8 text-muted-foreground" />
+              <div className="p-10 text-center bg-white/5 rounded-2xl border-2 border-dashed border-border flex flex-col items-center gap-6">
+                <div className="p-5 bg-secondary rounded-full shadow-inner">
+                  <Globe className="w-10 h-10 text-muted-foreground" />
                 </div>
-                <div className="space-y-1">
-                  <p className="font-semibold text-lg">Your profile isn't public yet</p>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                    Publish your identity to the cloud to start sharing your profile with recruiters and partners.
+                <div className="space-y-2">
+                  <p className="font-bold text-xl">Ready to go public?</p>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    By publishing, you create a read-only snapshot of your ProfileVault that can be accessed globally.
                   </p>
                 </div>
-                <Button onClick={handlePublish} disabled={isPublishing} size="lg" className="mt-2 font-bold px-8">
+                <Button onClick={handlePublish} disabled={isPublishing} size="lg" className="font-bold px-10 h-12">
                   {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  Publish My Profile
+                  Publish My Professional Profile
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="p-6 bg-accent/5 border border-accent/20 rounded-xl space-y-4">
+                <div className="p-6 bg-accent/5 border border-accent/20 rounded-xl space-y-5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-accent">Live URL</span>
-                    <span className="flex items-center gap-1 text-xs text-green-400 font-medium">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Active & Secure
+                    <span className="text-xs font-bold uppercase tracking-widest text-accent">Status: Published</span>
+                    <span className="flex items-center gap-1.5 text-xs text-green-400 font-bold">
+                      <CheckCircle2 className="w-4 h-4" />
+                      LIVE & VERIFIED
                     </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1 bg-background/50 border border-border p-3 rounded-md font-mono text-sm truncate select-all">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all">
                       {shareUrl}
                     </div>
-                    <Button onClick={handleCopy} variant="secondary" className="bg-accent/20 text-accent hover:bg-accent/30">
+                    <Button onClick={handleCopy} size="lg" variant="secondary" className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0">
                       {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                      Copy
+                      {copying ? 'Copied' : 'Copy Link'}
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-3 pt-2">
-                    <Button asChild variant="outline">
+                    <Button asChild variant="outline" size="lg" className="font-medium">
                       <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="w-4 h-4 mr-2" />
-                        View Public Profile
+                        Preview Public Page
                       </a>
                     </Button>
                     <Button onClick={handlePublish} disabled={isPublishing} variant="ghost" className="text-muted-foreground hover:text-foreground">
                       {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                      Update Public Version
+                      Sync Updates to Public Version
                     </Button>
                   </div>
                 </div>
@@ -150,12 +154,12 @@ export default function SharePage() {
             )}
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-6">
-            <div className="flex gap-4">
-              <Shield className="w-8 h-8 text-primary shrink-0" />
+            <div className="flex gap-4 items-start">
+              <Shield className="w-8 h-8 text-primary shrink-0 mt-1" />
               <div className="space-y-1">
-                <p className="text-sm font-bold">Privacy & Security</p>
+                <p className="text-sm font-bold">Visibility Control</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  When published, your profile data is stored securely in ProfileVault's global database. You can update the public version at any time by clicking "Update Public Version".
+                  The public page only displays the information you've entered in your profile. Your documents (PDFs) are also accessible if you've marked them as active in your resume vault.
                 </p>
               </div>
             </div>
