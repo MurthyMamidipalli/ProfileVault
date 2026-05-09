@@ -25,17 +25,27 @@ export default function AISummaryPage() {
   }, [_hasHydrated, profile.bio]);
 
   const handleGenerate = async () => {
-    if (profile.education.length === 0 && profile.experience.length === 0 && (profile.projects || []).length === 0) {
+    const jobs = profile.jobs || [];
+    if (profile.education.length === 0 && profile.experience.length === 0 && (profile.projects || []).length === 0 && jobs.length === 0) {
       toast({
         variant: "destructive",
         title: "Incomplete Profile",
-        description: "Please add some education, experience, or projects first so the AI can summarize them."
+        description: "Please add some education, experience, jobs, or projects first so the AI can summarize them."
       });
       return;
     }
 
     setLoading(true);
     try {
+      // We map active jobs into experience for the AI prompt to understand the current role better
+      const activeJobsAsExperience = jobs.map(j => ({
+        company: j.company,
+        title: j.role,
+        startDate: j.joiningDate,
+        endDate: 'Present',
+        description: `Current ${j.employmentType} role (${j.workSetting}).`
+      }));
+
       const result = await generateProfessionalSummary({
         education: profile.education.map(e => ({
           institution: e.institution,
@@ -45,14 +55,17 @@ export default function AISummaryPage() {
           endDate: e.endDate,
           description: e.description
         })),
-        experience: profile.experience.map(e => ({
-          company: e.company,
-          title: e.title,
-          location: e.location,
-          startDate: e.startDate,
-          endDate: e.endDate,
-          description: e.description
-        })),
+        experience: [
+          ...activeJobsAsExperience,
+          ...profile.experience.map(e => ({
+            company: e.company,
+            title: e.title,
+            location: e.location,
+            startDate: e.startDate,
+            endDate: e.endDate,
+            description: e.description
+          }))
+        ],
         projects: (profile.projects || []).map(p => ({
           title: p.title,
           description: p.description,
@@ -106,11 +119,14 @@ export default function AISummaryPage() {
               Generator
             </CardTitle>
             <CardDescription>
-              Our AI will analyze your {profile.education.length} education, {profile.experience.length} experience, and {(profile.projects || []).length} project entries to craft the perfect bio.
+              Our AI will analyze your {profile.education.length} education, {profile.experience.length} experience, {(profile.jobs || []).length} active jobs, and {(profile.projects || []).length} project entries to craft the perfect bio.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="relative">
+              <div className="absolute top-2 right-2 z-10">
+                <Badge variant="outline" className="bg-background/80 backdrop-blur-sm border-accent/30 text-accent">AI POWERED</Badge>
+              </div>
               <Textarea 
                 value={generatedSummary}
                 onChange={e => setGeneratedSummary(e.target.value)}
@@ -155,4 +171,16 @@ export default function AISummaryPage() {
       </div>
     </div>
   );
+}
+
+function Badge({ children, variant = "default", className }: { children: React.ReactNode, variant?: "default" | "outline", className?: string }) {
+  return (
+    <div className={cn(
+      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+      variant === "outline" ? "border-border text-foreground" : "bg-primary text-primary-foreground border-transparent",
+      className
+    )}>
+      {children}
+    </div>
+  )
 }

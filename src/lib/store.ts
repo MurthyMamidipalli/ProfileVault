@@ -56,7 +56,8 @@ export interface ProjectEntry {
   date?: string;
 }
 
-export interface CurrentJob {
+export interface JobEntry {
+  id: string;
   company: string;
   role: string;
   joiningDate: string;
@@ -82,7 +83,7 @@ export interface UserProfile {
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
-  currentJob: CurrentJob;
+  jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
 }
@@ -105,7 +106,9 @@ interface ProfileStore {
   removePortfolioLink: (id: string) => void;
   addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
   removeResume: (id: string) => void;
-  updateCurrentJob: (job: Partial<CurrentJob>) => void;
+  addJob: (job: Omit<JobEntry, 'id'>) => void;
+  updateJob: (id: string, job: Partial<JobEntry>) => void;
+  removeJob: (id: string) => void;
   markSynced: () => void;
 }
 
@@ -125,13 +128,7 @@ const DEFAULT_PROFILE: UserProfile = {
   age: '28',
   bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
   avatarUrl: '',
-  currentJob: {
-    company: '',
-    role: '',
-    joiningDate: '',
-    employmentType: 'Full-time',
-    workSetting: 'Remote'
-  },
+  jobs: [],
   education: [
     {
       id: '1',
@@ -260,10 +257,22 @@ export const useProfileStore = create<ProfileStore>()(
           resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
         }
       })),
-      updateCurrentJob: (updates) => set((state) => ({
+      addJob: (job) => set((state) => ({
         profile: {
           ...state.profile,
-          currentJob: { ...state.profile.currentJob, ...updates }
+          jobs: [...(state.profile.jobs || []), { ...job, id: generateId() }]
+        }
+      })),
+      updateJob: (id, job) => set((state) => ({
+        profile: {
+          ...state.profile,
+          jobs: (state.profile.jobs || []).map((j) => j.id === id ? { ...j, ...job } : j)
+        }
+      })),
+      removeJob: (id) => set((state) => ({
+        profile: {
+          ...state.profile,
+          jobs: (state.profile.jobs || []).filter((j) => j.id !== id)
         }
       })),
       markSynced: () => set((state) => ({

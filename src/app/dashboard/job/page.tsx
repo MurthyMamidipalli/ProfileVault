@@ -2,11 +2,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useProfileStore, CurrentJob } from "@/lib/store";
+import { useProfileStore, JobEntry } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
 import { 
   Select, 
   SelectContent, 
@@ -15,16 +24,30 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Calendar, Building2, Save, Loader2, Award, CheckCircle2, Globe, Laptop, Users } from "lucide-react";
+import { 
+  Briefcase, 
+  Calendar, 
+  Building2, 
+  Plus, 
+  Loader2, 
+  Award, 
+  CheckCircle2, 
+  Globe, 
+  Laptop, 
+  Users, 
+  Trash2, 
+  Pencil 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function JobPage() {
-  const { profile, updateCurrentJob, _hasHydrated } = useProfileStore();
+  const { profile, addJob, updateJob, removeJob, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const [formData, setFormData] = useState<CurrentJob>({
+  const [isOpen, setIsOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<Omit<JobEntry, 'id'>>({
     company: '',
     role: '',
     joiningDate: '',
@@ -34,24 +57,41 @@ export default function JobPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (_hasHydrated && profile.currentJob) {
-      setFormData(profile.currentJob);
+  }, []);
+
+  const handleOpen = (job?: JobEntry) => {
+    if (job) {
+      setEditingId(job.id);
+      setFormData({
+        company: job.company,
+        role: job.role,
+        joiningDate: job.joiningDate,
+        employmentType: job.employmentType || 'Full-time',
+        workSetting: job.workSetting || 'Remote'
+      });
+    } else {
+      setEditingId(null);
+      setFormData({
+        company: '',
+        role: '',
+        joiningDate: '',
+        employmentType: 'Full-time',
+        workSetting: 'Remote'
+      });
     }
-  }, [_hasHydrated, profile.currentJob]);
+    setIsOpen(true);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    
-    updateCurrentJob(formData);
-    
-    setTimeout(() => {
-      setIsSaving(false);
-      toast({
-        title: "Job Details Updated",
-        description: "Your job information has been saved successfully.",
-      });
-    }, 500);
+    if (editingId) {
+      updateJob(editingId, formData);
+      toast({ title: "Job Updated", description: "The job details have been saved." });
+    } else {
+      addJob(formData);
+      toast({ title: "Job Added", description: "A new active job has been added to your profile." });
+    }
+    setIsOpen(false);
   };
 
   if (!mounted || !_hasHydrated) {
@@ -62,162 +102,165 @@ export default function JobPage() {
     );
   }
 
-  const hasJobData = profile.currentJob?.company || profile.currentJob?.role;
+  const jobs = profile.jobs || [];
 
   return (
     <div className="max-w-6xl space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
-          Job Management
-          <Briefcase className="w-7 h-7 text-primary" />
-        </h1>
-        <p className="text-muted-foreground">Manage your current professional status and primary role.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
+            Active Jobs
+            <Briefcase className="w-7 h-7 text-primary" />
+          </h1>
+          <p className="text-muted-foreground">Manage your current professional roles and employment status.</p>
+        </div>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpen()} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Active Job
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px] glass-card">
+            <DialogHeader>
+              <DialogTitle>{editingId ? 'Edit' : 'Add'} Active Job</DialogTitle>
+              <DialogDescription>Enter details about your current position.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSave} className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company Name</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="company" 
+                      placeholder="e.g. Acme Corp" 
+                      value={formData.company}
+                      onChange={e => setFormData({ ...formData, company: e.target.value })}
+                      className="pl-10 bg-background/50"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Your Role / Title</Label>
+                  <div className="relative">
+                    <Award className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="role" 
+                      placeholder="e.g. Senior Software Engineer" 
+                      value={formData.role}
+                      onChange={e => setFormData({ ...formData, role: e.target.value })}
+                      className="pl-10 bg-background/50"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="joiningDate">Joining Date</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="joiningDate" 
+                      type="date"
+                      value={formData.joiningDate}
+                      onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
+                      className="pl-10 bg-background/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Employment Type</Label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
+                    <Select 
+                      value={formData.employmentType} 
+                      onValueChange={(value) => setFormData({ ...formData, employmentType: value })}
+                    >
+                      <SelectTrigger className="pl-10 bg-background/50">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Full-time">Full-time</SelectItem>
+                        <SelectItem value="Part-time">Part-time</SelectItem>
+                        <SelectItem value="Contract">Contract</SelectItem>
+                        <SelectItem value="Freelance">Freelance</SelectItem>
+                        <SelectItem value="Internship">Internship</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Work Setting</Label>
+                  <div className="relative">
+                    <Laptop className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
+                    <Select 
+                      value={formData.workSetting} 
+                      onValueChange={(value) => setFormData({ ...formData, workSetting: value })}
+                    >
+                      <SelectTrigger className="pl-10 bg-background/50">
+                        <SelectValue placeholder="Select setting" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Remote">Remote</SelectItem>
+                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                        <SelectItem value="On-site">On-site</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
+                <Button type="submit">
+                  {editingId ? 'Update Job' : 'Add Job'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Award className="w-5 h-5 text-primary" />
-                Edit Job Details
-              </CardTitle>
-              <CardDescription>Enter information about your current position. These options help define your professional standing.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSave} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="company" 
-                        placeholder="e.g. Acme Corp" 
-                        value={formData.company}
-                        onChange={e => setFormData({ ...formData, company: e.target.value })}
-                        className="pl-10 bg-background/50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Your Role / Title</Label>
-                    <div className="relative">
-                      <Award className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="role" 
-                        placeholder="e.g. Senior Software Engineer" 
-                        value={formData.role}
-                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                        className="pl-10 bg-background/50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="joiningDate">Joining Date</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="joiningDate" 
-                        type="date"
-                        value={formData.joiningDate}
-                        onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
-                        className="pl-10 bg-background/50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Employment Type</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
-                      <Select 
-                        value={formData.employmentType} 
-                        onValueChange={(value) => setFormData({ ...formData, employmentType: value })}
-                      >
-                        <SelectTrigger className="pl-10 bg-background/50">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Full-time">Full-time</SelectItem>
-                          <SelectItem value="Part-time">Part-time</SelectItem>
-                          <SelectItem value="Contract">Contract</SelectItem>
-                          <SelectItem value="Freelance">Freelance</SelectItem>
-                          <SelectItem value="Internship">Internship</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Work Setting</Label>
-                    <div className="relative">
-                      <Laptop className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
-                      <Select 
-                        value={formData.workSetting} 
-                        onValueChange={(value) => setFormData({ ...formData, workSetting: value })}
-                      >
-                        <SelectTrigger className="pl-10 bg-background/50">
-                          <SelectValue placeholder="Select setting" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Remote">Remote</SelectItem>
-                          <SelectItem value="Hybrid">Hybrid</SelectItem>
-                          <SelectItem value="On-site">On-site</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={isSaving} className="min-w-[140px] font-bold">
-                    {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Job Info
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1 space-y-6">
-          <div className="flex items-center gap-2 px-1">
-            <Globe className="w-4 h-4 text-accent" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Live Preview</h3>
-          </div>
-          
-          <Card className={cn(
-            "glass-card border-dashed overflow-hidden transition-all duration-500",
-            hasJobData ? "border-primary/50 opacity-100 scale-100" : "border-border/50 opacity-50 scale-95"
-          )}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {jobs.map((job) => (
+          <Card key={job.id} className="glass-card group overflow-hidden hover:border-primary/50 transition-smooth">
             <div className="h-2 bg-primary/20 w-full" />
             <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-bold flex items-center justify-between">
-                {profile.currentJob?.role || "Position Title"}
-                {hasJobData && <CheckCircle2 className="w-5 h-5 text-accent animate-in zoom-in" />}
-              </CardTitle>
+              <div className="flex items-start justify-between">
+                <CardTitle className="text-xl font-bold line-clamp-1">
+                  {job.role}
+                </CardTitle>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-smooth">
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(job)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeJob(job.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
               <CardDescription className="text-primary font-semibold flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
-                {profile.currentJob?.company || "Company Name"}
+                {job.company}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2 pt-1">
-                {profile.currentJob?.employmentType && (
+                {job.employmentType && (
                   <div className="px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold uppercase tracking-wider border border-border">
-                    {profile.currentJob.employmentType}
+                    {job.employmentType}
                   </div>
                 )}
-                {profile.currentJob?.workSetting && (
+                {job.workSetting && (
                   <div className="px-2 py-0.5 rounded-full bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider border border-accent/20">
-                    {profile.currentJob.workSetting}
+                    {job.workSetting}
                   </div>
                 )}
               </div>
 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4" />
-                <span>Joined {profile.currentJob?.joiningDate ? new Date(profile.currentJob.joiningDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : "Join Date"}</span>
+                <span>Joined {job.joiningDate ? new Date(job.joiningDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : "Join Date"}</span>
               </div>
               
               <div className="pt-4 border-t border-border/50">
@@ -228,13 +271,22 @@ export default function JobPage() {
               </div>
             </CardContent>
           </Card>
+        ))}
 
-          {!hasJobData && (
-            <p className="text-xs text-center text-muted-foreground italic px-4">
-              Enter and save your job details to see your professional status card.
-            </p>
-          )}
-        </div>
+        {jobs.length === 0 && (
+          <div className="col-span-full py-24 text-center border-2 border-dashed border-border rounded-xl bg-white/5 flex flex-col items-center gap-4">
+            <div className="p-4 bg-secondary rounded-full">
+              <Briefcase className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold">No Active Jobs</p>
+              <p className="text-sm text-muted-foreground">Add your current professional roles to display them on your profile.</p>
+            </div>
+            <Button onClick={() => handleOpen()} variant="outline" className="mt-2">
+              Add Your First Job
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
