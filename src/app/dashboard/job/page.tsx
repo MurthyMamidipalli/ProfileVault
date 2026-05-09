@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useProfileStore } from "@/lib/store";
+import { useProfileStore, CurrentJob } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,20 +15,34 @@ export default function JobPage() {
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Local state for the form so it doesn't update the store instantly
+  const [formData, setFormData] = useState<CurrentJob>({
+    company: '',
+    role: '',
+    joiningDate: ''
+  });
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (_hasHydrated && profile.currentJob) {
+      setFormData(profile.currentJob);
+    }
+  }, [_hasHydrated, profile.currentJob]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    // Local update is instant, we just add a small delay for feedback
+    
+    // Update the global store
+    updateCurrentJob(formData);
+    
+    // Feedback delay
     setTimeout(() => {
       setIsSaving(false);
       toast({
         title: "Job Details Updated",
-        description: "Your job information has been saved.",
+        description: "Your job information has been saved successfully.",
       });
     }, 500);
   };
@@ -40,9 +54,6 @@ export default function JobPage() {
       </div>
     );
   }
-
-  // Fallback for currentJob to prevent crash if rehydrated state is missing it
-  const currentJob = profile.currentJob || { company: '', role: '', joiningDate: '' };
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
@@ -72,8 +83,8 @@ export default function JobPage() {
                         id="company" 
                         required
                         placeholder="e.g. Acme Corp" 
-                        value={currentJob.company}
-                        onChange={e => updateCurrentJob({ company: e.target.value })}
+                        value={formData.company}
+                        onChange={e => setFormData({ ...formData, company: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
                     </div>
@@ -86,8 +97,8 @@ export default function JobPage() {
                         id="role" 
                         required
                         placeholder="e.g. Senior Software Engineer" 
-                        value={currentJob.role}
-                        onChange={e => updateCurrentJob({ role: e.target.value })}
+                        value={formData.role}
+                        onChange={e => setFormData({ ...formData, role: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
                     </div>
@@ -100,8 +111,8 @@ export default function JobPage() {
                         id="joiningDate" 
                         type="date"
                         required
-                        value={currentJob.joiningDate}
-                        onChange={e => updateCurrentJob({ joiningDate: e.target.value })}
+                        value={formData.joiningDate}
+                        onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
                         className="pl-10 bg-background/50"
                       />
                     </div>
@@ -127,12 +138,12 @@ export default function JobPage() {
               <div className="p-4 rounded-lg bg-background/40 border border-white/5 space-y-2">
                 <p className="text-xs text-muted-foreground font-medium uppercase">Current Status</p>
                 <div className="space-y-1">
-                  <p className="font-bold text-foreground">{currentJob.role || "N/A"}</p>
-                  <p className="text-sm text-primary font-medium">{currentJob.company || "N/A"}</p>
+                  <p className="font-bold text-foreground">{profile.currentJob.role || "Not Set"}</p>
+                  <p className="text-sm text-primary font-medium">{profile.currentJob.company || "Not Set"}</p>
                 </div>
                 <div className="pt-2 flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
-                  <span>Joined {currentJob.joiningDate ? new Date(currentJob.joiningDate).toLocaleDateString() : 'N/A'}</span>
+                  <span>Joined {profile.currentJob.joiningDate ? new Date(profile.currentJob.joiningDate).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground italic leading-relaxed">

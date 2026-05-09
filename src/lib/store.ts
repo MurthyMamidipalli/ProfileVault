@@ -124,9 +124,9 @@ const DEFAULT_PROFILE: UserProfile = {
   bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
   avatarUrl: '',
   currentJob: {
-    company: 'TechFlow Systems',
-    role: 'Senior Frontend Engineer',
-    joiningDate: '2020-07-01'
+    company: '',
+    role: '',
+    joiningDate: ''
   },
   education: [
     {
