@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { useFirestore, useAuth, useUser } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, LogIn, Settings } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -19,7 +18,6 @@ export default function SharePage() {
   const { profile, setProfile, markSynced, _hasHydrated } = useProfileStore();
   const { toast } = useToast();
   const db = useFirestore();
-  const auth = useAuth();
   const { user, loading: authLoading } = useUser();
   
   const [mounted, setMounted] = useState(false);
@@ -36,29 +34,6 @@ export default function SharePage() {
     }
   }, [_hasHydrated, profile.sharedId, setProfile]);
 
-  const handleSignIn = async () => {
-    if (isConfigMissing) {
-      toast({
-        variant: "destructive",
-        title: "Configuration Required",
-        description: "Your Firebase project is still being provisioned."
-      });
-      return;
-    }
-
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast({ title: "Authenticated", description: "You can now sync your profile." });
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Sign In Failed", 
-        description: error.message || "Could not authenticate with Google." 
-      });
-    }
-  };
-
   const handleSync = () => {
     if (isConfigMissing) {
       toast({
@@ -71,8 +46,9 @@ export default function SharePage() {
 
     if (!user) {
       toast({
+        variant: "destructive",
         title: "Authentication Required",
-        description: "Please sign in with Google to sync your profile."
+        description: "You must be signed in to sync your profile."
       });
       return;
     }
@@ -96,7 +72,6 @@ export default function SharePage() {
       createdAt: profile.lastSyncedAt ? undefined : serverTimestamp(),
     };
 
-    // Non-blocking mutation as per guidelines
     setDoc(profileRef, syncData, { merge: true })
       .then(() => {
         markSynced();
@@ -160,22 +135,6 @@ export default function SharePage() {
               </div>
             </div>
             <Button disabled className="opacity-50">Waiting for setup...</Button>
-          </div>
-        )}
-
-        {!isConfigMissing && !user && (
-          <div className="p-6 bg-primary/10 border border-primary/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Shield className="w-8 h-8 text-primary" />
-              <div>
-                <p className="font-bold text-foreground">Secure Synchronization</p>
-                <p className="text-sm text-muted-foreground">Sign in to securely own and update your public portfolio link.</p>
-              </div>
-            </div>
-            <Button onClick={handleSignIn} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
-              <LogIn className="w-4 h-4 mr-2" />
-              Sign in with Google
-            </Button>
           </div>
         )}
 

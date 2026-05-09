@@ -22,7 +22,7 @@
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": ["password"]
   },
   "firestore": {
     "/shared-profiles/{profileId}": {
