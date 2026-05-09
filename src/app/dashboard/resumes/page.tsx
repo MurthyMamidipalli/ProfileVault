@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState } from "react";
-import { useProfileStore, ResumeDocument } from "@/lib/store";
+import React, { useState, useRef } from "react";
+import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -32,6 +32,8 @@ import { cn } from "@/lib/utils";
 export default function ResumesPage() {
   const { profile, addResume, removeResume } = useProfileStore();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   
@@ -44,7 +46,12 @@ export default function ResumesPage() {
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLimitReached) return;
+    if (isLimitReached) {
+       toast({ variant: "destructive", title: "Limit Reached", description: "You have reached the maximum of 10 documents." });
+       return;
+    }
+    if (!linkData.name || !linkData.url) return;
+
     addResume({
       name: linkData.name,
       url: linkData.url,
@@ -55,10 +62,20 @@ export default function ResumesPage() {
     toast({ title: "Link Added", description: "Your resume link has been saved." });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadData({ name: file.name });
+    }
+  };
+
   const handleMockUpload = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLimitReached) return;
-    // Mocking an upload by creating a data URL or just a placeholder
+    if (isLimitReached) {
+       toast({ variant: "destructive", title: "Limit Reached", description: "You have reached the maximum of 10 documents." });
+       return;
+    }
+    
     addResume({
       name: uploadData.name || "Resume_Upload.pdf",
       url: "#", 
@@ -67,6 +84,10 @@ export default function ResumesPage() {
     setUploadData({ name: '' });
     setIsUploadDialogOpen(false);
     toast({ title: "Document Uploaded", description: "Resume document added to your vault." });
+  };
+
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -141,7 +162,7 @@ export default function ResumesPage() {
               </DialogHeader>
               <form onSubmit={handleMockUpload} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Document Name</Label>
+                  <Label>Document Name (Display Label)</Label>
                   <Input 
                     required 
                     placeholder="e.g. Senior_Engineer_2024.pdf" 
@@ -149,13 +170,25 @@ export default function ResumesPage() {
                     onChange={e => setUploadData({...uploadData, name: e.target.value})}
                   />
                 </div>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth">
+                <div 
+                  onClick={triggerFileSelect}
+                  className="border-2 border-dashed border-border rounded-lg p-8 text-center bg-white/5 cursor-pointer hover:bg-white/10 transition-smooth"
+                >
+                   <input 
+                     type="file" 
+                     ref={fileInputRef} 
+                     onChange={handleFileChange} 
+                     className="hidden" 
+                     accept=".pdf,.doc,.docx"
+                   />
                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                   <p className="text-sm text-muted-foreground">Drag and drop or click to select file</p>
-                   <p className="text-xs text-muted-foreground/50 mt-1">PDF, DOCX up to 5MB</p>
+                   <p className="text-sm text-muted-foreground">
+                     {uploadData.name ? `Selected: ${uploadData.name}` : "Click to select file"}
+                   </p>
+                   <p className="text-xs text-muted-foreground/50 mt-1">PDF, DOCX up to 5MB (Simulation)</p>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Complete Upload</Button>
+                  <Button type="submit" disabled={!uploadData.name}>Complete Upload</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

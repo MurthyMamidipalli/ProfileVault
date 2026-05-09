@@ -67,6 +67,13 @@ interface ProfileStore {
   removeResume: (id: string) => void;
 }
 
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 export const useProfileStore = create<ProfileStore>()(
   persist(
     (set) => ({
@@ -113,7 +120,7 @@ export const useProfileStore = create<ProfileStore>()(
       addEducation: (entry) => set((state) => ({
         profile: {
           ...state.profile,
-          education: [...state.profile.education, { ...entry, id: crypto.randomUUID() }]
+          education: [...state.profile.education, { ...entry, id: generateId() }]
         }
       })),
       updateEducation: (id, entry) => set((state) => ({
@@ -131,7 +138,7 @@ export const useProfileStore = create<ProfileStore>()(
       addExperience: (entry) => set((state) => ({
         profile: {
           ...state.profile,
-          experience: [...state.profile.experience, { ...entry, id: crypto.randomUUID() }]
+          experience: [...state.profile.experience, { ...entry, id: generateId() }]
         }
       })),
       updateExperience: (id, entry) => set((state) => ({
@@ -149,7 +156,7 @@ export const useProfileStore = create<ProfileStore>()(
       addPortfolioLink: (link) => set((state) => ({
         profile: {
           ...state.profile,
-          portfolioLinks: [...state.profile.portfolioLinks, { ...link, id: crypto.randomUUID() }]
+          portfolioLinks: [...state.profile.portfolioLinks, { ...link, id: generateId() }]
         }
       })),
       removePortfolioLink: (id) => set((state) => ({
@@ -163,7 +170,7 @@ export const useProfileStore = create<ProfileStore>()(
           ...state.profile,
           resumes: [...state.profile.resumes, { 
             ...resume, 
-            id: crypto.randomUUID(),
+            id: generateId(),
             uploadDate: new Date().toISOString().split('T')[0]
           }]
         }
