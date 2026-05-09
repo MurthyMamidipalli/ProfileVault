@@ -29,7 +29,7 @@ import {
   FolderCode
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -46,20 +46,26 @@ const NAV_ITEMS = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // For a prototype, we'll just redirect to the home page
+    router.push("/");
+  };
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <Sidebar collapsible="icon" className="border-r border-border/50">
           <SidebarHeader className="h-16 flex items-center px-4 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                 <Vault className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-headline font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">
+              <span className="font-headline font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden whitespace-nowrap">
                 ProfileVault
               </span>
-            </div>
+            </Link>
           </SidebarHeader>
           <SidebarContent className="py-4">
             <SidebarMenu>
@@ -86,13 +92,26 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <SidebarFooter className="border-t border-border/50 p-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton className="h-10 px-4 transition-smooth">
-                  <Settings className="w-5 h-5" />
-                  <span>Settings</span>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/dashboard/settings"}
+                  tooltip="Settings"
+                  className={cn(
+                    "h-10 px-4 transition-smooth",
+                    pathname === "/dashboard/settings" ? "bg-primary/10 text-primary" : "hover:bg-accent/10 hover:text-accent"
+                  )}
+                >
+                  <Link href="/dashboard/settings">
+                    <Settings className="w-5 h-5" />
+                    <span>Settings</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton className="h-10 px-4 text-destructive hover:bg-destructive/10 transition-smooth">
+                <SidebarMenuButton 
+                  onClick={handleLogout}
+                  className="h-10 px-4 text-destructive hover:bg-destructive/10 transition-smooth"
+                >
                   <LogOut className="w-5 h-5" />
                   <span>Log out</span>
                 </SidebarMenuButton>
@@ -106,16 +125,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <SidebarTrigger />
               <div className="h-6 w-px bg-border/50" />
               <h2 className="font-headline font-semibold text-foreground">
-                {NAV_ITEMS.find(item => item.href === pathname)?.name || "Dashboard"}
+                {NAV_ITEMS.find(item => item.href === pathname)?.name || 
+                 (pathname === "/dashboard/settings" ? "Settings" : "Dashboard")}
               </h2>
             </div>
             <div className="flex items-center gap-4">
                <div className="text-sm font-medium text-muted-foreground hidden sm:block">
                  Welcome back
                </div>
-               <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-border">
+               <Link href="/dashboard/profile" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-border hover:border-primary transition-smooth">
                  <User className="w-4 h-4 text-primary" />
-               </div>
+               </Link>
             </div>
           </header>
           <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
