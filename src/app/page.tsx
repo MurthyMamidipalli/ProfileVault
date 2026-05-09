@@ -12,7 +12,7 @@ export default function Home() {
           <div className="mx-auto w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 animate-bounce">
             <Vault className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="text-5xl md:text-7xl font-headline font-black tracking-tighter">
+          <h1 className="text-5xl md:text-7xl font-headline font-black tracking-tighter text-foreground">
             Profile<span className="text-primary">Vault</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
@@ -37,18 +37,20 @@ export default function Home() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <Button asChild size="lg" className="h-14 px-10 text-lg font-bold group">
-          <Link href="/dashboard">
-            Enter Dashboard
+          <Link href="/login">
+            Get Started
             <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-smooth" />
           </Link>
         </Button>
-        <Button variant="outline" size="lg" className="h-14 px-10 text-lg font-bold">
-          Learn More
+        <Button asChild variant="outline" size="lg" className="h-14 px-10 text-lg font-bold">
+          <Link href="/signup">
+            Create Account
+          </Link>
         </Button>
       </div>
 
       <footer className="pt-12 text-sm text-muted-foreground">
-        &copy; 2024 ProfileVault Inc. Professional Identity Solutions.
+        &copy; {new Date().getFullYear()} ProfileVault Inc. Professional Identity Solutions.
       </footer>
     </div>
   );
