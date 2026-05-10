@@ -165,12 +165,12 @@ export default function PublicProfileView() {
               <CardContent className="p-8 space-y-10">
                 <div className="group">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3 group-hover:text-primary transition-smooth">Direct Email</p>
-                  <p className="font-bold text-lg text-foreground truncate">{profile.email}</p>
+                  <p className="font-bold text-lg text-foreground break-all">{profile.email}</p>
                 </div>
                 {profile.secondaryEmail && (
                   <div className="group opacity-70">
                     <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3">Backup Email</p>
-                    <p className="font-bold text-lg text-foreground truncate">{profile.secondaryEmail}</p>
+                    <p className="font-bold text-lg text-foreground break-all">{profile.secondaryEmail}</p>
                   </div>
                 )}
                 <div className="group">
@@ -180,7 +180,7 @@ export default function PublicProfileView() {
                 {profile.website && (
                   <div className="group">
                     <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-3 group-hover:text-accent transition-smooth">Digital HQ</p>
-                    <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-lg text-accent hover:underline block truncate">
+                    <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-lg text-accent hover:underline block break-all">
                       {profile.website.replace(/^https?:\/\//, '')}
                     </a>
                   </div>
@@ -210,7 +210,7 @@ export default function PublicProfileView() {
                       </div>
                       <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
                         <Clock className="w-3 h-3" />
-                        {new Date(job.joiningDate).getFullYear()} — {job.endDate ? new Date(job.endDate).getFullYear() : 'PRESENT'}
+                        {new Date(job.joiningDate).getFullYear()} — {job.endDate ? new Date(job.joiningDate).getFullYear() : 'PRESENT'}
                       </div>
                       <div className="flex gap-2">
                         {job.employmentType && <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black">{job.employmentType}</Badge>}
