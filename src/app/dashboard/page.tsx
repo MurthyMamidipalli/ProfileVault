@@ -3,27 +3,13 @@
 
 import { useProfileStore } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { User } from "lucide-react";
 
 export default function DashboardOverview() {
-  const { profile, _hasHydrated } = useProfileStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const { profile } = useProfileStore();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in fade-in duration-700">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="p-4 bg-primary/10 rounded-full border border-primary/20">
         <User className="w-12 h-12 text-primary" />
       </div>

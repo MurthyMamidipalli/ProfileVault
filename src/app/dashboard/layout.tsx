@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -10,22 +10,23 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Loader2 } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const { profile, setProfile, _hasHydrated } = useProfileStore();
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+  const syncAttempted = useRef(false);
 
   // Auth Protection
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
-  // Cloud Sync to Local on mount
+  // Background Cloud Sync to Local on mount
   useEffect(() => {
-    if (user && _hasHydrated && profile.sharedId && !isReady) {
+    if (user && _hasHydrated && profile.sharedId && !syncAttempted.current) {
+      syncAttempted.current = true;
       const fetchCloudProfile = async () => {
         try {
           const docRef = doc(db, "shared-profiles", profile.sharedId!);
@@ -38,22 +39,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Cloud sync failed:", error);
-        } finally {
-          setIsReady(true);
         }
       };
       fetchCloudProfile();
-    } else if (_hasHydrated) {
-      setIsReady(true);
     }
-  }, [user, _hasHydrated, profile.sharedId, db, setProfile, isReady]);
+  }, [user, _hasHydrated, profile.sharedId, db, setProfile]);
 
-  if (loading || !isReady) {
+  // Show a high-quality global loader while authenticating or waiting for initial local state hydration
+  if (authLoading || !_hasHydrated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">
+          <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground animate-pulse tracking-tight">
             Synchronizing your Professional Vault...
           </p>
         </div>
@@ -62,7 +62,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return <DashboardLayout>{children}</DashboardLayout>;

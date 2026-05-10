@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +22,10 @@ import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Cake, Users, Camera, T
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 export default function ProfilePage() {
-  const { profile, setProfile, _hasHydrated } = useProfileStore();
+  const { profile, setProfile } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,14 +81,6 @@ export default function ProfilePage() {
     toast({ title: "Avatar Removed", description: "Profile picture has been cleared." });
   };
 
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col gap-2">
@@ -104,7 +91,7 @@ export default function ProfilePage() {
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground">
-          <strong>Tip:</strong> Large images and documents are stored in memory and cleared on refresh unless you <strong>Sync</strong> them to the cloud in the <strong>Portfolio Link</strong> section.
+          <strong>Tip:</strong> Large images and documents are stored in your local vault. Use the <strong>Portfolio Link</strong> section to sync them to the cloud for public sharing.
         </p>
       </div>
 

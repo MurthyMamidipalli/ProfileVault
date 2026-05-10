@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useProfileStore, JobEntry } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,22 +29,18 @@ import {
   Calendar, 
   Building2, 
   Plus, 
-  Loader2, 
   Award, 
-  Globe, 
   Laptop, 
   Users, 
   Trash2, 
   Pencil,
-  Clock,
-  Sparkles
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function JobPage() {
-  const { profile, addJob, updateJob, removeJob, _hasHydrated } = useProfileStore();
+  const { profile, addJob, updateJob, removeJob } = useProfileStore();
   const { toast } = useToast();
-  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -56,10 +52,6 @@ export default function JobPage() {
     employmentType: 'Full-time',
     workSetting: 'Remote'
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleOpen = (job?: JobEntry) => {
     if (job) {
@@ -98,18 +90,10 @@ export default function JobPage() {
     setIsOpen(false);
   };
 
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   const jobs = profile.jobs || [];
 
   return (
-    <div className="max-w-6xl space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-6xl space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
@@ -173,7 +157,7 @@ export default function JobPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date (Optional / Last Date)</Label>
+                  <Label htmlFor="endDate">End Date (Optional)</Label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useProfileStore } from "@/lib/store";
 import { generateProfessionalSummary } from "@/ai/flows/generate-professional-summary";
 import { Button } from "@/components/ui/button";
@@ -9,21 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, Copy, RefreshCw, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function AISummaryPage() {
-  const { profile, setProfile, _hasHydrated } = useProfileStore();
+  const { profile, setProfile } = useProfileStore();
   const { toast } = useToast();
-  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [generatedSummary, setGeneratedSummary] = useState('');
-
-  useEffect(() => {
-    setMounted(true);
-    if (_hasHydrated) {
-      setGeneratedSummary(profile.bio || '');
-    }
-  }, [_hasHydrated, profile.bio]);
+  const [generatedSummary, setGeneratedSummary] = useState(profile.bio || '');
 
   const handleGenerate = async () => {
     const jobs = profile.jobs || [];
@@ -38,7 +29,6 @@ export default function AISummaryPage() {
 
     setLoading(true);
     try {
-      // Map active jobs into experience for the AI prompt
       const activeJobsAsExperience = jobs.map(j => ({
         company: j.company,
         title: j.role,
@@ -93,16 +83,8 @@ export default function AISummaryPage() {
     toast({ title: "Copied", description: "Copied to clipboard." });
   };
 
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
+    <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
           AI Profile Summary
