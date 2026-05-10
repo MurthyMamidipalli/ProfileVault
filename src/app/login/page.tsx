@@ -4,13 +4,22 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { useAuth, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Vault, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { Vault, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -24,6 +33,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const isConfigMissing = !firebaseConfig.apiKey || firebaseConfig.apiKey === "PLACEHOLDER";
 
@@ -57,6 +69,30 @@ export default function LoginPage() {
       });
     } finally {
       setIsAuthenticating(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast({
+        title: "Reset Email Sent",
+        description: "Check your inbox for password reset instructions.",
+      });
+      setIsResetDialogOpen(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Reset Failed",
+        description: error.message || "Could not send reset email.",
+      });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -111,7 +147,50 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button 
+                      type="button" 
+                      className="text-xs text-primary hover:underline font-medium"
+                      disabled={isConfigMissing}
+                    >
+                      Forgot password?
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="glass-card">
+                    <DialogHeader>
+                      <DialogTitle>Reset Password</DialogTitle>
+                      <DialogDescription>
+                        Enter your email address and we'll send you a link to reset your password.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePasswordReset} className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            required 
+                            type="email"
+                            placeholder="name@example.com" 
+                            value={resetEmail}
+                            onChange={e => setResetEmail(e.target.value)}
+                            className="pl-10 bg-background/50"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" disabled={isResetting || !resetEmail} className="w-full">
+                          {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
+                          Send Reset Link
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input 
