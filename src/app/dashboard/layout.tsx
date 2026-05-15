@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // 2. Initial Cloud Hydration (Atomic Fetch)
   useEffect(() => {
-    // Only attempt hydration once per auth session
+    // Only attempt hydration if we have a user and haven't loaded cloud data yet
     if (user && _hasHydrated && !isCloudLoaded && !hydrationAttempted.current) {
       hydrationAttempted.current = true;
       
@@ -73,6 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // 3. Background Auto-Sync (Mirroring)
   useEffect(() => {
     // SECURITY GATE: Only sync if we are fully hydrated and have a reference to the cloud state
+    // This prevents "blank" local sessions from overwriting cloud data during loading
     if (user && isCloudLoaded && _hasHydrated && lastSyncRef.current !== null) {
       const currentProfileString = JSON.stringify(profile);
       
@@ -115,6 +116,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, authLoading, reset]);
 
   // Loading Gate: Ensures perfect data consistency on initial load
+  // If we have a user but haven't loaded their cloud data, we wait.
   if (authLoading || !_hasHydrated || (user && !isCloudLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">

@@ -270,6 +270,9 @@ export const useProfileStore = create<ProfileStore>()(
     }),
     { 
       name: 'profile-vault-storage',
+      // DO NOT persist sync-status flags like isCloudLoaded or _hasHydrated
+      // This ensures Browser B always tries to fetch fresh data on mount
+      partialize: (state) => ({ profile: state.profile }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       }
