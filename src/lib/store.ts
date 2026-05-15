@@ -114,6 +114,7 @@ interface ProfileStore {
   updateJob: (id: string, job: Partial<JobEntry>) => void;
   removeJob: (id: string) => void;
   markSynced: (timestamp?: string) => void;
+  reset: () => void;
 }
 
 const generateId = () => {
@@ -261,7 +262,11 @@ export const useProfileStore = create<ProfileStore>()(
           ...state.profile,
           lastSyncedAt: timestamp || new Date().toISOString()
         }
-      }))
+      })),
+      reset: () => set({ 
+        profile: DEFAULT_PROFILE, 
+        isCloudLoaded: false 
+      })
     }),
     { 
       name: 'profile-vault-storage',
