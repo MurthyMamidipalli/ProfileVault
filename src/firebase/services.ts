@@ -5,7 +5,6 @@ import {
   Firestore, 
   doc, 
   setDoc, 
-  getDoc, 
   onSnapshot, 
   serverTimestamp,
   DocumentReference,
@@ -26,7 +25,8 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
-  console.log(`[Firestore] ATTEMPT WRITE: ${ref.path}`);
+  
+  console.log(`[Firestore] PUSHING UPDATE: ${ref.path}`);
   
   const payload = {
     profileData: data,
@@ -45,6 +45,7 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 
 /**
  * Subscribe to real-time profile updates using UID.
+ * Treats Firestore as the absolute source of truth.
  */
 export function subscribeToProfile(
   db: Firestore, 
@@ -58,10 +59,10 @@ export function subscribeToProfile(
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      console.log(`[Sync] CLOUD UPDATE RECEIVED for ${uid}`);
+      console.log(`[Sync] CLOUD DATA RECEIVED for UID: ${uid}`);
       onUpdate(data.profileData as UserProfile);
     } else {
-      console.log('[Sync] NO CLOUD DATA FOUND for this UID - Creating first entry...');
+      console.log(`[Sync] NO EXISTING PROFILE FOUND for UID: ${uid} (New User Flow)`);
       onUpdate(null);
     }
   }, (err) => {

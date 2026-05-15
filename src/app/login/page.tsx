@@ -41,6 +41,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !loading) {
+      console.log(`[Auth] User already logged in (UID: ${user.uid}), redirecting to dashboard.`);
       router.push("/dashboard");
     }
   }, [user, loading, router]);
@@ -51,21 +52,24 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Setup Incomplete",
-        description: "Firebase project is not yet configured. Please check your console.",
+        description: "Firebase project is not yet configured.",
       });
       return;
     }
 
     setIsAuthenticating(true);
+    console.log(`[Auth] Attempting LOGIN for: ${email}`);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Welcome back!", description: "Successfully signed in." });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log(`[Auth] LOGIN SUCCESS: ${userCredential.user.uid}`);
+      toast({ title: "Welcome back!", description: "Accessing your professional vault." });
       router.push("/dashboard");
     } catch (error: any) {
+      console.error(`[Auth] LOGIN ERROR:`, error);
       toast({
         variant: "destructive",
-        title: "Sign In Failed",
-        description: error.message || "Invalid email or password.",
+        title: "Login Failed",
+        description: error.message || "Incorrect email or password.",
       });
     } finally {
       setIsAuthenticating(false);
@@ -81,7 +85,7 @@ export default function LoginPage() {
       await sendPasswordResetEmail(auth, resetEmail);
       toast({
         title: "Reset Email Sent",
-        description: "Check your inbox for password reset instructions.",
+        description: "Check your inbox for instructions.",
       });
       setIsResetDialogOpen(false);
       setResetEmail("");
@@ -89,7 +93,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Reset Failed",
-        description: error.message || "Could not send reset email.",
+        description: error.message,
       });
     } finally {
       setIsResetting(false);
@@ -106,108 +110,53 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="absolute inset-0 bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-      
       <Card className="w-full max-w-md glass-card border-primary/20 relative z-10 overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 -mr-4 -mt-4 bg-primary/10 rounded-full blur-2xl" />
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
             <Database className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-headline font-bold">Sign In</CardTitle>
+            <CardTitle className="text-2xl font-headline font-bold">Log In</CardTitle>
             <CardDescription>Access your secure Professional Vault</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          {isConfigMissing && (
-            <div className="mb-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-500 font-medium">
-                System setup in progress. Please wait for Firebase provisioning to complete.
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="name@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-background/50" 
-                  disabled={isConfigMissing}
-                />
-              </div>
+              <Input 
+                id="email" 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-background/50" 
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-                  <DialogTrigger asChild>
-                    <button 
-                      type="button" 
-                      className="text-xs text-primary hover:underline font-medium"
-                      disabled={isConfigMissing}
-                    >
-                      Forgot password?
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="glass-card">
-                    <DialogHeader>
-                      <DialogTitle>Reset Password</DialogTitle>
-                      <DialogDescription>
-                        Enter your email address and we'll send you a link to reset your password.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handlePasswordReset} className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <Label>Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                          <Input 
-                            required 
-                            type="email"
-                            placeholder="name@example.com" 
-                            value={resetEmail}
-                            onChange={e => setResetEmail(e.target.value)}
-                            className="pl-10 bg-background/50"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" disabled={isResetting || !resetEmail} className="w-full">
-                          {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
-                          Send Reset Link
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                <button 
+                  type="button" 
+                  onClick={() => setIsResetDialogOpen(true)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  Forgot password?
+                </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input 
                   id="password" 
                   type={showPassword ? "text" : "password"} 
-                  placeholder="••••••••"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 bg-background/50" 
-                  disabled={isConfigMissing}
+                  className="bg-background/50 pr-10" 
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
-                  disabled={isConfigMissing}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -215,36 +164,45 @@ export default function LoginPage() {
             </div>
             <Button 
               type="submit"
-              className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={isAuthenticating || isConfigMissing}
+              className="w-full h-11 font-bold"
+              disabled={isAuthenticating}
             >
-              {isAuthenticating ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <LogIn className="w-4 h-4 mr-2" />
-              )}
+              {isAuthenticating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <LogIn className="w-4 h-4 mr-2" />}
               Sign In
             </Button>
           </form>
           
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/50"></span></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Or</span></div>
+          <div className="relative my-6 text-center">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest">or</span>
           </div>
           
           <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            New to ProfileVault?{" "}
             <Link href="/signup" className="text-primary hover:underline font-bold">
-              Sign up
+              Create an account
             </Link>
           </p>
         </CardContent>
-        <CardFooter className="bg-white/5 p-4 flex justify-center">
-          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-            <LogIn className="w-3 h-3" /> Back to Home
-          </Link>
-        </CardFooter>
       </Card>
+
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="glass-card">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>We'll send a link to your email.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePasswordReset} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input required type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} />
+            </div>
+            <Button type="submit" disabled={isResetting} className="w-full">
+              {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
+              Send Reset Link
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
