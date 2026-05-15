@@ -14,10 +14,10 @@ import {
 import { UserProfile } from '@/lib/store';
 
 /**
- * PATH: users/{uid}/profile/main
+ * Consolidating to shared-profiles/{uid} as the single source of truth
  */
 const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
-  return doc(db, 'users', uid, 'profile', 'main');
+  return doc(db, 'shared-profiles', uid);
 };
 
 /**
@@ -25,64 +25,69 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
-  console.log(`[Firestore] Saving profile to: ${ref.path}`);
+  console.log(`[Firestore] Attempting write to: ${ref.path}`);
   
+  const payload = {
+    profileData: data,
+    updatedAt: serverTimestamp(),
+    ownerId: uid
+  };
+
   try {
-    await setDoc(ref, {
-      profileData: data,
-      updatedAt: serverTimestamp(),
-      ownerId: uid
-    }, { merge: true });
-    console.log('[Firestore] Write successful');
+    await setDoc(ref, payload, { merge: true });
+    console.log('[Firestore] Write SUCCESS', { path: ref.path, timestamp: new Date().toISOString() });
   } catch (error) {
-    console.error('[Firestore] Write failed:', error);
+    console.error('[Firestore] Write FAILED:', error);
     throw error;
   }
 }
 
 /**
- * Load profile data once
+ * Load profile data once (used for initial verification if needed)
  */
 export async function loadProfile(db: Firestore, uid: string): Promise<UserProfile | null> {
   const ref = getProfileRef(db, uid);
-  console.log(`[Firestore] Reading profile from: ${ref.path}`);
+  console.log(`[Firestore] Initial read from: ${ref.path}`);
   
   try {
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      console.log('[Firestore] Read successful, data found');
-      return snap.data().profileData as UserProfile;
+      const data = snap.data();
+      console.log('[Firestore] Read SUCCESS, data found');
+      return data.profileData as UserProfile;
     }
-    console.log('[Firestore] Read successful, but document does not exist');
+    console.log('[Firestore] Read SUCCESS, no document found');
     return null;
   } catch (error) {
-    console.error('[Firestore] Read failed:', error);
+    console.error('[Firestore] Read FAILED:', error);
     throw error;
   }
 }
 
 /**
  * Subscribe to real-time profile updates
+ * This is the engine that keeps multiple browsers in sync.
  */
 export function subscribeToProfile(
   db: Firestore, 
   uid: string, 
-  callback: (data: UserProfile | null) => void,
+  onUpdate: (data: UserProfile | null) => void,
   onError: (err: any) => void
 ): Unsubscribe {
   const ref = getProfileRef(db, uid);
-  console.log(`[Firestore] Initializing real-time listener for: ${ref.path}`);
+  console.log(`[Sync] Starting real-time listener: ${ref.path}`);
   
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
-      console.log('[Firestore] Real-time update received');
-      callback(snap.data().profileData as UserProfile);
+      const data = snap.data();
+      console.log(`[Sync] UPDATE RECEIVED from cloud for ${uid}`);
+      onUpdate(data.profileData as UserProfile);
     } else {
-      console.log('[Firestore] Real-time listener: No document found');
-      callback(null);
+      console.log('[Sync] Listener active: Document does not exist yet');
+      onUpdate(null);
     }
   }, (err) => {
-    console.error('[Firestore] Real-time listener error:', err);
+    console.error('[Sync] Real-time listener ERROR:', err);
     onError(err);
   });
 }

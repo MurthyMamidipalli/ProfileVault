@@ -140,10 +140,13 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15);
 };
 
-// Cloud-only store (No localStorage persistence)
+/**
+ * Pure Cloud Store: No localStorage persistence.
+ * Every login fetch from Firestore.
+ */
 export const useProfileStore = create<ProfileStore>((set) => ({
   profile: DEFAULT_PROFILE,
-  _hasHydrated: true, // Mark true immediately as we don't use localStorage anymore
+  _hasHydrated: true, 
   isCloudLoaded: false,
   setIsCloudLoaded: (state) => set({ isCloudLoaded: state }),
   setProfile: (updates) => set((state) => ({ 
