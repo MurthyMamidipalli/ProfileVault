@@ -117,50 +117,25 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+// We use an "Empty" initial profile so users aren't confused by sample data when sync is pending
 const DEFAULT_PROFILE: UserProfile = {
-  name: 'Alex Sterling',
-  email: 'alex.sterling@example.com',
+  name: '',
+  email: '',
   secondaryEmail: '',
-  phone: '+1 (555) 000-0000',
+  phone: '',
   secondaryPhone: '',
-  address: 'San Francisco, CA',
-  website: 'https://alexsterling.dev',
-  gender: 'Male',
-  age: '28',
-  bio: 'Senior Frontend Engineer with a passion for building intuitive user experiences.',
+  address: '',
+  website: '',
+  gender: 'Prefer not to say',
+  age: '',
+  bio: '',
   avatarUrl: '',
   jobs: [],
-  education: [
-    {
-      id: '1',
-      institution: 'Stanford University',
-      degree: 'Master of Science',
-      fieldOfStudy: 'Computer Science',
-      startDate: '2018-09-01',
-      endDate: '2020-06-15',
-      description: 'Focus on Human-Computer Interaction and AI.'
-    }
-  ],
-  experience: [
-    {
-      id: '1',
-      company: 'TechFlow Systems',
-      title: 'Senior Frontend Engineer',
-      location: 'Remote',
-      startDate: '2020-07-01',
-      endDate: 'Present',
-      description: 'Leading the UI modernization project across the enterprise suite.',
-      projectLinks: [
-        { id: 'p1', name: 'UI Library Demo', url: 'https://github.com/techflow/ui-lib' }
-      ]
-    }
-  ],
+  education: [],
+  experience: [],
   projects: [],
   socialLinks: [],
-  portfolioLinks: [
-    { id: '1', platform: 'GitHub', url: 'https://github.com' },
-    { id: '2', platform: 'LinkedIn', url: 'https://linkedin.com' }
-  ],
+  portfolioLinks: [],
   resumes: []
 };
 
@@ -171,7 +146,7 @@ export const useProfileStore = create<ProfileStore>()(
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       setProfile: (updates) => set((state) => ({ 
-        profile: { ...DEFAULT_PROFILE, ...state.profile, ...updates } 
+        profile: { ...state.profile, ...updates } 
       })),
       addEducation: (entry) => set((state) => ({
         profile: {

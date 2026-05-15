@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useProfileStore } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2 } from "lucide-react";
+import { Loader2, CloudSync } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
@@ -15,6 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { setProfile, _hasHydrated } = useProfileStore();
   const router = useRouter();
   const syncAttempted = useRef(false);
+  const [cloudSyncDone, setCloudSyncDone] = useState(false);
 
   // Auth Protection
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, authLoading, router]);
 
   // Background Cloud Sync to Local on mount
-  // Keyed by user.uid to ensure data follows the account across devices
+  // This ensures data follows the account across devices
   useEffect(() => {
     if (user && _hasHydrated && !syncAttempted.current) {
       syncAttempted.current = true;
@@ -41,23 +42,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Cloud sync failed:", error);
+        } finally {
+          setCloudSyncDone(true);
         }
       };
       fetchCloudProfile();
+    } else if (!user && !authLoading) {
+      setCloudSyncDone(true);
     }
-  }, [user, _hasHydrated, db, setProfile]);
+  }, [user, _hasHydrated, db, setProfile, authLoading]);
 
-  // Show a high-quality global loader while authenticating or waiting for initial local state hydration
-  if (authLoading || !_hasHydrated) {
+  // Show a high-quality global loader while authenticating or waiting for cloud sync
+  // We wait for cloudSyncDone specifically to prevent showing default local data
+  if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {
     return (
-      <div className="flex items-center justify-center min-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+            <div className="relative p-6 bg-card border border-primary/20 rounded-3xl shadow-2xl">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            </div>
           </div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse tracking-tight">
-            Synchronizing your Professional Vault...
-          </p>
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">Accessing Your Vault</h3>
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <CloudSync className="w-4 h-4 animate-bounce" />
+              Synchronizing account data...
+            </p>
+          </div>
         </div>
       </div>
     );
