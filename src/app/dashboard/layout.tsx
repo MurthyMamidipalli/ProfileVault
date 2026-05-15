@@ -32,7 +32,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           const docRef = doc(db, "shared-profiles", user.uid);
           const docSnap = await getDoc(docRef);
           
-          // Start with a clean slate for this specific user
           let profileToApply: UserProfile = { 
             ...DEFAULT_PROFILE, 
             sharedId: user.uid 
@@ -41,26 +40,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.profileData) {
-              // Merge cloud data over defaults
               profileToApply = { 
                 ...profileToApply, 
                 ...data.profileData,
-                sharedId: user.uid // Always enforce correct ID
+                sharedId: user.uid
               };
             }
           }
           
-          // Apply the fetched (or fresh) profile to the local store
           replaceProfile(profileToApply);
-          
-          // Immediately update the ref to prevent the auto-sync effect from 
-          // thinking this was a "change" made by the user.
           lastSyncRef.current = JSON.stringify(profileToApply);
           
         } catch (error) {
           console.error("Cloud hydration failed:", error);
         } finally {
-          // Allow the dashboard to be displayed
           setCloudSyncDone(true);
         }
       };
@@ -72,37 +65,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Background Auto-Sync: Automatically save local changes to the cloud
   useEffect(() => {
-    // Only start syncing AFTER initial hydration is done
     if (user && cloudSyncDone && _hasHydrated) {
       const currentProfileString = JSON.stringify(profile);
-      
-      // Stop if nothing has changed since the last sync or hydration
       if (currentProfileString === lastSyncRef.current) return;
 
       const timer = setTimeout(async () => {
         try {
           const profileRef = doc(db, "shared-profiles", user.uid);
           const syncTimestamp = new Date().toISOString();
-          
-          // Prepare the bundle for the cloud
           const updatedProfile = { ...profile, lastSyncedAt: syncTimestamp };
           const syncData = {
             profileData: updatedProfile,
             updatedAt: serverTimestamp(),
           };
 
-          // Save to Firestore
           await setDoc(profileRef, syncData, { merge: true });
-          
-          // Update the reference point so we don't sync again immediately
           lastSyncRef.current = JSON.stringify(updatedProfile);
-          
-          // Mark as synced locally
           markSynced(syncTimestamp);
         } catch (error) {
           console.error("Auto-sync failed:", error);
         }
-      }, 3000); // 3 second debounce to group rapid changes
+      }, 2000); // 2 second debounce
 
       return () => clearTimeout(timer);
     }
@@ -128,10 +111,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Final check to prevent rendering children if user logged out during loading
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }

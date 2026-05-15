@@ -30,7 +30,9 @@ import {
   FolderCode,
   Share2,
   Building2,
-  Cloud
+  Cloud,
+  CheckCircle2,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -160,15 +162,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-6">
              <div className="hidden lg:flex flex-col items-end gap-0.5">
-               <span className="text-sm font-bold text-foreground leading-none">{profile.name || "New User"}</span>
+               <span className="text-sm font-bold text-foreground leading-none">{profile.name || "Vault Owner"}</span>
                <div className="flex items-center gap-1.5">
                  {isSynced ? (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
-                     <Cloud className="w-3 h-3" /> Vault Synced
+                     <CheckCircle2 className="w-3 h-3" /> Cloud Synced
                    </span>
                  ) : (
-                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
-                     <Cloud className="w-3 h-3" /> Local Only
+                   <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                     <RefreshCw className="w-3 h-3 animate-spin" /> Fetching Vault...
                    </span>
                  )}
                </div>
