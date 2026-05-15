@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db) return;
 
-    console.log(`[Sync] OPENING VAULT for UID: ${user.uid}`);
+    console.log(`[Sync] OPENING VAULT for UID: ${user.uid} at path shared-profiles/${user.uid}`);
 
     const unsubscribe = subscribeToProfile(
       db, 
@@ -56,13 +56,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // 1. Initial Load: Apply cloud data to local state if we haven't loaded yet.
         // 2. Cross-Device Update: If Cloud changed AND the user isn't currently typing (local matches last known cloud).
         if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
-          console.log(`[Sync] Cloud -> Local update applied (shared-profiles/${user.uid})`);
+          console.log(`[Sync] Realtime update received: Cloud -> Local applied (shared-profiles/${user.uid})`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         } else if (cloudDataStr !== lastCloudDataRef.current) {
           // Acknowledge update but suppress overwrite to avoid clearing user's active typing
           lastCloudDataRef.current = cloudDataStr;
-          console.log(`[Sync] Cloud change acknowledged (Background sync suppressed while typing)`);
+          console.log(`[Sync] Realtime update received: Cloud change acknowledged (Background sync suppressed while typing)`);
         }
         
         setIsCloudLoaded(true);
@@ -92,15 +92,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Sync] PUSHING VAULT UPDATE: shared-profiles/${user.uid}`);
+        console.log(`[Firestore] Pushing update to path: shared-profiles/${user.uid}`);
         
         // Optimistically update ref to prevent immediate loopback echo
         lastCloudDataRef.current = dataToSaveStr;
         
         await saveProfile(db, user.uid, profileToSync);
+        console.log(`[Firestore] Write success: shared-profiles/${user.uid}`);
         markSynced(syncTimestamp);
       } catch (error) {
-        console.error("[Sync] Vault update failed:", error);
+        console.error("[Firestore] Write failed:", error);
       }
     }, 2500); // 2.5s debounce for UI stability
 
@@ -110,7 +111,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // 4. Logout Cleanup
   useEffect(() => {
     if (!authLoading && !user) {
-      console.log("[Auth] Clearing local vault cache.");
+      console.log("[Auth] Session ended, clearing local vault cache.");
       reset();
       lastCloudDataRef.current = null;
     }

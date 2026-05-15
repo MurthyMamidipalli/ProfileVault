@@ -19,7 +19,7 @@ import {
   DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Database, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from "lucide-react";
+import { Database, LogIn, Loader2, Mail, Lock, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -57,15 +57,16 @@ export default function LoginPage() {
       return;
     }
 
+    console.log(`[Auth] LOGIN called for: ${email}`);
     setIsAuthenticating(true);
-    console.log(`[Auth] Attempting LOGIN for: ${email}`);
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log(`[Auth] LOGIN SUCCESS: ${userCredential.user.uid}`);
+      console.log(`[Auth] LOGIN success: ${userCredential.user.uid}`);
       toast({ title: "Welcome back!", description: "Accessing your professional vault." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(`[Auth] LOGIN ERROR:`, error);
+      console.error(`[Auth] LOGIN error:`, error);
       toast({
         variant: "destructive",
         title: "Login Failed",

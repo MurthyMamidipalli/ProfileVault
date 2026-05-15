@@ -26,7 +26,7 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
   
-  console.log(`[Firestore] PUSHING UPDATE: ${ref.path}`);
+  console.log(`[Firestore] Writing to document: ${ref.path}`);
   
   const payload = {
     profileData: data,
@@ -36,9 +36,9 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 
   try {
     await setDoc(ref, payload, { merge: true });
-    console.log(`[Firestore] WRITE SUCCESS: ${ref.path}`);
+    console.log(`[Firestore] Write success for UID: ${uid}`);
   } catch (error) {
-    console.error('[Firestore] WRITE FAILED:', error);
+    console.error('[Firestore] Write failed for UID:', uid, error);
     throw error;
   }
 }
@@ -54,19 +54,19 @@ export function subscribeToProfile(
   onError: (err: any) => void
 ): Unsubscribe {
   const ref = getProfileRef(db, uid);
-  console.log(`[Sync] ATTACHING REAL-TIME LISTENER: ${ref.path}`);
+  console.log(`[Sync] Attaching realtime listener to: ${ref.path}`);
   
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      console.log(`[Sync] CLOUD DATA RECEIVED for UID: ${uid}`);
+      console.log(`[Sync] Realtime sync received for path: ${ref.path}`);
       onUpdate(data.profileData as UserProfile);
     } else {
-      console.log(`[Sync] NO EXISTING PROFILE FOUND for UID: ${uid} (New User Flow)`);
+      console.log(`[Sync] No existing profile found at ${ref.path} (New user initialization)`);
       onUpdate(null);
     }
   }, (err) => {
-    console.error('[Sync] REAL-TIME LISTENER ERROR:', err);
+    console.error('[Sync] Realtime listener error for UID:', uid, err);
     onError(err);
   });
 }

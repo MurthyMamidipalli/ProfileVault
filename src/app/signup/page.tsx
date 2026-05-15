@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Database, UserPlus, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Database, UserPlus, Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -54,15 +54,16 @@ export default function SignupPage() {
       return;
     }
 
+    console.log(`[Auth] SIGNUP called for: ${email}`);
     setIsAuthenticating(true);
-    console.log(`[Auth] Attempting SIGNUP for: ${email}`);
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log(`[Auth] SIGNUP SUCCESS: ${userCredential.user.uid}`);
+      console.log(`[Auth] SIGNUP success: ${userCredential.user.uid}`);
       toast({ title: "Account created!", description: "Welcome to ProfileVault." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(`[Auth] SIGNUP ERROR:`, error);
+      console.error(`[Auth] SIGNUP error:`, error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
