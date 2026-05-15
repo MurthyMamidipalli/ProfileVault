@@ -2,7 +2,6 @@
 "use client";
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface ProjectLink {
   id: string;
@@ -89,11 +88,31 @@ export interface UserProfile {
   lastSyncedAt?: string;
 }
 
+export const DEFAULT_PROFILE: UserProfile = {
+  name: '',
+  email: '',
+  secondaryEmail: '',
+  phone: '',
+  secondaryPhone: '',
+  address: '',
+  website: '',
+  gender: 'Prefer not to say',
+  age: '',
+  bio: '',
+  avatarUrl: '',
+  jobs: [],
+  education: [],
+  experience: [],
+  projects: [],
+  socialLinks: [],
+  portfolioLinks: [],
+  resumes: []
+};
+
 interface ProfileStore {
   profile: UserProfile;
   _hasHydrated: boolean;
   isCloudLoaded: boolean;
-  setHasHydrated: (state: boolean) => void;
   setIsCloudLoaded: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
   replaceProfile: (profile: UserProfile) => void;
@@ -118,163 +137,130 @@ interface ProfileStore {
 }
 
 const generateId = () => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return Math.random().toString(36).substring(2, 15);
 };
 
-export const DEFAULT_PROFILE: UserProfile = {
-  name: '',
-  email: '',
-  secondaryEmail: '',
-  phone: '',
-  secondaryPhone: '',
-  address: '',
-  website: '',
-  gender: 'Prefer not to say',
-  age: '',
-  bio: '',
-  avatarUrl: '',
-  jobs: [],
-  education: [],
-  experience: [],
-  projects: [],
-  socialLinks: [],
-  portfolioLinks: [],
-  resumes: []
-};
-
-export const useProfileStore = create<ProfileStore>()(
-  persist(
-    (set) => ({
-      profile: DEFAULT_PROFILE,
-      _hasHydrated: false,
-      isCloudLoaded: false,
-      setHasHydrated: (state) => set({ _hasHydrated: state }),
-      setIsCloudLoaded: (state) => set({ isCloudLoaded: state }),
-      setProfile: (updates) => set((state) => ({ 
-        profile: { ...state.profile, ...updates } 
-      })),
-      replaceProfile: (fullProfile) => set({ 
-        profile: { ...DEFAULT_PROFILE, ...fullProfile },
-        isCloudLoaded: true 
-      }),
-      addEducation: (entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          education: [...(state.profile.education || []), { ...entry, id: generateId() }]
-        }
-      })),
-      updateEducation: (id, entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          education: (state.profile.education || []).map((e) => e.id === id ? { ...e, ...entry } : e)
-        }
-      })),
-      removeEducation: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          education: (state.profile.education || []).filter((e) => e.id !== id)
-        }
-      })),
-      addExperience: (entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          experience: [...(state.profile.experience || []), { ...entry, id: generateId() }]
-        }
-      })),
-      updateExperience: (id, entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          experience: (state.profile.experience || []).map((e) => e.id === id ? { ...e, ...entry } : e)
-        }
-      })),
-      removeExperience: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          experience: (state.profile.experience || []).filter((e) => e.id !== id)
-        }
-      })),
-      addProject: (entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          projects: [...(state.profile.projects || []), { ...entry, id: generateId() }]
-        }
-      })),
-      updateProject: (id, entry) => set((state) => ({
-        profile: {
-          ...state.profile,
-          projects: (state.profile.projects || []).map((p) => p.id === id ? { ...p, ...entry } : p)
-        }
-      })),
-      removeProject: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          projects: (state.profile.projects || []).filter((p) => p.id !== id)
-        }
-      })),
-      addPortfolioLink: (link) => set((state) => ({
-        profile: {
-          ...state.profile,
-          portfolioLinks: [...(state.profile.portfolioLinks || []), { ...link, id: generateId() }]
-        }
-      })),
-      removePortfolioLink: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          portfolioLinks: (state.profile.portfolioLinks || []).filter((l) => l.id !== id)
-        }
-      })),
-      addResume: (resume) => set((state) => ({
-        profile: {
-          ...state.profile,
-          resumes: [...(state.profile.resumes || []), { 
-            ...resume, 
-            id: generateId(),
-            uploadDate: new Date().toISOString().split('T')[0]
-          }]
-        }
-      })),
-      removeResume: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
-        }
-      })),
-      addJob: (job) => set((state) => ({
-        profile: {
-          ...state.profile,
-          jobs: [...(state.profile.jobs || []), { ...job, id: generateId() }]
-        }
-      })),
-      updateJob: (id, job) => set((state) => ({
-        profile: {
-          ...state.profile,
-          jobs: (state.profile.jobs || []).map((j) => j.id === id ? { ...j, ...job } : j)
-        }
-      })),
-      removeJob: (id) => set((state) => ({
-        profile: {
-          ...state.profile,
-          jobs: (state.profile.jobs || []).filter((j) => j.id !== id)
-        }
-      })),
-      markSynced: (timestamp) => set((state) => ({
-        profile: {
-          ...state.profile,
-          lastSyncedAt: timestamp || new Date().toISOString()
-        }
-      })),
-      reset: () => set({ 
-        profile: DEFAULT_PROFILE, 
-        isCloudLoaded: false 
-      })
-    }),
-    { 
-      name: 'profile-vault-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ profile: state.profile }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      }
+// Cloud-only store (No localStorage persistence)
+export const useProfileStore = create<ProfileStore>((set) => ({
+  profile: DEFAULT_PROFILE,
+  _hasHydrated: true, // Mark true immediately as we don't use localStorage anymore
+  isCloudLoaded: false,
+  setIsCloudLoaded: (state) => set({ isCloudLoaded: state }),
+  setProfile: (updates) => set((state) => ({ 
+    profile: { ...state.profile, ...updates } 
+  })),
+  replaceProfile: (fullProfile) => set({ 
+    profile: { ...DEFAULT_PROFILE, ...fullProfile },
+    isCloudLoaded: true 
+  }),
+  addEducation: (entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      education: [...(state.profile.education || []), { ...entry, id: generateId() }]
     }
-  )
-);
+  })),
+  updateEducation: (id, entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      education: (state.profile.education || []).map((e) => e.id === id ? { ...e, ...entry } : e)
+    }
+  })),
+  removeEducation: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      education: (state.profile.education || []).filter((e) => e.id !== id)
+    }
+  })),
+  addExperience: (entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      experience: [...(state.profile.experience || []), { ...entry, id: generateId() }]
+    }
+  })),
+  updateExperience: (id, entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      experience: (state.profile.experience || []).map((e) => e.id === id ? { ...e, ...entry } : e)
+    }
+  })),
+  removeExperience: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      experience: (state.profile.experience || []).filter((e) => e.id !== id)
+    }
+  })),
+  addProject: (entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      projects: [...(state.profile.projects || []), { ...entry, id: generateId() }]
+    }
+  })),
+  updateProject: (id, entry) => set((state) => ({
+    profile: {
+      ...state.profile,
+      projects: (state.profile.projects || []).map((p) => p.id === id ? { ...p, ...entry } : p)
+    }
+  })),
+  removeProject: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      projects: (state.profile.projects || []).filter((p) => p.id !== id)
+    }
+  })),
+  addPortfolioLink: (link) => set((state) => ({
+    profile: {
+      ...state.profile,
+      portfolioLinks: [...(state.profile.portfolioLinks || []), { ...link, id: generateId() }]
+    }
+  })),
+  removePortfolioLink: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      portfolioLinks: (state.profile.portfolioLinks || []).filter((l) => l.id !== id)
+    }
+  })),
+  addResume: (resume) => set((state) => ({
+    profile: {
+      ...state.profile,
+      resumes: [...(state.profile.resumes || []), { 
+        ...resume, 
+        id: generateId(),
+        uploadDate: new Date().toISOString().split('T')[0]
+      }]
+    }
+  })),
+  removeResume: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
+    }
+  })),
+  addJob: (job) => set((state) => ({
+    profile: {
+      ...state.profile,
+      jobs: [...(state.profile.jobs || []), { ...job, id: generateId() }]
+    }
+  })),
+  updateJob: (id, job) => set((state) => ({
+    profile: {
+      ...state.profile,
+      jobs: (state.profile.jobs || []).map((j) => j.id === id ? { ...j, ...job } : j)
+    }
+  })),
+  removeJob: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      jobs: (state.profile.jobs || []).filter((j) => j.id !== id)
+    }
+  })),
+  markSynced: (timestamp) => set((state) => ({
+    profile: {
+      ...state.profile,
+      lastSyncedAt: timestamp || new Date().toISOString()
+    }
+  })),
+  reset: () => set({ 
+    profile: DEFAULT_PROFILE, 
+    isCloudLoaded: false 
+  })
+}));

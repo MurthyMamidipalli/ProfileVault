@@ -10,11 +10,10 @@
           "type": "object",
           "description": "The full user profile data."
         },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
+        "ownerId": {
+          "type": "string"
         },
-        "createdAt": {
+        "updatedAt": {
           "type": "string",
           "format": "date-time"
         }
@@ -25,9 +24,13 @@
     "providers": ["password"]
   },
   "firestore": {
+    "/users/{uid}/profile/main": {
+      "schema": { "$ref": "#/backend/entities/SharedProfile" },
+      "description": "Private professional vault data. Path requested by user."
+    },
     "/shared-profiles/{profileId}": {
       "schema": { "$ref": "#/backend/entities/SharedProfile" },
-      "description": "Publicly shared professional profiles. Accessible by anyone with the unique ID."
+      "description": "Publicly shared profile snapshots."
     }
   }
 }

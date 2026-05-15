@@ -4,135 +4,112 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
-import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
+import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { RefreshCw, Cloud, ShieldCheck } from "lucide-react";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
+import { RefreshCw, ShieldCheck } from "lucide-react";
+import { subscribeToProfile, saveProfile } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const { profile, replaceProfile, markSynced, _hasHydrated, isCloudLoaded, setIsCloudLoaded, reset } = useProfileStore();
+  const { 
+    profile, 
+    replaceProfile, 
+    markSynced, 
+    isCloudLoaded, 
+    setIsCloudLoaded, 
+    reset 
+  } = useProfileStore();
   const router = useRouter();
   
-  // Ref to track the last version of the profile received from the cloud
-  // This helps prevent infinite loops during auto-sync
-  const cloudDataRef = useRef<string | null>(null);
-  const hydrationAttempted = useRef(false);
+  // Ref to track the data we last saw from the cloud to prevent write-loops
+  const lastCloudDataRef = useRef<string | null>(null);
 
   // 1. Auth Protection
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
+    if (!authLoading) {
+      console.log(`[Auth] State change: ${user ? 'Authenticated (' + user.uid + ')' : 'Unauthenticated'}`);
+      if (!user) {
+        router.push("/login");
+      }
     }
   }, [user, authLoading, router]);
 
-  // 2. Real-time Cloud Sync & Hydration
+  // 2. Real-time Subscription (Loading from Cloud)
   useEffect(() => {
-    if (!user || !db || !_hasHydrated) return;
+    if (!user || !db) return;
 
-    const profileRef = doc(db, "shared-profiles", user.uid);
-    
-    // Initial fetch and real-time subscription
-    const unsubscribe = onSnapshot(profileRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const cloudProfile = {
-          ...DEFAULT_PROFILE,
-          ...data.profileData,
-          sharedId: user.uid
-        };
-
-        const cloudProfileStr = JSON.stringify(cloudProfile);
-        
-        // Only update local state if the cloud data is different from what we already have
-        // OR if this is the first load
-        if (cloudProfileStr !== JSON.stringify(profile) || !isCloudLoaded) {
-          cloudDataRef.current = cloudProfileStr;
-          replaceProfile(cloudProfile);
-          setIsCloudLoaded(true);
+    const unsubscribe = subscribeToProfile(
+      db, 
+      user.uid, 
+      (cloudData) => {
+        if (cloudData) {
+          const cloudDataStr = JSON.stringify(cloudData);
+          
+          // Only update local store if data is actually different
+          if (cloudDataStr !== JSON.stringify(profile)) {
+            console.log('[Sync] Updating local store with cloud data');
+            lastCloudDataRef.current = cloudDataStr;
+            replaceProfile(cloudData);
+          }
+        } else {
+          console.log('[Sync] No existing cloud profile found for this user');
+          lastCloudDataRef.current = JSON.stringify(DEFAULT_PROFILE);
         }
-      } else {
-        // New user: No profile in cloud yet. 
-        // We mark cloud as loaded so the local profile can be synced later.
         setIsCloudLoaded(true);
-        cloudDataRef.current = JSON.stringify(profile);
+      },
+      (err) => {
+        console.error('[Sync] Subscription error:', err);
+        setIsCloudLoaded(true); // Allow local fallback even on error
       }
-    }, (err) => {
-      const permissionError = new FirestorePermissionError({
-        path: profileRef.path,
-        operation: 'get',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-      // Even on error, we stop the loading state to allow local-only fallback
-      setIsCloudLoaded(true);
-    });
+    );
 
     return () => unsubscribe();
-  }, [user, db, _hasHydrated, replaceProfile, setIsCloudLoaded]);
+  }, [user, db, replaceProfile, setIsCloudLoaded]);
 
-  // 3. Background Auto-Sync (Debounced Writes)
+  // 3. Auto-Save (Pushing to Cloud)
   useEffect(() => {
-    // Only sync if:
-    // 1. User is authenticated
-    // 2. Cloud data has been successfully fetched at least once
-    // 3. Local store has hydrated from localStorage
-    if (!user || !db || !isCloudLoaded || !_hasHydrated) return;
+    // SECURITY: Only save if we have successfully loaded from the cloud once.
+    // This prevents a blank local session from overwriting an existing cloud profile
+    // during the initial "race" when logging in.
+    if (!user || !db || !isCloudLoaded) return;
 
     const currentProfileStr = JSON.stringify(profile);
 
-    // If local data matches the last known cloud state, do nothing
-    if (currentProfileStr === cloudDataRef.current) return;
+    // If local matches cloud, don't write
+    if (currentProfileStr === lastCloudDataRef.current) return;
+
+    console.log('[Sync] Change detected in local profile. Queueing auto-save...');
 
     const timer = setTimeout(async () => {
       try {
-        const profileRef = doc(db, "shared-profiles", user.uid);
         const syncTimestamp = new Date().toISOString();
-        
-        // Ensure sharedId is always correct
         const profileToSync = { ...profile, sharedId: user.uid, lastSyncedAt: syncTimestamp };
         
-        const syncData = {
-          profileData: profileToSync,
-          updatedAt: serverTimestamp(),
-        };
-
-        // Non-blocking write
-        setDoc(profileRef, syncData, { merge: true })
-          .then(() => {
-            // Update the reference to prevent re-fetching what we just wrote
-            cloudDataRef.current = JSON.stringify(profileToSync);
-            markSynced(syncTimestamp);
-          })
-          .catch(async (err) => {
-            const permissionError = new FirestorePermissionError({
-              path: profileRef.path,
-              operation: 'write',
-              requestResourceData: syncData
-            });
-            errorEmitter.emit('permission-error', permissionError);
-          });
-
+        await saveProfile(db, user.uid, profileToSync);
+        
+        // Update ref so we don't sync the sync
+        lastCloudDataRef.current = JSON.stringify(profileToSync);
+        markSynced(syncTimestamp);
+        
       } catch (error) {
-        console.error("Auto-sync error:", error);
+        console.error("[Sync] Auto-save error:", error);
       }
-    }, 2000); // 2-second debounce for writes
+    }, 1500); // 1.5s debounce
 
     return () => clearTimeout(timer);
-  }, [profile, user, db, isCloudLoaded, _hasHydrated, markSynced]);
+  }, [profile, user, db, isCloudLoaded, markSynced]);
 
-  // 4. Clean up on logout
+  // 4. Cleanup on logout
   useEffect(() => {
     if (!authLoading && !user) {
       reset();
-      cloudDataRef.current = null;
+      lastCloudDataRef.current = null;
     }
   }, [user, authLoading, reset]);
 
-  // Loading Screen: Visible until Auth is determined AND cloud data is fetched
-  if (authLoading || !_hasHydrated || (user && !isCloudLoaded)) {
+  // Loading Gate: Don't show dashboard until we know WHO the user is and WHAT their data is.
+  if (authLoading || (user && !isCloudLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center gap-6 animate-in fade-in duration-700">
