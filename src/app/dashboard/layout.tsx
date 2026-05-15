@@ -12,7 +12,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const { setProfile, _hasHydrated } = useProfileStore();
+  const { profile, setProfile, replaceProfile, _hasHydrated } = useProfileStore();
   const router = useRouter();
   const [cloudSyncDone, setCloudSyncDone] = useState(false);
 
@@ -23,7 +23,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, router]);
 
-  // Initial Cloud Hydration
+  // Initial Cloud Hydration: Prioritize cloud data on fresh devices/tabs
   useEffect(() => {
     if (user && _hasHydrated && !cloudSyncDone) {
       const fetchCloudProfile = async () => {
@@ -34,8 +34,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.profileData) {
-              // Replace local state with cloud state on first login/refresh
-              setProfile(data.profileData);
+              // Replace local state with cloud state entirely to ensure consistency
+              replaceProfile(data.profileData);
             }
           }
         } catch (error) {
@@ -48,15 +48,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     } else if (!user && !authLoading) {
       setCloudSyncDone(true);
     }
-  }, [user, _hasHydrated, db, setProfile, authLoading, cloudSyncDone]);
+  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone]);
 
-  // If sync is done but we have a user, ensure the local sharedId is correct
+  // Ensure sharedId is always synced with user UID
   useEffect(() => {
     if (user && cloudSyncDone) {
-      // Just a safety check to ensure sharedId matches UID
-      setProfile({ sharedId: user.uid });
+      if (profile.sharedId !== user.uid) {
+        setProfile({ sharedId: user.uid });
+      }
     }
-  }, [user, cloudSyncDone, setProfile]);
+  }, [user, cloudSyncDone, profile.sharedId, setProfile]);
 
   // Global loader while authenticating or waiting for the initial cloud sync
   if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {

@@ -94,6 +94,7 @@ interface ProfileStore {
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
+  replaceProfile: (profile: UserProfile) => void;
   addEducation: (entry: Omit<EducationEntry, 'id'>) => void;
   updateEducation: (id: string, entry: Partial<EducationEntry>) => void;
   removeEducation: (id: string) => void;
@@ -147,6 +148,7 @@ export const useProfileStore = create<ProfileStore>()(
       setProfile: (updates) => set((state) => ({ 
         profile: { ...state.profile, ...updates } 
       })),
+      replaceProfile: (fullProfile) => set({ profile: fullProfile }),
       addEducation: (entry) => set((state) => ({
         profile: {
           ...state.profile,

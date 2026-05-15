@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export default function DashboardOverview() {
   const { profile } = useProfileStore();
 
-  const isProfileEmpty = !profile.name && !profile.bio && profile.jobs.length === 0;
+  const isProfileEmpty = !profile.name && !profile.bio && (profile.jobs || []).length === 0;
   const isSynced = !!profile.lastSyncedAt;
 
   return (
