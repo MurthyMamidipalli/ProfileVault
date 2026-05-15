@@ -68,7 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       
       fetchCloudProfile();
     }
-  }, [user, _hasHydrated, db, replaceProfile, isCloudLoaded, setIsCloudLoaded]);
+  }, [user, _hasHydrated, db, replaceProfile, isCloudLoaded, setIsCloudLoaded, profile]);
 
   // 3. Background Auto-Sync (Mirroring)
   useEffect(() => {
@@ -116,7 +116,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, authLoading, reset]);
 
   // Loading Gate: Ensures perfect data consistency on initial load
-  // If we have a user but haven't loaded their cloud data, we wait.
   if (authLoading || !_hasHydrated || (user && !isCloudLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
