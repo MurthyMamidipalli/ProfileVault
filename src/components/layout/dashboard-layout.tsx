@@ -29,7 +29,9 @@ import {
   Files,
   FolderCode,
   Share2,
-  Building2
+  Building2,
+  CloudCheck,
+  CloudOff
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -69,6 +71,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       toast({ variant: "destructive", title: "Logout Failed", description: error.message });
     }
   };
+
+  const isSynced = !!profile.lastSyncedAt;
 
   return (
     <div className="flex min-h-screen w-full bg-background overflow-hidden">
@@ -156,8 +160,19 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             </h2>
           </div>
           <div className="flex items-center gap-6">
-             <div className="text-sm font-bold text-muted-foreground hidden lg:block tracking-tight">
-               {profile.name}
+             <div className="hidden lg:flex flex-col items-end gap-0.5">
+               <span className="text-sm font-bold text-foreground leading-none">{profile.name || "New User"}</span>
+               <div className="flex items-center gap-1.5">
+                 {isSynced ? (
+                   <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
+                     <CloudCheck className="w-3 h-3" /> Vault Synced
+                   </span>
+                 ) : (
+                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
+                     <CloudOff className="w-3 h-3" /> Local Only
+                   </span>
+                 )}
+               </div>
              </div>
              <Link href="/dashboard/profile" className="transition-smooth hover:scale-110 active:scale-95">
                <Avatar className="w-10 h-10 border-2 border-primary/20 hover:border-primary transition-smooth shadow-lg">

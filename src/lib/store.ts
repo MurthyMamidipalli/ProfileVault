@@ -117,7 +117,6 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-// We use an "Empty" initial profile so users aren't confused by sample data when sync is pending
 const DEFAULT_PROFILE: UserProfile = {
   name: '',
   email: '',
