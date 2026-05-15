@@ -44,26 +44,36 @@ export default function PublicProfileView() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!id || !db) return;
+    setMounted(true);
+  }, []);
 
+  useEffect(() => {
+    if (!id || !db || !mounted) return;
+
+    console.log(`[View] Connecting to secure vault: shared-profiles/${id}`);
     const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data && data.profileData) {
+          console.log(`[View] Real-time update received for: ${id}`);
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
+          console.error(`[View] Data structure mismatch in vault: ${id}`);
           setError("Vault data structure is invalid.");
         }
       } else {
+        console.warn(`[View] No public vault found for: ${id}`);
         setError("Professional vault not found. The profile may be private or not yet synced.");
       }
       setLoading(false);
     }, async (err) => {
+      console.error(`[View] Connection denied:`, err);
       const permissionError = new FirestorePermissionError({
         path: profileRef.path,
         operation: 'get',
@@ -74,9 +84,12 @@ export default function PublicProfileView() {
     });
 
     return () => unsubscribe();
-  }, [id, db]);
+  }, [id, db, mounted]);
 
-  if (loading) {
+  // Prevent hydration mismatches
+  if (!mounted) return null;
+
+  if (loading && !profile) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-6 p-6">
         <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 animate-pulse">
@@ -89,7 +102,7 @@ export default function PublicProfileView() {
     );
   }
 
-  if (error || !profile) {
+  if (error && !profile) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center space-y-8 animate-fade-in">
         <div className="p-8 bg-destructive/5 rounded-full border border-destructive/10">
@@ -113,11 +126,11 @@ export default function PublicProfileView() {
     );
   }
 
-  const jobs = profile.jobs || [];
+  const jobs = profile?.jobs || [];
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary selection:text-primary-foreground">
-      {/* Hero Section with Glassmorphism Overlay */}
+      {/* Hero Section */}
       <div className="relative h-[400px] md:h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-accent/20" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.1),transparent)]" />
@@ -127,8 +140,8 @@ export default function PublicProfileView() {
           <div className="flex flex-col md:flex-row md:items-end gap-8 w-full animate-fade-in">
             <div className="relative shrink-0">
               <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] bg-card border-4 border-background shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden transition-smooth hover:scale-[1.03]">
-                {profile.avatarUrl ? (
-                  <Image src={profile.avatarUrl} alt={profile.name} fill className="object-cover" />
+                {profile?.avatarUrl ? (
+                  <Image src={profile.avatarUrl} alt={profile.name || "User"} fill className="object-cover" />
                 ) : (
                   <UserIcon className="w-20 h-20 text-primary/20" />
                 )}
@@ -138,14 +151,14 @@ export default function PublicProfileView() {
               </Badge>
             </div>
             <div className="space-y-4 pb-2">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-tight">{profile.name}</h1>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-tight">{profile?.name || "Vault Owner"}</h1>
               <div className="flex flex-wrap gap-y-2 gap-x-8 text-muted-foreground font-semibold text-sm md:text-base">
                 {jobs.length > 0 && (
                   <span className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-accent" /> {jobs[0].role} @ {jobs[0].company}
                   </span>
                 )}
-                {profile.address && (
+                {profile?.address && (
                   <span className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-primary" /> {profile.address}
                   </span>
@@ -165,9 +178,9 @@ export default function PublicProfileView() {
               <CardContent className="p-8 space-y-8">
                 <div className="group">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-2 group-hover:text-primary transition-smooth">Direct Email</p>
-                  <p className="font-bold text-base text-foreground break-words">{profile.email}</p>
+                  <p className="font-bold text-base text-foreground break-words">{profile?.email || "N/A"}</p>
                 </div>
-                {profile.secondaryEmail && (
+                {profile?.secondaryEmail && (
                   <div className="group opacity-70">
                     <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-2">Backup Email</p>
                     <p className="font-bold text-base text-foreground break-words">{profile.secondaryEmail}</p>
@@ -175,9 +188,9 @@ export default function PublicProfileView() {
                 )}
                 <div className="group">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-2 group-hover:text-primary transition-smooth">Phone Line</p>
-                  <p className="font-bold text-base text-foreground">{profile.phone}</p>
+                  <p className="font-bold text-base text-foreground">{profile?.phone || "N/A"}</p>
                 </div>
-                {profile.website && (
+                {profile?.website && (
                   <div className="group">
                     <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/40 mb-2 group-hover:text-accent transition-smooth">Digital HQ</p>
                     <a href={profile.website} target="_blank" rel="noopener" className="font-bold text-base text-accent hover:underline block break-words">
@@ -210,7 +223,7 @@ export default function PublicProfileView() {
                       </div>
                       <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
                         <Clock className="w-3 h-3" />
-                        {new Date(job.joiningDate).getFullYear()} — {job.endDate ? new Date(job.endDate).getFullYear() : 'PRESENT'}
+                        {job.joiningDate ? new Date(job.joiningDate).getFullYear() : 'N/A'} — {job.endDate ? new Date(job.endDate).getFullYear() : 'PRESENT'}
                       </div>
                       <div className="flex gap-2">
                         {job.employmentType && <Badge variant="secondary" className="text-[8px] h-4 uppercase font-black">{job.employmentType}</Badge>}
@@ -223,33 +236,35 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Portfolio Index</h2>
-            <div className="grid grid-cols-1 gap-3">
-              {profile.portfolioLinks?.map((link) => (
-                <a 
-                  key={link.id} 
-                  href={link.url} 
-                  target="_blank" 
-                  rel="noopener"
-                  className="group flex items-center justify-between p-5 rounded-xl bg-white/[0.01] border border-white/5 hover:border-accent/40 hover:bg-accent/5 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-lg bg-white/5 text-muted-foreground group-hover:text-accent transition-smooth">
-                      <LinkIcon className="w-4 h-4" />
+          {profile?.portfolioLinks && profile.portfolioLinks.length > 0 && (
+            <section className="space-y-6">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Portfolio Index</h2>
+              <div className="grid grid-cols-1 gap-3">
+                {profile.portfolioLinks.map((link) => (
+                  <a 
+                    key={link.id} 
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener"
+                    className="group flex items-center justify-between p-5 rounded-xl bg-white/[0.01] border border-white/5 hover:border-accent/40 hover:bg-accent/5 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-2.5 rounded-lg bg-white/5 text-muted-foreground group-hover:text-accent transition-smooth">
+                        <LinkIcon className="w-4 h-4" />
+                      </div>
+                      <span className="font-bold text-xs uppercase tracking-widest text-foreground">{link.platform}</span>
                     </div>
-                    <span className="font-bold text-xs uppercase tracking-widest text-foreground">{link.platform}</span>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-accent transition-smooth" />
-                </a>
-              ))}
-            </div>
-          </section>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-accent transition-smooth" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Main Content Area */}
         <div className="lg:col-span-8 space-y-16 animate-fade-in [animation-delay:200ms]">
-          {profile.bio && (
+          {profile?.bio && (
             <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Executive Summary</h2>
               <p className="text-2xl md:text-4xl font-medium leading-relaxed text-foreground/90 italic font-serif tracking-tight">
@@ -260,7 +275,7 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-5" />
 
-          {profile.projects && profile.projects.length > 0 && (
+          {profile?.projects && profile.projects.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Signature Works</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -302,7 +317,7 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-5" />
 
-          {profile.experience && profile.experience.length > 0 && (
+          {profile?.experience && profile.experience.length > 0 && (
             <section className="space-y-12">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Career Timeline</h2>
               <div className="space-y-16">
@@ -339,7 +354,7 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-5" />
 
-          {profile.education && profile.education.length > 0 && (
+          {profile?.education && profile.education.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Academic Pedigree</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
