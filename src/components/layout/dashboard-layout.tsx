@@ -30,8 +30,7 @@ import {
   FolderCode,
   Share2,
   Building2,
-  CloudCheck,
-  CloudOff
+  Cloud
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -165,11 +164,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                <div className="flex items-center gap-1.5">
                  {isSynced ? (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
-                     <CloudCheck className="w-3 h-3" /> Vault Synced
+                     <Cloud className="w-3 h-3" /> Vault Synced
                    </span>
                  ) : (
                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
-                     <CloudOff className="w-3 h-3" /> Local Only
+                     <Cloud className="w-3 h-3" /> Local Only
                    </span>
                  )}
                </div>

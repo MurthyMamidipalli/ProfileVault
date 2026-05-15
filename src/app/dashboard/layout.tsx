@@ -7,7 +7,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useProfileStore } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, RefreshCw, CloudCheck } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();

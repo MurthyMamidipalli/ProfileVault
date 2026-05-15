@@ -3,7 +3,7 @@
 
 import { useProfileStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { User, CheckCircle2, CloudCheck, ShieldCheck, AlertCircle } from "lucide-react";
+import { User, CheckCircle2, Cloud, ShieldCheck, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function DashboardOverview() {
@@ -19,7 +19,7 @@ export default function DashboardOverview() {
           <User className="w-12 h-12 text-primary" />
           {isSynced && (
             <div className="absolute -bottom-1 -right-1 bg-accent text-accent-foreground rounded-full p-1 border-2 border-background">
-              <CloudCheck className="w-4 h-4" />
+              <Cloud className="w-4 h-4" />
             </div>
           )}
         </div>
@@ -47,7 +47,7 @@ export default function DashboardOverview() {
             {isSynced ? (
               <>
                 <div className="flex items-center gap-2 text-accent font-bold">
-                  <CloudCheck className="w-5 h-5" />
+                  <Cloud className="w-5 h-5" />
                   Cloud Synchronized
                 </div>
                 <p className="text-xs text-muted-foreground">
