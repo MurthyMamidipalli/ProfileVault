@@ -7,7 +7,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useProfileStore } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, CloudSync } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
@@ -53,7 +53,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [user, _hasHydrated, db, setProfile, authLoading]);
 
   // Show a high-quality global loader while authenticating or waiting for cloud sync
-  // We wait for cloudSyncDone specifically to prevent showing default local data
   if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -67,7 +66,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-center space-y-2">
             <h3 className="text-lg font-bold tracking-tight text-foreground">Accessing Your Vault</h3>
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              <CloudSync className="w-4 h-4 animate-bounce" />
+              <RefreshCw className="w-4 h-4 animate-spin" />
               Synchronizing account data...
             </p>
           </div>

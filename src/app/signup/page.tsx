@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Vault, UserPlus, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Database, UserPlus, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -87,7 +87,7 @@ export default function SignupPage() {
         <div className="absolute top-0 right-0 p-8 -mr-4 -mt-4 bg-accent/10 rounded-full blur-2xl" />
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
-            <Vault className="w-6 h-6 text-accent-foreground" />
+            <Database className="w-6 h-6 text-accent-foreground" />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-headline font-bold">Create Account</CardTitle>

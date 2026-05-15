@@ -19,7 +19,7 @@ import {
   DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Vault, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from "lucide-react";
+import { Database, LogIn, Loader2, Mail, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
         <div className="absolute top-0 right-0 p-8 -mr-4 -mt-4 bg-primary/10 rounded-full blur-2xl" />
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <Vault className="w-6 h-6 text-primary-foreground" />
+            <Database className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-headline font-bold">Sign In</CardTitle>

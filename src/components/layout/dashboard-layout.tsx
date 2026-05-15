@@ -25,7 +25,7 @@ import {
   LayoutDashboard, 
   Settings, 
   LogOut,
-  Vault,
+  Database,
   Files,
   FolderCode,
   Share2,
@@ -81,7 +81,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="h-20 flex items-center px-6 border-b border-border/50">
           <Link href="/dashboard" className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-              <Vault className="w-6 h-6 text-primary-foreground" />
+              <Database className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className={cn(
               "font-headline font-bold text-xl tracking-tighter transition-all duration-300",

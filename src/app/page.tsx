@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Vault, ChevronRight, User, Shield, Zap } from 'lucide-react';
+import { Database, ChevronRight, User, Shield, Zap } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -10,7 +10,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-primary/20 blur-[120px] rounded-full" />
         <div className="relative space-y-4">
           <div className="mx-auto w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 animate-bounce">
-            <Vault className="w-10 h-10 text-primary-foreground" />
+            <Database className="w-10 h-10 text-primary-foreground" />
           </div>
           <h1 className="text-5xl md:text-7xl font-headline font-black tracking-tighter text-foreground">
             Profile<span className="text-primary">Vault</span>
