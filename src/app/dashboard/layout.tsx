@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { useProfileStore } from "@/lib/store";
+import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -35,12 +35,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             const data = docSnap.data();
             if (data.profileData) {
               // Replace local state with cloud state entirely to ensure consistency
-              replaceProfile(data.profileData);
+              // We merge with DEFAULT_PROFILE to handle any structural updates in the schema
+              replaceProfile({ ...DEFAULT_PROFILE, ...data.profileData });
             }
           }
         } catch (error) {
           console.error("Cloud sync failed:", error);
         } finally {
+          // Always mark as done so we don't block the user forever if the fetch fails
           setCloudSyncDone(true);
         }
       };

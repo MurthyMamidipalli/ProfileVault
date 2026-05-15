@@ -118,7 +118,7 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-const DEFAULT_PROFILE: UserProfile = {
+export const DEFAULT_PROFILE: UserProfile = {
   name: '',
   email: '',
   secondaryEmail: '',
@@ -148,7 +148,7 @@ export const useProfileStore = create<ProfileStore>()(
       setProfile: (updates) => set((state) => ({ 
         profile: { ...state.profile, ...updates } 
       })),
-      replaceProfile: (fullProfile) => set({ profile: fullProfile }),
+      replaceProfile: (fullProfile) => set({ profile: { ...DEFAULT_PROFILE, ...fullProfile } }),
       addEducation: (entry) => set((state) => ({
         profile: {
           ...state.profile,
