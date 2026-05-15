@@ -47,7 +47,7 @@ export default function ProfilePage() {
         toast({ 
           variant: "destructive", 
           title: "File Too Large", 
-          description: "Please select an image smaller than 1MB to ensure smooth performance." 
+          description: "Please select an image smaller than 1MB." 
         });
         return;
       }
@@ -62,15 +62,11 @@ export default function ProfilePage() {
           toast({ 
             variant: "destructive", 
             title: "Storage Error", 
-            description: "The image is still too large for local storage. Please try an even smaller image." 
+            description: "Image too large for local cache." 
           });
         } finally {
           setIsUploading(false);
         }
-      };
-      reader.onerror = () => {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not read the file." });
-        setIsUploading(false);
       };
       reader.readAsDataURL(file);
     }
@@ -88,13 +84,6 @@ export default function ProfilePage() {
         <p className="text-muted-foreground">Manage your basic identity and contact information.</p>
       </div>
 
-      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground">
-          <strong>Tip:</strong> Large images and documents are stored in your local vault. Use the <strong>Portfolio Link</strong> section to sync them to the cloud for public sharing.
-        </p>
-      </div>
-
       <form onSubmit={handleSave} className="space-y-6">
         <Card className="glass-card overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-white/5">
@@ -110,7 +99,7 @@ export default function ProfilePage() {
                 <Avatar className="w-28 h-28 border-2 border-primary/20 shadow-xl group-hover:border-primary/50 transition-smooth">
                   <AvatarImage src={profile.avatarUrl} className="object-cover" />
                   <AvatarFallback className="bg-secondary text-secondary-foreground text-2xl font-bold">
-                    {profile.name?.charAt(0) || <User className="w-10 h-10" />}
+                    {profile.fullName?.charAt(0) || <User className="w-10 h-10" />}
                   </AvatarFallback>
                 </Avatar>
                 {isUploading && (
@@ -123,30 +112,13 @@ export default function ProfilePage() {
                 <h4 className="font-bold">Profile Picture</h4>
                 <p className="text-sm text-muted-foreground">Upload a professional headshot (Max 1MB).</p>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    className="hidden" 
-                    accept="image/*" 
-                  />
-                  <Button 
-                    type="button" 
-                    size="sm" 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2"
-                  >
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                  <Button type="button" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
                     <Camera className="w-4 h-4" />
                     Change Photo
                   </Button>
                   {profile.avatarUrl && (
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={removeAvatar}
-                      className="text-destructive hover:bg-destructive/10"
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={removeAvatar} className="text-destructive hover:bg-destructive/10">
                       <Trash2 className="w-4 h-4 mr-2" />
                       Remove
                     </Button>
@@ -157,12 +129,13 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 <Input 
-                  id="name" 
-                  value={profile.name} 
-                  onChange={(e) => setProfile({ name: e.target.value })}
+                  id="fullName" 
+                  value={profile.fullName || profile.name || ""} 
+                  onChange={(e) => setProfile({ fullName: e.target.value })}
                   className="bg-background/50" 
+                  placeholder="e.g. John Doe"
                 />
               </div>
               
@@ -199,10 +172,7 @@ export default function ProfilePage() {
                 <Label htmlFor="gender">Gender</Label>
                 <div className="relative">
                   <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
-                  <Select 
-                    value={profile.gender || "Prefer not to say"} 
-                    onValueChange={(value) => setProfile({ gender: value })}
-                  >
+                  <Select value={profile.gender || "Prefer not to say"} onValueChange={(value) => setProfile({ gender: value })}>
                     <SelectTrigger className="pl-10 bg-background/50">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
@@ -218,44 +188,10 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="age">Age</Label>
-                <div className="relative">
-                  <Cake className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="age" 
-                    type="number"
-                    placeholder="e.g. 25"
-                    value={profile.age || ""} 
-                    onChange={(e) => setProfile({ age: e.target.value })}
-                    className="pl-10 bg-background/50" 
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="phone">Primary Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="phone" 
-                    value={profile.phone} 
-                    onChange={(e) => setProfile({ phone: e.target.value })}
-                    className="pl-10 bg-background/50" 
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="secondaryPhone">Secondary Phone Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="secondaryPhone" 
-                    placeholder="e.g. +1 (555) 000-0000"
-                    value={profile.secondaryPhone || ''} 
-                    onChange={(e) => setProfile({ secondaryPhone: e.target.value })}
-                    className="pl-10 bg-background/50" 
-                  />
+                  <Input id="phone" value={profile.phone} onChange={(e) => setProfile({ phone: e.target.value })} className="pl-10 bg-background/50" />
                 </div>
               </div>
 
@@ -263,25 +199,15 @@ export default function ProfilePage() {
                 <Label htmlFor="website">Personal Website</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="website" 
-                    placeholder="https://yourportfolio.com" 
-                    value={profile.website} 
-                    onChange={(e) => setProfile({ website: e.target.value })}
-                    className="pl-10 bg-background/50" 
-                  />
+                  <Input id="website" placeholder="https://yourportfolio.com" value={profile.website} onChange={(e) => setProfile({ website: e.target.value })} className="pl-10 bg-background/50" />
                 </div>
               </div>
+
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="address">Full Address / Location</Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="address" 
-                    value={profile.address} 
-                    onChange={(e) => setProfile({ address: e.target.value })}
-                    className="pl-10 bg-background/50" 
-                  />
+                  <Input id="address" value={profile.address} onChange={(e) => setProfile({ address: e.target.value })} className="pl-10 bg-background/50" />
                 </div>
               </div>
             </div>

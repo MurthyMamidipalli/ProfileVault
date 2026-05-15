@@ -30,7 +30,6 @@ import {
   FolderCode,
   Share2,
   Building2,
-  Cloud,
   CheckCircle2,
   RefreshCw
 } from "lucide-react";
@@ -74,6 +73,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   };
 
   const isSynced = !!profile.lastSyncedAt;
+  const displayName = profile.fullName || profile.name || "Vault Owner";
 
   return (
     <div className="flex min-h-screen w-full bg-background overflow-hidden">
@@ -162,7 +162,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-6">
              <div className="hidden lg:flex flex-col items-end gap-0.5">
-               <span className="text-sm font-bold text-foreground leading-none">{profile.name || "Vault Owner"}</span>
+               <span className="text-sm font-bold text-foreground leading-none">{displayName}</span>
                <div className="flex items-center gap-1.5">
                  {isSynced ? (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
@@ -179,7 +179,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                <Avatar className="w-10 h-10 border-2 border-primary/20 hover:border-primary transition-smooth shadow-lg">
                   <AvatarImage src={profile.avatarUrl} className="object-cover" />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm font-black">
-                    {profile.name?.charAt(0) || "U"}
+                    {displayName.charAt(0)}
                   </AvatarFallback>
                </Avatar>
              </Link>

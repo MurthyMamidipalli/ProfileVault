@@ -66,7 +66,7 @@ export interface JobEntry {
 }
 
 export interface UserProfile {
-  name: string;
+  fullName: string; // Changed from 'name' to 'fullName' to match Firestore migration requirement
   email: string;
   secondaryEmail: string;
   phone: string;
@@ -86,10 +86,11 @@ export interface UserProfile {
   jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
+  name?: string; // Legacy field fallback
 }
 
 export const DEFAULT_PROFILE: UserProfile = {
-  name: '',
+  fullName: '',
   email: '',
   secondaryEmail: '',
   phone: '',

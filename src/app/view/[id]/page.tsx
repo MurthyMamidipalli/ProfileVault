@@ -5,8 +5,6 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 import { UserProfile } from "@/lib/store";
 import { 
   Loader2, 
@@ -52,21 +50,27 @@ export default function PublicProfileView() {
     const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
+      console.log(`[View] Snapshot triggered for: ${id}`);
       if (snapshot.exists()) {
         const data = snapshot.data();
+        console.log("[View] Full Document Data:", data);
+        
+        // Critical requirement: Read from doc.data().profileData
         if (data && data.profileData) {
-          console.log(`[View] Real-time profile data received for: ${id}`);
+          console.log("[View] profileData found:", data.profileData);
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
-          setError("Vault content structure is unsupported.");
+          console.warn("[View] Document exists but 'profileData' field is missing.");
+          setError("This vault is currently empty or incorrectly formatted.");
         }
       } else {
-        setError("Professional vault not found. Ensure the user has synced their profile.");
+        console.warn("[View] Vault document does not exist at path:", profileRef.path);
+        setError("Professional vault not found. Ensure the user has published their profile.");
       }
       setLoading(false);
     }, (err) => {
-      console.error(`[View] Permission denied:`, err);
+      console.error(`[View] Firebase Error:`, err);
       setError("Secure access restricted or profile is private.");
       setLoading(false);
     });
@@ -102,7 +106,19 @@ export default function PublicProfileView() {
     );
   }
 
-  const jobs = profile?.jobs || [];
+  // Unified data mapping with legacy fallbacks
+  const pData = profile;
+  const fullName = pData?.fullName || pData?.name || "Vault Owner";
+  const bio = pData?.bio || "";
+  const avatarUrl = pData?.avatarUrl || "";
+  const email = pData?.email || "N/A";
+  const phone = pData?.phone || "";
+  const website = pData?.website || "";
+  const address = pData?.address || "";
+  const jobs = pData?.jobs || [];
+  const projects = pData?.projects || [];
+  const experience = pData?.experience || [];
+  const portfolioLinks = pData?.portfolioLinks || [];
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary/30">
@@ -114,8 +130,8 @@ export default function PublicProfileView() {
           <div className="flex flex-col md:flex-row md:items-end gap-6 w-full animate-fade-in">
             <div className="relative shrink-0">
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2rem] bg-card border-4 border-background shadow-2xl overflow-hidden">
-                {profile?.avatarUrl ? (
-                  <Image src={profile.avatarUrl} alt={profile.name || "User"} fill className="object-cover" />
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt={fullName} fill className="object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-secondary">
                     <UserIcon className="w-16 h-16 text-muted-foreground/30" />
@@ -127,16 +143,16 @@ export default function PublicProfileView() {
               </Badge>
             </div>
             <div className="space-y-3 pb-2">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tighter">{profile?.name || "Vault Owner"}</h1>
+              <h1 className="text-4xl md:text-5xl font-black tracking-tighter">{fullName}</h1>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-muted-foreground font-semibold text-sm">
                 {jobs.length > 0 && (
                   <span className="flex items-center gap-1.5">
                     <Building2 className="w-4 h-4 text-primary" /> {jobs[0].role} @ {jobs[0].company}
                   </span>
                 )}
-                {profile?.address && (
+                {address && (
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-accent" /> {profile.address}
+                    <MapPin className="w-4 h-4 text-accent" /> {address}
                   </span>
                 )}
               </div>
@@ -155,31 +171,31 @@ export default function PublicProfileView() {
             <CardContent className="space-y-6 pt-4">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase font-bold text-primary/60">Primary Email</p>
-                <p className="text-sm font-bold break-all">{profile?.email || "N/A"}</p>
+                <p className="text-sm font-bold break-all">{email}</p>
               </div>
-              {profile?.website && (
+              {website && (
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-primary/60">Professional Site</p>
-                  <a href={profile.website} target="_blank" rel="noopener" className="text-sm font-bold text-accent hover:underline flex items-center gap-2">
-                    {profile.website.replace(/^https?:\/\//, '')}
+                  <a href={website} target="_blank" rel="noopener" className="text-sm font-bold text-accent hover:underline flex items-center gap-2">
+                    {website.replace(/^https?:\/\//, '')}
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               )}
-              {profile?.phone && (
+              {phone && (
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-primary/60">Phone Line</p>
-                  <p className="text-sm font-bold">{profile.phone}</p>
+                  <p className="text-sm font-bold">{phone}</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {profile?.portfolioLinks && profile.portfolioLinks.length > 0 && (
+          {portfolioLinks.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Network Links</h3>
               <div className="grid grid-cols-1 gap-2">
-                {profile.portfolioLinks.map((link) => (
+                {portfolioLinks.map((link) => (
                   <a 
                     key={link.id} 
                     href={link.url} 
@@ -201,22 +217,22 @@ export default function PublicProfileView() {
 
         {/* Main Feed */}
         <div className="lg:col-span-8 space-y-12 animate-fade-in [animation-delay:200ms]">
-          {profile?.bio && (
+          {bio && (
             <section className="space-y-6">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Executive Summary</h2>
               <p className="text-xl md:text-2xl font-medium leading-relaxed italic opacity-90">
-                "{profile.bio}"
+                "{bio}"
               </p>
             </section>
           )}
 
           <Separator className="opacity-10" />
 
-          {profile?.projects && profile.projects.length > 0 && (
+          {projects.length > 0 && (
             <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Signature Projects</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {profile.projects.map((proj) => (
+                {projects.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-all">
                     {proj.imageUrl && (
                       <div className="relative h-48 w-full border-b border-white/5 overflow-hidden">
@@ -242,11 +258,11 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {profile?.experience && profile.experience.length > 0 && (
+          {experience.length > 0 && (
             <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Career History</h2>
               <div className="space-y-10">
-                {profile.experience.map((exp) => (
+                {experience.map((exp) => (
                   <div key={exp.id} className="relative pl-8 border-l-2 border-primary/20">
                     <div className="absolute top-0 left-[-6px] w-2.5 h-2.5 rounded-full bg-primary" />
                     <div className="space-y-3">
