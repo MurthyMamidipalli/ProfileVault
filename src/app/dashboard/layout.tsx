@@ -1,20 +1,21 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const { profile, setProfile, replaceProfile, _hasHydrated } = useProfileStore();
+  const { profile, setProfile, replaceProfile, markSynced, _hasHydrated } = useProfileStore();
   const router = useRouter();
   const [cloudSyncDone, setCloudSyncDone] = useState(false);
+  const lastSyncRef = useRef<string>("");
 
   // Auth Protection
   useEffect(() => {
@@ -34,15 +35,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.profileData) {
-              // Replace local state with cloud state entirely to ensure consistency
-              // We merge with DEFAULT_PROFILE to handle any structural updates in the schema
-              replaceProfile({ ...DEFAULT_PROFILE, ...data.profileData });
+              // Deep compare to avoid unnecessary state updates if local and cloud are already in sync
+              const cloudDataString = JSON.stringify(data.profileData);
+              if (cloudDataString !== JSON.stringify(profile)) {
+                replaceProfile({ ...DEFAULT_PROFILE, ...data.profileData });
+                lastSyncRef.current = cloudDataString;
+              }
             }
           }
         } catch (error) {
-          console.error("Cloud sync failed:", error);
+          console.error("Cloud hydration failed:", error);
         } finally {
-          // Always mark as done so we don't block the user forever if the fetch fails
           setCloudSyncDone(true);
         }
       };
@@ -50,7 +53,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     } else if (!user && !authLoading) {
       setCloudSyncDone(true);
     }
-  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone]);
+  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone, profile]);
+
+  // Background Auto-Sync: Automatically persist local changes to Firestore
+  useEffect(() => {
+    if (user && cloudSyncDone && _hasHydrated) {
+      const currentProfileString = JSON.stringify(profile);
+      
+      // Only sync if data has actually changed from what we last synced
+      if (currentProfileString === lastSyncRef.current) return;
+
+      const timer = setTimeout(async () => {
+        try {
+          const profileRef = doc(db, "shared-profiles", user.uid);
+          const syncData = {
+            profileData: JSON.parse(currentProfileString),
+            updatedAt: serverTimestamp(),
+          };
+
+          await setDoc(profileRef, syncData, { merge: true });
+          lastSyncRef.current = currentProfileString;
+          markSynced();
+        } catch (error) {
+          console.error("Auto-sync failed:", error);
+        }
+      }, 2000); // Debounce sync by 2 seconds to avoid excessive writes during rapid typing
+
+      return () => clearTimeout(timer);
+    }
+  }, [profile, user, cloudSyncDone, _hasHydrated, db, markSynced]);
 
   // Ensure sharedId is always synced with user UID
   useEffect(() => {
@@ -74,9 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="text-center space-y-2">
             <h3 className="text-lg font-bold tracking-tight text-foreground">Accessing Your Vault</h3>
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              Synchronizing account data across devices...
-            </p>
+            <p className="text-sm text-muted-foreground">Synchronizing account data across devices...</p>
           </div>
         </div>
       </div>

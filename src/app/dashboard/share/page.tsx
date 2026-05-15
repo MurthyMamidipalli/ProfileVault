@@ -10,7 +10,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError, type SecurityRuleContext } from "@/firebase/errors";
-import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, AlertTriangle, Settings } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, RefreshCw, CheckCircle2, Shield, Settings, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -28,13 +28,12 @@ export default function SharePage() {
 
   useEffect(() => {
     setMounted(true);
-    // If we're logged in, our sharedId should match our UID for reliable cross-device discovery
     if (user && _hasHydrated && profile.sharedId !== user.uid) {
       setProfile({ sharedId: user.uid });
     }
   }, [_hasHydrated, user, profile.sharedId, setProfile]);
 
-  const handleSync = () => {
+  const handleSyncManual = () => {
     if (isConfigMissing) {
       toast({
         variant: "destructive",
@@ -57,28 +56,21 @@ export default function SharePage() {
 
     setIsSyncing(true);
     
-    // Always use user.uid for the sync document to allow discovery on other devices
     const profileRef = doc(db, "shared-profiles", user.uid);
-    
     const syncData: any = {
       profileData: JSON.parse(JSON.stringify({
         ...profile,
         sharedId: user.uid,
-        ownerId: user.uid
       })),
       updatedAt: serverTimestamp(),
     };
-
-    if (!profile.lastSyncedAt) {
-      syncData.createdAt = serverTimestamp();
-    }
 
     setDoc(profileRef, syncData, { merge: true })
       .then(() => {
         markSynced();
         toast({
           title: "Profile Synced",
-          description: "Your portfolio is now live and updated across all your devices.",
+          description: "Manual sync successful. Auto-sync is also active.",
         });
         setIsSyncing(false);
       })
@@ -126,6 +118,22 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
+        <div className="p-6 bg-accent/10 border border-accent/20 rounded-xl flex items-center gap-4">
+          <div className="p-3 bg-accent/20 rounded-full">
+            <Zap className="w-6 h-6 text-accent animate-pulse" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-accent">Auto-Sync Active</p>
+            <p className="text-xs text-muted-foreground">Every change you make in the vault is now automatically saved to the cloud.</p>
+          </div>
+          {isSynced && (
+            <div className="text-right">
+              <p className="text-[10px] text-muted-foreground uppercase font-black">Last Cloud Sync</p>
+              <p className="text-xs font-bold text-foreground">{new Date(profile.lastSyncedAt!).toLocaleTimeString()}</p>
+            </div>
+          )}
+        </div>
+
         {isConfigMissing && (
           <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -136,19 +144,6 @@ export default function SharePage() {
               </div>
             </div>
             <Button disabled className="opacity-50">Waiting for setup...</Button>
-          </div>
-        )}
-
-        {user && !isSynced && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-4">
-            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-bold text-amber-500">Action Required</p>
-              <p className="text-xs text-muted-foreground">Your profile is not yet live. Click sync to publish it.</p>
-            </div>
-            <Button size="sm" onClick={handleSync} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600 text-white border-none">
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync Now"}
-            </Button>
           </div>
         )}
 
@@ -175,9 +170,9 @@ export default function SharePage() {
                   isSynced ? "text-accent" : "text-muted-foreground"
                 )}>
                   {isSynced ? (
-                    <><CheckCircle2 className="w-4 h-4" /> LIVE</>
+                    <><CheckCircle2 className="w-4 h-4" /> LIVE & AUTO-SYNCING</>
                   ) : (
-                    <><RefreshCw className="w-4 h-4" /> AWAITING SYNC</>
+                    <><RefreshCw className="w-4 h-4" /> AWAITING INITIAL SYNC</>
                   )}
                 </span>
               </div>
@@ -202,27 +197,24 @@ export default function SharePage() {
                 <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced || isConfigMissing}>
                   <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview
+                    Preview Portfolio
                   </a>
                 </Button>
                 <Button 
-                  onClick={handleSync} 
+                  onClick={handleSyncManual} 
                   disabled={isSyncing || !shareUrl || !user || isConfigMissing} 
-                  variant={isSynced ? "ghost" : "default"}
-                  className={cn(
-                    !isSynced && "bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:bg-primary/90",
-                    isSynced && "text-muted-foreground hover:text-foreground"
-                  )}
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  {isSynced ? 'Sync Changes' : 'Sync Profile Now'}
+                  Force Manual Sync
                 </Button>
               </div>
             </div>
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-6 text-xs text-muted-foreground">
             <Shield className="w-4 h-4 mr-2 inline" />
-            Authenticated sync ensures your data is available on any device you sign into.
+            Your data is protected and available on any device you sign into. Auto-sync is debounced for performance.
           </CardFooter>
         </Card>
       </div>
