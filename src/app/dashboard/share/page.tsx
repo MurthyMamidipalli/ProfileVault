@@ -57,20 +57,20 @@ export default function SharePage() {
     setIsSyncing(true);
     
     const profileRef = doc(db, "shared-profiles", user.uid);
+    const syncTimestamp = new Date().toISOString();
+    const updatedProfile = { ...profile, sharedId: user.uid, lastSyncedAt: syncTimestamp };
+    
     const syncData: any = {
-      profileData: JSON.parse(JSON.stringify({
-        ...profile,
-        sharedId: user.uid,
-      })),
+      profileData: updatedProfile,
       updatedAt: serverTimestamp(),
     };
 
     setDoc(profileRef, syncData, { merge: true })
       .then(() => {
-        markSynced();
+        markSynced(syncTimestamp);
         toast({
           title: "Profile Synced",
-          description: "Manual sync successful. Auto-sync is also active.",
+          description: "Manual sync successful. All devices will now see these updates.",
         });
         setIsSyncing(false);
       })
@@ -129,7 +129,7 @@ export default function SharePage() {
           {isSynced && (
             <div className="text-right">
               <p className="text-[10px] text-muted-foreground uppercase font-black">Last Cloud Sync</p>
-              <p className="text-xs font-bold text-foreground">{new Date(profile.lastSyncedAt!).toLocaleTimeString()}</p>
+              <p className="text-xs font-bold text-foreground">{new Date(profile.lastSyncedAt!).toLocaleString()}</p>
             </div>
           )}
         </div>

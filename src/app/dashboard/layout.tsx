@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, router]);
 
-  // Initial Cloud Hydration: Prioritize cloud data on fresh devices/tabs
+  // Initial Cloud Hydration
   useEffect(() => {
     if (user && _hasHydrated && !cloudSyncDone) {
       const fetchCloudProfile = async () => {
@@ -35,8 +35,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.profileData) {
-              // Deep compare to avoid unnecessary state updates if local and cloud are already in sync
               const cloudDataString = JSON.stringify(data.profileData);
+              // Update local store if cloud data is different
               if (cloudDataString !== JSON.stringify(profile)) {
                 replaceProfile({ ...DEFAULT_PROFILE, ...data.profileData });
                 lastSyncRef.current = cloudDataString;
@@ -53,31 +53,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     } else if (!user && !authLoading) {
       setCloudSyncDone(true);
     }
-  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone, profile]);
+  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone]);
 
-  // Background Auto-Sync: Automatically persist local changes to Firestore
+  // Background Auto-Sync
   useEffect(() => {
     if (user && cloudSyncDone && _hasHydrated) {
       const currentProfileString = JSON.stringify(profile);
       
-      // Only sync if data has actually changed from what we last synced
+      // Prevent sync if nothing has changed since last sync
       if (currentProfileString === lastSyncRef.current) return;
 
       const timer = setTimeout(async () => {
         try {
           const profileRef = doc(db, "shared-profiles", user.uid);
+          const syncTimestamp = new Date().toISOString();
+          
+          // Prepare data with the new timestamp included in the profile
+          const updatedProfile = { ...profile, lastSyncedAt: syncTimestamp };
           const syncData = {
-            profileData: JSON.parse(currentProfileString),
+            profileData: updatedProfile,
             updatedAt: serverTimestamp(),
           };
 
           await setDoc(profileRef, syncData, { merge: true });
-          lastSyncRef.current = currentProfileString;
-          markSynced();
+          
+          // Update local state and ref to prevent loops
+          lastSyncRef.current = JSON.stringify(updatedProfile);
+          markSynced(syncTimestamp);
         } catch (error) {
           console.error("Auto-sync failed:", error);
         }
-      }, 2000); // Debounce sync by 2 seconds to avoid excessive writes during rapid typing
+      }, 3000); // 3 second debounce for stability
 
       return () => clearTimeout(timer);
     }
@@ -92,7 +98,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, cloudSyncDone, profile.sharedId, setProfile]);
 
-  // Global loader while authenticating or waiting for the initial cloud sync
   if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">

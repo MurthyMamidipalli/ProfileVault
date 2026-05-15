@@ -111,7 +111,7 @@ interface ProfileStore {
   addJob: (job: Omit<JobEntry, 'id'>) => void;
   updateJob: (id: string, job: Partial<JobEntry>) => void;
   removeJob: (id: string) => void;
-  markSynced: () => void;
+  markSynced: (timestamp?: string) => void;
 }
 
 const generateId = () => {
@@ -249,10 +249,10 @@ export const useProfileStore = create<ProfileStore>()(
           jobs: (state.profile.jobs || []).filter((j) => j.id !== id)
         }
       })),
-      markSynced: () => set((state) => ({
+      markSynced: (timestamp) => set((state) => ({
         profile: {
           ...state.profile,
-          lastSyncedAt: new Date().toISOString()
+          lastSyncedAt: timestamp || new Date().toISOString()
         }
       }))
     }),
