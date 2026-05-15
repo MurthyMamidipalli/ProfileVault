@@ -28,11 +28,11 @@ export default function SharePage() {
 
   useEffect(() => {
     setMounted(true);
-    if (_hasHydrated && !profile.sharedId) {
-      const newId = Math.random().toString(36).substring(2, 12);
-      setProfile({ sharedId: newId });
+    // If we're logged in, our sharedId should match our UID for reliable cross-device discovery
+    if (user && _hasHydrated && profile.sharedId !== user.uid) {
+      setProfile({ sharedId: user.uid });
     }
-  }, [_hasHydrated, profile.sharedId, setProfile]);
+  }, [_hasHydrated, user, profile.sharedId, setProfile]);
 
   const handleSync = () => {
     if (isConfigMissing) {
@@ -57,22 +57,18 @@ export default function SharePage() {
 
     setIsSyncing(true);
     
-    const currentId = profile.sharedId || Math.random().toString(36).substring(2, 12);
-    if (!profile.sharedId) setProfile({ sharedId: currentId });
-
-    const profileRef = doc(db, "shared-profiles", currentId);
+    // Always use user.uid for the sync document to allow discovery on other devices
+    const profileRef = doc(db, "shared-profiles", user.uid);
     
-    // Construct sync data without any 'undefined' values
     const syncData: any = {
       profileData: JSON.parse(JSON.stringify({
         ...profile,
-        sharedId: currentId,
+        sharedId: user.uid,
         ownerId: user.uid
       })),
       updatedAt: serverTimestamp(),
     };
 
-    // Only set createdAt if it doesn't already exist on the local profile status
     if (!profile.lastSyncedAt) {
       syncData.createdAt = serverTimestamp();
     }
@@ -82,7 +78,7 @@ export default function SharePage() {
         markSynced();
         toast({
           title: "Profile Synced",
-          description: "Your portfolio is now live and updated.",
+          description: "Your portfolio is now live and updated across all your devices.",
         });
         setIsSyncing(false);
       })
@@ -97,8 +93,8 @@ export default function SharePage() {
       });
   };
 
-  const shareUrl = typeof window !== 'undefined' && profile.sharedId 
-    ? `${window.location.origin}/view/${profile.sharedId}` 
+  const shareUrl = typeof window !== 'undefined' && user?.uid 
+    ? `${window.location.origin}/view/${user.uid}` 
     : '';
 
   const handleCopy = () => {
@@ -188,7 +184,7 @@ export default function SharePage() {
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
-                  {shareUrl || "Generating ID..."}
+                  {shareUrl || "Generating Link..."}
                 </div>
                 <Button 
                   onClick={handleCopy} 
@@ -226,7 +222,7 @@ export default function SharePage() {
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-6 text-xs text-muted-foreground">
             <Shield className="w-4 h-4 mr-2 inline" />
-            Authenticated writes only. Public read access allowed for anyone with the unique link.
+            Authenticated sync ensures your data is available on any device you sign into.
           </CardFooter>
         </Card>
       </div>
