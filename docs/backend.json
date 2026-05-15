@@ -24,13 +24,9 @@
     "providers": ["password"]
   },
   "firestore": {
-    "/users/{uid}/profile/main": {
+    "/shared-profiles/{uid}": {
       "schema": { "$ref": "#/backend/entities/SharedProfile" },
-      "description": "Private professional vault data. Path requested by user."
-    },
-    "/shared-profiles/{profileId}": {
-      "schema": { "$ref": "#/backend/entities/SharedProfile" },
-      "description": "Publicly shared profile snapshots."
+      "description": "The primary source of truth for user profiles, keyed by Auth UID."
     }
   }
 }

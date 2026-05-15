@@ -14,7 +14,8 @@ import {
 import { UserProfile } from '@/lib/store';
 
 /**
- * Deterministic Profile Path: shared-profiles/{uid}
+ * DETERMINISTIC PATH: shared-profiles/{uid}
+ * This ensures every device/browser points to the SAME document for the SAME user.
  */
 const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
   return doc(db, 'shared-profiles', uid);
@@ -22,7 +23,6 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
 
 /**
  * Save profile data to Firestore using UID as ID.
- * Logs the full path and status for debugging.
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
@@ -45,7 +45,6 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 
 /**
  * Subscribe to real-time profile updates using UID.
- * Includes detailed logging for cross-browser debugging.
  */
 export function subscribeToProfile(
   db: Firestore, 
@@ -62,7 +61,7 @@ export function subscribeToProfile(
       console.log(`[Sync] CLOUD UPDATE RECEIVED for ${uid}`);
       onUpdate(data.profileData as UserProfile);
     } else {
-      console.log('[Sync] NO CLOUD DATA FOUND for this UID');
+      console.log('[Sync] NO CLOUD DATA FOUND for this UID - Creating first entry...');
       onUpdate(null);
     }
   }, (err) => {

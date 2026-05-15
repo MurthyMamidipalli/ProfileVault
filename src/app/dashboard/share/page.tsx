@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
-import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SharePage() {
@@ -22,6 +22,9 @@ export default function SharePage() {
     setMounted(true);
   }, []);
 
+  /**
+   * Deterministic Share URL using Auth UID
+   */
   const shareUrl = typeof window !== 'undefined' && user?.uid 
     ? `${window.location.origin}/view/${user.uid}` 
     : '';
@@ -30,7 +33,7 @@ export default function SharePage() {
     if (!shareUrl) return;
     setCopying(true);
     navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Copied", description: "Portfolio link copied to clipboard." });
+    toast({ title: "Link Copied", description: "Your secure portfolio link is ready to share." });
     setTimeout(() => setCopying(false), 2000);
   };
 
@@ -47,25 +50,25 @@ export default function SharePage() {
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold flex items-center gap-3 text-foreground">
-          Portfolio Link
+        <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
+          Professional Vault Mirror
           <Share2 className="w-6 h-6 text-primary" />
         </h1>
-        <p className="text-muted-foreground">Your Professional Vault is now automatically synchronized with the cloud.</p>
+        <p className="text-muted-foreground">Your dashboard is mirrored in real-time to your public identity vault.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        <div className="p-6 bg-accent/10 border border-accent/20 rounded-xl flex items-center gap-4">
+        <div className="p-6 bg-accent/5 border border-accent/20 rounded-xl flex items-center gap-4">
           <div className="p-3 bg-accent/20 rounded-full">
             <Zap className="w-6 h-6 text-accent animate-pulse" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-accent">Real-Time Sync Active</p>
-            <p className="text-xs text-muted-foreground">Every edit you make in the dashboard is instantly mirrored to your public portfolio link.</p>
+            <p className="text-xs text-muted-foreground">Every edit you make is instantly saved and shared via your unique UID-based link.</p>
           </div>
           {isSynced && (
             <div className="text-right">
-              <p className="text-[10px] text-muted-foreground uppercase font-black">Last Cloud Save</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-black">Latest Sync</p>
               <p className="text-xs font-bold text-foreground">{new Date(profile.lastSyncedAt!).toLocaleTimeString()}</p>
             </div>
           )}
@@ -76,10 +79,10 @@ export default function SharePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Globe className="w-5 h-5 text-accent" />
-              Your Portfolio URL
+              Your Secure URL
             </CardTitle>
             <CardDescription>
-              Share this secure address with recruiters and clients to showcase your achievements.
+              This link is pinned to your account. It never changes, even if you update your profile content.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -88,22 +91,22 @@ export default function SharePage() {
               isSynced ? "bg-accent/5 border-accent/20" : "bg-muted/50 border-border"
             )}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cloud Status</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Vault Status</span>
                 <span className={cn(
                   "flex items-center gap-1.5 text-xs font-bold",
                   isSynced ? "text-accent" : "text-muted-foreground"
                 )}>
                   {isSynced ? (
-                    <><CheckCircle2 className="w-4 h-4" /> LIVE & SYNCHRONIZED</>
+                    <><CheckCircle2 className="w-4 h-4" /> LIVE & PERSISTENT</>
                   ) : (
-                    <><RefreshCw className="w-4 h-4 animate-spin" /> ESTABLISHING CONNECTION...</>
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> SYNCING...</>
                   )}
                 </span>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
-                  {shareUrl || "Generating Secure Link..."}
+                  {shareUrl || "Connecting to Cloud..."}
                 </div>
                 <Button 
                   onClick={handleCopy} 
@@ -121,7 +124,7 @@ export default function SharePage() {
                 <Button asChild variant="outline" size="lg" className="font-medium" disabled={!isSynced}>
                   <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview Portfolio
+                    Preview Public Vault
                   </a>
                 </Button>
               </div>
@@ -129,7 +132,7 @@ export default function SharePage() {
           </CardContent>
           <CardFooter className="bg-white/5 border-t border-border/50 p-6 text-xs text-muted-foreground">
             <Shield className="w-4 h-4 mr-2 inline" />
-            Your data is mirrored across all browsers you sign into. Auto-sync protects your changes from browser crashes or device failures.
+            Your data is secured by Firebase Authentication. Only you can edit this information, but anyone with the link can view your professional achievements.
           </CardFooter>
         </Card>
       </div>

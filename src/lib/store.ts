@@ -109,6 +109,10 @@ export const DEFAULT_PROFILE: UserProfile = {
   resumes: []
 };
 
+/**
+ * ZUSTAND STORE: NO LOCALSTORAGE PERSISTENCE.
+ * The Cloud is the only source of truth.
+ */
 interface ProfileStore {
   profile: UserProfile;
   _hasHydrated: boolean;

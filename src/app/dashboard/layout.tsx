@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { RefreshCw, ShieldCheck, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -34,6 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // 1. Auth Guard
   useEffect(() => {
     if (!authLoading && !user) {
+      console.log("[Auth] No session found, redirecting to login.");
       router.push("/login");
     }
   }, [user, authLoading, router]);
@@ -42,7 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db) return;
 
-    console.log(`[Sync] Initializing vault for user: ${user.uid}`);
+    console.log(`[Sync] Initializing vault for UID: ${user.uid}`);
 
     const unsubscribe = subscribeToProfile(
       db, 
@@ -52,25 +53,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const localDataStr = JSON.stringify(currentLocalRef.current);
         
         // ECHO-LOOP SUPPRESSION:
-        // Only apply cloud update if:
-        // 1. We haven't loaded yet (Initial load)
-        // 2. The cloud data is different from what we thought was in the cloud
-        // 3. AND the local state matches our last known cloud state (meaning user isn't mid-type)
+        // 1. Initial Load: Apply cloud data to local state.
+        // 2. Cross-Device Update: If Cloud changed AND user isn't mid-type (local matches last known cloud).
         if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
-          console.log(`[Sync] Applying Cloud -> Local update`);
+          console.log(`[Sync] Applying Cloud -> Local update (Path: shared-profiles/${user.uid})`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
-        } else {
-          // If we are mid-type, we update our reference but don't overwrite the UI
+        } else if (cloudDataStr !== lastCloudDataRef.current) {
+          // Acknowledge update but don't overwrite UI to prevent clearing inputs while typing
           lastCloudDataRef.current = cloudDataStr;
-          console.log(`[Sync] Cloud update acknowledged but suppressed (User is typing)`);
+          console.log(`[Sync] Cloud change acknowledged but suppressed (Active user typing)`);
         }
         
         setIsCloudLoaded(true);
       },
       (err) => {
         console.error('[Sync] Vault access error:', err);
-        setIsCloudLoaded(true); // Prevent infinite loading on error
+        setIsCloudLoaded(true); // Prevent infinite loading loop on error
       }
     );
 
@@ -83,7 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     const currentLocalStr = JSON.stringify(profile);
 
-    // If local state hasn't changed from the last cloud state, skip save
+    // If local state hasn't changed from the last known cloud state, skip save
     if (currentLocalStr === lastCloudDataRef.current) return;
 
     const timer = setTimeout(async () => {
@@ -92,8 +91,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Sync] Pushing local changes to cloud vault...`);
-        // Update local ref immediately to prevent the next listener event from thinking it's an external change
+        console.log(`[Sync] Pushing updates to: shared-profiles/${user.uid}`);
+        // Optimistically update ref to suppress immediate echo
         lastCloudDataRef.current = dataToSaveStr;
         
         await saveProfile(db, user.uid, profileToSync);
@@ -101,7 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("[Sync] Auto-save failed:", error);
       }
-    }, 2000); // 2 second debounce
+    }, 2500); // 2.5s debounce for stability
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -122,8 +121,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-bold">Accessing Secure Vault</h3>
-            <p className="text-sm text-muted-foreground">Syncing your professional identity...</p>
+            <h3 className="text-lg font-bold">Opening Secure Vault</h3>
+            <p className="text-sm text-muted-foreground">Synchronizing your professional identity...</p>
           </div>
         </div>
       </div>
