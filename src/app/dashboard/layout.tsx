@@ -5,7 +5,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
+import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { RefreshCw } from "lucide-react";
 
@@ -17,14 +17,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [cloudSyncDone, setCloudSyncDone] = useState(false);
   const lastSyncRef = useRef<string>("");
 
-  // Auth Protection
+  // Auth Protection: Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
     }
   }, [user, authLoading, router]);
 
-  // Initial Cloud Hydration
+  // Initial Cloud Hydration: Pull data from Firestore on first load/login
   useEffect(() => {
     if (user && _hasHydrated && !cloudSyncDone) {
       const fetchCloudProfile = async () => {
@@ -32,20 +32,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           const docRef = doc(db, "shared-profiles", user.uid);
           const docSnap = await getDoc(docRef);
           
+          // Start with a clean slate for this specific user
+          let profileToApply: UserProfile = { 
+            ...DEFAULT_PROFILE, 
+            sharedId: user.uid 
+          };
+          
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.profileData) {
-              const cloudDataString = JSON.stringify(data.profileData);
-              // Update local store if cloud data is different
-              if (cloudDataString !== JSON.stringify(profile)) {
-                replaceProfile({ ...DEFAULT_PROFILE, ...data.profileData });
-                lastSyncRef.current = cloudDataString;
-              }
+              // Merge cloud data over defaults
+              profileToApply = { 
+                ...profileToApply, 
+                ...data.profileData,
+                sharedId: user.uid // Always enforce correct ID
+              };
             }
           }
+          
+          // Apply the fetched (or fresh) profile to the local store
+          replaceProfile(profileToApply);
+          
+          // Immediately update the ref to prevent the auto-sync effect from 
+          // thinking this was a "change" made by the user.
+          lastSyncRef.current = JSON.stringify(profileToApply);
+          
         } catch (error) {
           console.error("Cloud hydration failed:", error);
         } finally {
+          // Allow the dashboard to be displayed
           setCloudSyncDone(true);
         }
       };
@@ -55,12 +70,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone]);
 
-  // Background Auto-Sync
+  // Background Auto-Sync: Automatically save local changes to the cloud
   useEffect(() => {
+    // Only start syncing AFTER initial hydration is done
     if (user && cloudSyncDone && _hasHydrated) {
       const currentProfileString = JSON.stringify(profile);
       
-      // Prevent sync if nothing has changed since last sync
+      // Stop if nothing has changed since the last sync or hydration
       if (currentProfileString === lastSyncRef.current) return;
 
       const timer = setTimeout(async () => {
@@ -68,36 +84,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           const profileRef = doc(db, "shared-profiles", user.uid);
           const syncTimestamp = new Date().toISOString();
           
-          // Prepare data with the new timestamp included in the profile
+          // Prepare the bundle for the cloud
           const updatedProfile = { ...profile, lastSyncedAt: syncTimestamp };
           const syncData = {
             profileData: updatedProfile,
             updatedAt: serverTimestamp(),
           };
 
+          // Save to Firestore
           await setDoc(profileRef, syncData, { merge: true });
           
-          // Update local state and ref to prevent loops
+          // Update the reference point so we don't sync again immediately
           lastSyncRef.current = JSON.stringify(updatedProfile);
+          
+          // Mark as synced locally
           markSynced(syncTimestamp);
         } catch (error) {
           console.error("Auto-sync failed:", error);
         }
-      }, 3000); // 3 second debounce for stability
+      }, 3000); // 3 second debounce to group rapid changes
 
       return () => clearTimeout(timer);
     }
   }, [profile, user, cloudSyncDone, _hasHydrated, db, markSynced]);
 
-  // Ensure sharedId is always synced with user UID
-  useEffect(() => {
-    if (user && cloudSyncDone) {
-      if (profile.sharedId !== user.uid) {
-        setProfile({ sharedId: user.uid });
-      }
-    }
-  }, [user, cloudSyncDone, profile.sharedId, setProfile]);
-
+  // Loading Gate: Prevents "flickering" of default data while fetching cloud vault
   if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -117,6 +128,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Final check to prevent rendering children if user logged out during loading
   if (!user) {
     return null;
   }
