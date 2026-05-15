@@ -24,18 +24,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   
   // Track the actual cloud state to prevent echo-loops
   const lastCloudDataRef = useRef<string | null>(null);
+  // Track current local state in a ref to avoid stale closures in the listener
+  const currentLocalRef = useRef(profile);
 
-  // 1. Auth Protection & Logging
+  // Keep the ref in sync with the state
   useEffect(() => {
-    if (!authLoading) {
-      console.log(`[Auth] State Change: ${user ? 'Authenticated (UID: ' + user.uid + ')' : 'Unauthenticated'}`);
-      if (!user) {
-        router.push("/login");
-      }
+    currentLocalRef.current = profile;
+  }, [profile]);
+
+  // 1. Auth Protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
     }
   }, [user, authLoading, router]);
 
-  // 2. Real-time Subscription (Loading from Cloud)
+  // 2. Real-time Subscription (Strict Hydration)
   useEffect(() => {
     if (!user || !db) return;
 
@@ -45,15 +49,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       (cloudData) => {
         if (cloudData) {
           const cloudDataStr = JSON.stringify(cloudData);
-          const currentLocalStr = JSON.stringify(profile);
+          const activeLocalStr = JSON.stringify(currentLocalRef.current);
           
-          if (cloudDataStr !== currentLocalStr) {
-            console.log(`[Sync] CLOUD -> BROWSER Sync: Profile loaded for UID: ${user.uid}`);
+          // ONLY apply if the cloud is truly different from what the user is currently seeing/typing
+          if (cloudDataStr !== activeLocalStr) {
+            console.log(`[Sync] CLOUD -> BROWSER: Applying update from vault`);
             lastCloudDataRef.current = cloudDataStr;
             replaceProfile(cloudData);
+          } else {
+            // Data is the same, just update the ref to prevent echo
+            lastCloudDataRef.current = cloudDataStr;
           }
         } else {
-          console.log('[Sync] New User Detected: Initializing empty cloud vault');
+          console.log('[Sync] New User: Initializing default vault');
           lastCloudDataRef.current = JSON.stringify(DEFAULT_PROFILE);
         }
         setIsCloudLoaded(true);
@@ -67,9 +75,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [user, db, replaceProfile, setIsCloudLoaded]);
 
-  // 3. Auto-Save (Pushing to Cloud)
+  // 3. Intelligent Auto-Save (Debounced)
   useEffect(() => {
-    // CRITICAL: NEVER save until we have successfully confirmed the cloud state
     if (!user || !db || !isCloudLoaded) return;
 
     const currentProfileStr = JSON.stringify(profile);
@@ -77,23 +84,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // If local matches cloud, do nothing.
     if (currentProfileStr === lastCloudDataRef.current) return;
 
-    console.log('[Sync] BROWSER -> CLOUD Sync: Detected local edit. Scheduling save...');
-
     const timer = setTimeout(async () => {
       try {
         const syncTimestamp = new Date().toISOString();
         const profileToSync = { ...profile, sharedId: user.uid, lastSyncedAt: syncTimestamp };
         
+        console.log('[Sync] BROWSER -> CLOUD: Mirroring changes to vault...');
         await saveProfile(db, user.uid, profileToSync);
         
-        // Update ref so we don't loop
+        // Update ref so we don't trigger an echo back from the listener
         lastCloudDataRef.current = JSON.stringify(profileToSync);
         markSynced(syncTimestamp);
-        console.log('[Sync] Auto-Save Success');
       } catch (error) {
         console.error("[Sync] Auto-Save Failed:", error);
       }
-    }, 1500); // Debounce to allow multiple quick edits
+    }, 2000); // 2 second debounce to ensure typing isn't interrupted
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -106,7 +111,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, reset]);
 
-  // Loading Screen: Prevent "New User" flash while vault is opening
   if (authLoading || (user && !isCloudLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -118,10 +122,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-bold tracking-tight">Syncing Professional Vault</h3>
+            <h3 className="text-lg font-bold tracking-tight">Accessing Professional Vault</h3>
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
               <ShieldCheck className="w-4 h-4 text-accent" />
-              Verifying cloud credentials...
+              Verifying identity...
             </p>
           </div>
         </div>
