@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
@@ -15,6 +15,9 @@ export function initializeFirebase() {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const firestore = getFirestore(app);
   const auth = getAuth(app);
+
+  // Ensure login persists across browser sessions and tabs
+  setPersistence(auth, browserLocalPersistence).catch(console.error);
 
   return { app, firestore, auth };
 }

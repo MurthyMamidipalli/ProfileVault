@@ -2,7 +2,7 @@
 "use client";
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface ProjectLink {
   id: string;
@@ -270,8 +270,7 @@ export const useProfileStore = create<ProfileStore>()(
     }),
     { 
       name: 'profile-vault-storage',
-      // DO NOT persist sync-status flags like isCloudLoaded or _hasHydrated
-      // This ensures Browser B always tries to fetch fresh data on mount
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ profile: state.profile }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
