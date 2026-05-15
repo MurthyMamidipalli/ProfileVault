@@ -92,7 +92,9 @@ export interface UserProfile {
 interface ProfileStore {
   profile: UserProfile;
   _hasHydrated: boolean;
+  isCloudLoaded: boolean;
   setHasHydrated: (state: boolean) => void;
+  setIsCloudLoaded: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
   replaceProfile: (profile: UserProfile) => void;
   addEducation: (entry: Omit<EducationEntry, 'id'>) => void;
@@ -144,11 +146,16 @@ export const useProfileStore = create<ProfileStore>()(
     (set) => ({
       profile: DEFAULT_PROFILE,
       _hasHydrated: false,
+      isCloudLoaded: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
+      setIsCloudLoaded: (state) => set({ isCloudLoaded: state }),
       setProfile: (updates) => set((state) => ({ 
         profile: { ...state.profile, ...updates } 
       })),
-      replaceProfile: (fullProfile) => set({ profile: { ...DEFAULT_PROFILE, ...fullProfile } }),
+      replaceProfile: (fullProfile) => set({ 
+        profile: { ...DEFAULT_PROFILE, ...fullProfile },
+        isCloudLoaded: true 
+      }),
       addEducation: (entry) => set((state) => ({
         profile: {
           ...state.profile,

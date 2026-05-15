@@ -12,9 +12,8 @@ import { RefreshCw } from "lucide-react";
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const { profile, setProfile, replaceProfile, markSynced, _hasHydrated } = useProfileStore();
+  const { profile, replaceProfile, markSynced, _hasHydrated, isCloudLoaded, setIsCloudLoaded } = useProfileStore();
   const router = useRouter();
-  const [cloudSyncDone, setCloudSyncDone] = useState(false);
   const lastSyncRef = useRef<string>("");
 
   // Auth Protection: Redirect to login if not authenticated
@@ -26,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Initial Cloud Hydration: Pull data from Firestore on first load/login
   useEffect(() => {
-    if (user && _hasHydrated && !cloudSyncDone) {
+    if (user && _hasHydrated && !isCloudLoaded) {
       const fetchCloudProfile = async () => {
         try {
           const docRef = doc(db, "shared-profiles", user.uid);
@@ -48,51 +47,67 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             }
           }
           
+          // Apply the fetched data
+          const finalProfileString = JSON.stringify(profileToApply);
           replaceProfile(profileToApply);
-          lastSyncRef.current = JSON.stringify(profileToApply);
+          
+          // Crucial: Set the sync ref immediately to prevent the local state 
+          // (which might have just updated from the cloud) from syncing BACK to the cloud 
+          // and creating a loop or race condition.
+          lastSyncRef.current = finalProfileString;
           
         } catch (error) {
           console.error("Cloud hydration failed:", error);
         } finally {
-          setCloudSyncDone(true);
+          setIsCloudLoaded(true);
         }
       };
       fetchCloudProfile();
     } else if (!user && !authLoading) {
-      setCloudSyncDone(true);
+      setIsCloudLoaded(true);
     }
-  }, [user, _hasHydrated, db, replaceProfile, authLoading, cloudSyncDone]);
+  }, [user, _hasHydrated, db, replaceProfile, authLoading, isCloudLoaded, setIsCloudLoaded]);
 
   // Background Auto-Sync: Automatically save local changes to the cloud
   useEffect(() => {
-    if (user && cloudSyncDone && _hasHydrated) {
+    // ONLY sync if we have a user AND the initial cloud data has been loaded.
+    // This prevents wiping out cloud data with the local default state.
+    if (user && isCloudLoaded && _hasHydrated) {
       const currentProfileString = JSON.stringify(profile);
+      
+      // Don't sync if nothing changed since last cloud update
       if (currentProfileString === lastSyncRef.current) return;
 
       const timer = setTimeout(async () => {
         try {
           const profileRef = doc(db, "shared-profiles", user.uid);
           const syncTimestamp = new Date().toISOString();
-          const updatedProfile = { ...profile, lastSyncedAt: syncTimestamp };
+          
+          // We don't update 'profile' in store here to avoid triggering another useEffect,
+          // we just prepare the data for firestore.
           const syncData = {
-            profileData: updatedProfile,
+            profileData: { ...profile, lastSyncedAt: syncTimestamp },
             updatedAt: serverTimestamp(),
           };
 
           await setDoc(profileRef, syncData, { merge: true });
-          lastSyncRef.current = JSON.stringify(updatedProfile);
+          
+          // Update ref and store synced timestamp
+          lastSyncRef.current = JSON.stringify(syncData.profileData);
           markSynced(syncTimestamp);
+          
+          console.log("Auto-sync successful at", syncTimestamp);
         } catch (error) {
           console.error("Auto-sync failed:", error);
         }
-      }, 2000); // 2 second debounce
+      }, 3000); // 3 second debounce to group rapid edits
 
       return () => clearTimeout(timer);
     }
-  }, [profile, user, cloudSyncDone, _hasHydrated, db, markSynced]);
+  }, [profile, user, isCloudLoaded, _hasHydrated, db, markSynced]);
 
-  // Loading Gate: Prevents "flickering" of default data while fetching cloud vault
-  if (authLoading || !_hasHydrated || (user && !cloudSyncDone)) {
+  // Loading Gate: Prevents rendering the dashboard with empty data while cloud is fetching
+  if (authLoading || !_hasHydrated || (user && !isCloudLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-6">
