@@ -140,10 +140,6 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15);
 };
 
-/**
- * Pure Cloud Store: No localStorage persistence.
- * Every login fetch from Firestore.
- */
 export const useProfileStore = create<ProfileStore>((set) => ({
   profile: DEFAULT_PROFILE,
   _hasHydrated: true, 
