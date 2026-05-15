@@ -17,22 +17,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   
   // lastSyncRef holds the stringified profile from the cloud to prevent loops
   const lastSyncRef = useRef<string | null>(null);
-  const fetchingRef = useRef(false);
+  const hydrationAttempted = useRef(false);
 
-  // Auth Protection
+  // 1. Auth Protection
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
     }
   }, [user, authLoading, router]);
 
-  // Initial Cloud Hydration: Fetch profile only once on login or page load
+  // 2. Initial Cloud Hydration (Atomic Fetch)
   useEffect(() => {
-    if (user && _hasHydrated && !isCloudLoaded && !fetchingRef.current) {
-      fetchingRef.current = true;
+    // Only attempt hydration once per auth session
+    if (user && _hasHydrated && !isCloudLoaded && !hydrationAttempted.current) {
+      hydrationAttempted.current = true;
+      
       const fetchCloudProfile = async () => {
         try {
-          console.log("Hydrating vault from cloud for user:", user.uid);
           const docRef = doc(db, "shared-profiles", user.uid);
           const docSnap = await getDoc(docRef);
           
@@ -45,47 +46,46 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               ...data.profileData,
               sharedId: user.uid 
             };
-            console.log("Cloud profile found. Syncing local vault.");
           } else {
             // New vault: pin current local state to this user
             profileToApply = { 
               ...profile,
               sharedId: user.uid 
             };
-            console.log("No cloud profile found. Initializing new vault.");
           }
           
-          // CRITICAL: Update the ref BEFORE updating the store to prevent immediate re-sync
+          // Set the sync reference BEFORE updating the store to prevent immediate re-sync
           lastSyncRef.current = JSON.stringify(profileToApply);
           replaceProfile(profileToApply);
           setIsCloudLoaded(true);
         } catch (error) {
           console.error("Cloud hydration failed:", error);
-          setIsCloudLoaded(true); // Don't block UI indefinitely
-        } finally {
-          fetchingRef.current = false;
+          // If hydration fails, we still set cloud loaded to allow local use
+          // but we won't have a lastSyncRef which blocks auto-sync safety
+          setIsCloudLoaded(true);
         }
       };
+      
       fetchCloudProfile();
     }
-  }, [user, _hasHydrated, db, replaceProfile, isCloudLoaded, setIsCloudLoaded, profile]);
+  }, [user, _hasHydrated, db, replaceProfile, isCloudLoaded, setIsCloudLoaded]);
 
-  // Background Auto-Sync: Mirrors all local changes to the cloud
+  // 3. Background Auto-Sync (Mirroring)
   useEffect(() => {
-    // Only start auto-sync after cloud hydration is confirmed and we have a reference
+    // SECURITY GATE: Only sync if we are fully hydrated and have a reference to the cloud state
     if (user && isCloudLoaded && _hasHydrated && lastSyncRef.current !== null) {
       const currentProfileString = JSON.stringify(profile);
       
-      // Don't sync if local state matches the last cloud update
+      // Don't sync if local state matches the last cloud update (prevents loops)
       if (currentProfileString === lastSyncRef.current) return;
 
       const timer = setTimeout(async () => {
         try {
-          console.log("Auto-syncing changes to cloud...");
           const profileRef = doc(db, "shared-profiles", user.uid);
           const syncTimestamp = new Date().toISOString();
           
-          const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
+          // Ensure sharedId is always set to current user during sync
+          const profileToSync = { ...profile, sharedId: user.uid, lastSyncedAt: syncTimestamp };
           const syncData = {
             profileData: profileToSync,
             updatedAt: serverTimestamp(),
@@ -96,8 +96,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           // Update ref and mark synced locally
           lastSyncRef.current = JSON.stringify(profileToSync);
           markSynced(syncTimestamp);
-          
-          console.log("Vault auto-sync complete at", syncTimestamp);
         } catch (error) {
           console.error("Auto-sync failed:", error);
         }
@@ -107,11 +105,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [profile, user, isCloudLoaded, _hasHydrated, db, markSynced]);
 
-  // Reset state on user logout
+  // 4. Cleanup on logout
   useEffect(() => {
     if (!authLoading && !user) {
       reset();
       lastSyncRef.current = null;
+      hydrationAttempted.current = false;
     }
   }, [user, authLoading, reset]);
 
@@ -130,7 +129,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <h3 className="text-lg font-bold tracking-tight">Accessing Secure Vault</h3>
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
               <Cloud className="w-4 h-4" />
-              Verifying credentials and pulling profile...
+              Opening your professional record...
             </p>
           </div>
         </div>
