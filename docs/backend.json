@@ -58,6 +58,28 @@
         "category": { "type": "string", "enum": ["project", "product"] },
         "userId": { "type": "string" }
       }
+    },
+    "Education": {
+      "title": "Education",
+      "type": "object",
+      "properties": {
+        "institution": { "type": "string" },
+        "degree": { "type": "string" },
+        "fieldOfStudy": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "description": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "PortfolioLink": {
+      "title": "PortfolioLink",
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string" },
+        "url": { "type": "string" },
+        "userId": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -75,6 +97,18 @@
     },
     "/users/{uid}/projects/{projId}": {
       "schema": { "$ref": "#/backend/entities/Project" }
+    },
+    "/users/{uid}/education/{eduId}": {
+      "schema": { "$ref": "#/backend/entities/Education" }
+    },
+    "/users/{uid}/portfolioLinks/{linkId}": {
+      "schema": { "$ref": "#/backend/entities/PortfolioLink" }
+    },
+    "/shared-profiles/{uid}": {
+      "rules": "allow read: if true; allow write: if request.auth.uid == uid;"
+    },
+    "/shared-profiles/{uid}/{subcollection}/{docId}": {
+      "rules": "allow read: if true; allow write: if request.auth.uid == uid;"
     }
   }
 }

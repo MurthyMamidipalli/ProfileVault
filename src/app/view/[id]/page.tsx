@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { doc, onSnapshot, collection, query, DocumentData } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
@@ -54,7 +54,6 @@ export default function PublicProfileView() {
 
     console.log(`[PublicView] Synchronizing distributed mirror for UID: ${id}`);
     
-    // 1. Fetch root profile (Basic metadata)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -68,22 +67,25 @@ export default function PublicProfileView() {
       }
       setLoading(false);
     }, (err) => {
+      console.error("[PublicView] Root Profile Error:", err);
       setError("Secure access denied.");
       setLoading(false);
     });
 
-    // 2. Fetch distributed sub-collections
-    // CRITICAL: We fetch without orderBy to avoid index requirement errors, sorting client-side instead.
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = query(collection(db, "shared-profiles", id, type));
       return onSnapshot(q, (snap) => {
         const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        // Deterministic client-side sort by updatedAt timestamp
+        
         docs.sort((a: any, b: any) => {
-          const timeA = a.updatedAt?.seconds || 0;
-          const timeB = b.updatedAt?.seconds || 0;
-          return timeB - timeA;
+          const getTime = (val: any) => {
+            if (val instanceof Timestamp) return val.toMillis();
+            if (val?.seconds) return val.seconds * 1000;
+            return 0;
+          };
+          return getTime(b.updatedAt) - getTime(a.updatedAt);
         });
+        
         setter(docs);
       }, (err) => {
         console.warn(`[PublicView] Could not load ${type}:`, err);
@@ -133,7 +135,7 @@ export default function PublicProfileView() {
   }
 
   const p = profile!;
-  const fullName = p.fullName || p.name || "Vault Owner";
+  const fullName = p.fullName || "Vault Owner";
   const bio = p.bio || "";
   const avatarUrl = p.avatarUrl || "";
 
