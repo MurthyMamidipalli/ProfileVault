@@ -14,7 +14,7 @@ import {
   SidebarInset,
   useSidebar
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarImage, AvatarFallback } from "@/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   User, 
   GraduationCap, 
