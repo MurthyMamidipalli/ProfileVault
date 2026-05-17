@@ -30,8 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 /**
- * @fileOverview Professional Vault Public Mirror (Optimized)
- * Strictly uses distributed sub-collections with ID-based uniqueness filtering to prevent duplication.
+ * @fileOverview Professional Vault Public Mirror (Hardened & De-duplicated)
+ * Implements strict ID-based filtering to ensure zero duplication of professional records.
  */
 
 export default function PublicProfileView() {
@@ -57,7 +57,7 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile (Metadata only - explicitly ignore legacy arrays)
+    // 1. Root Profile Listener (Basic Metadata only)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -75,32 +75,31 @@ export default function PublicProfileView() {
       setLoading(false);
     });
 
-    // 2. Specialized Collection Fetcher (With ID Uniqueness filtering)
+    // 2. Specialized Collection Fetcher (Atomic state updates)
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
-      const q = query(collection(db, "shared-profiles", id, type));
+      const q = collection(db, "shared-profiles", id, type);
       return onSnapshot(q, (snap) => {
-        const docsMap = new Map();
-        
-        snap.docs.forEach(doc => {
+        const docs = snap.docs.map(doc => {
           const data = doc.data();
-          // Use Map to ensure document ID uniqueness and prevent duplicates
-          docsMap.set(doc.id, { ...data, id: doc.id });
+          return { ...data, id: doc.id };
         });
 
-        const docs = Array.from(docsMap.values());
-        
-        // Manual sort by timestamp
+        // Manual sort by timestamp (newest first)
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
+            if (val?.updatedAt?.seconds) return val.updatedAt.seconds * 1000;
             if (val?.createdAt?.seconds) return val.createdAt.seconds * 1000;
             return 0;
           };
           return getTime(b) - getTime(a);
         });
         
+        // Strict replacement - never use prev => [...prev, ...data] to avoid duplicates
         setter(docs);
+      }, (err) => {
+        console.warn(`[Sync Warning] Failed to fetch ${type} sub-collection`);
       });
     };
 
@@ -146,6 +145,13 @@ export default function PublicProfileView() {
     );
   }
 
+  // --- STRICT DE-DUPLICATION (RENDER TIME LOCK) ---
+  const uniqueJobs = Array.from(new Map(jobs.map(item => [item.id, item])).values());
+  const uniqueExperience = Array.from(new Map(experience.map(item => [item.id, item])).values());
+  const uniqueProjectsAndProducts = Array.from(new Map(projects.map(item => [item.id, item])).values());
+  const uniqueEducation = Array.from(new Map(education.map(item => [item.id, item])).values());
+  const uniqueLinks = Array.from(new Map(links.map(item => [item.id, item])).values());
+
   const p = profile!;
   const fullName = p.fullName || "Vault Owner";
 
@@ -174,9 +180,9 @@ export default function PublicProfileView() {
             <div className="space-y-4 pb-2">
               <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground">{fullName}</h1>
               <div className="flex flex-wrap gap-x-8 gap-y-3 text-muted-foreground font-semibold text-sm">
-                {jobs.length > 0 && (
+                {uniqueJobs.length > 0 && (
                   <span className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-primary" /> {jobs[0].role} @ {jobs[0].company}
+                    <Building2 className="w-4 h-4 text-primary" /> {uniqueJobs[0].role} @ {uniqueJobs[0].company}
                   </span>
                 )}
                 {p.address && (
@@ -214,10 +220,10 @@ export default function PublicProfileView() {
                   </a>
                 </div>
               )}
-              {links.length > 0 && (
+              {uniqueLinks.length > 0 && (
                 <div className="pt-4 border-t border-white/5 space-y-3">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground mb-4">Professional Networks</p>
-                  {links.map((link) => (
+                  {uniqueLinks.map((link) => (
                     <a key={link.id} href={link.url} target="_blank" rel="noopener" className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-primary/5 transition-smooth group">
                       <span className="text-xs font-bold uppercase tracking-widest">{link.platform}</span>
                       <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-smooth" />
@@ -240,11 +246,11 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {experience.length > 0 && (
+          {uniqueExperience.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Experience</h2>
               <div className="space-y-12">
-                {experience.map((exp) => (
+                {uniqueExperience.map((exp) => (
                   <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
                     <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
                     <div className="space-y-4">
@@ -267,11 +273,11 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {projects.length > 0 && (
+          {uniqueProjectsAndProducts.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects & Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {projects.map((proj) => (
+                {uniqueProjectsAndProducts.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-smooth h-full flex flex-col">
                     <div className="relative h-52 w-full border-b border-white/5 bg-white/5">
                       {proj.imageUrl ? (
@@ -308,11 +314,11 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {education.length > 0 && (
+          {uniqueEducation.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Education</h2>
               <div className="space-y-12">
-                {education.map((edu) => (
+                {uniqueEducation.map((edu) => (
                   <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
                     <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
                     <div className="space-y-3">
