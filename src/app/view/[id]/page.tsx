@@ -53,7 +53,7 @@ export default function PublicProfileView() {
 
     console.log(`[PublicView] Synchronizing distributed mirror for UID: ${id}`);
     
-    // 1. Fetch thinned root profile (Basic metadata)
+    // 1. Fetch root profile (Basic metadata)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -72,8 +72,9 @@ export default function PublicProfileView() {
     });
 
     // 2. Fetch distributed sub-collections (Bypasses 1MB limit)
+    // CRITICAL: Order by updatedAt because it is reliably set by mirrorToPublic
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
-      const q = query(collection(db, "shared-profiles", id, type), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, "shared-profiles", id, type), orderBy('updatedAt', 'desc'));
       return onSnapshot(q, (snap) => {
         setter(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       }, (err) => console.warn(`[PublicView] Could not load ${type}:`, err));

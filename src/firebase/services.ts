@@ -34,7 +34,13 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
     if (isDelete) {
       await deleteDoc(ref);
     } else {
-      await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+      // Ensure the mirror always has a timestamp for sorting in the public view
+      await setDoc(ref, { 
+        ...data, 
+        updatedAt: data.updatedAt || serverTimestamp(),
+        // If createdAt is missing in mirror, public view might skip doc in sorted queries
+        createdAt: data.createdAt || data.updatedAt || serverTimestamp()
+      }, { merge: true });
     }
   } catch (err) {
     console.error(`[Mirror Error] Failed to mirror ${type} to public vault:`, err);
@@ -75,8 +81,13 @@ export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (da
 async function addItem(db: Firestore, uid: string, collectionName: string, data: any) {
   try {
     const colRef = collection(db, 'users', uid, collectionName);
-    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, collectionName, docRef.id, data);
+    const timestamp = serverTimestamp();
+    const docData = { ...data, createdAt: timestamp, updatedAt: timestamp };
+    const docRef = await addDoc(colRef, docData);
+    
+    // Mirror the exact data to the public shared profile
+    await mirrorToPublic(db, uid, collectionName, docRef.id, docData);
+    
     log(`add ${collectionName}`, docRef.path);
     return docRef.id;
   } catch (error) {
@@ -88,8 +99,12 @@ async function addItem(db: Firestore, uid: string, collectionName: string, data:
 async function updateItem(db: Firestore, uid: string, collectionName: string, id: string, data: any) {
   try {
     const docRef = doc(db, 'users', uid, collectionName, id);
-    await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, collectionName, id, data);
+    const timestamp = serverTimestamp();
+    const updateData = { ...data, updatedAt: timestamp };
+    
+    await updateDoc(docRef, updateData);
+    await mirrorToPublic(db, uid, collectionName, id, updateData);
+    
     log(`update ${collectionName}`, docRef.path);
   } catch (error) {
     logError(`update ${collectionName}`, `users/${uid}/${collectionName}/${id}`, error);
