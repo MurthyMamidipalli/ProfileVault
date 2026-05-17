@@ -59,15 +59,14 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
   ];
 
   try {
-    // 1. Mirror Basic Profile Metadata & Purge Legacy Fields
+    // 1. Mirror Basic Profile Metadata & Aggressively Purge Legacy Array Fields
     const profileRef = doc(db, 'shared-profiles', uid);
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profile;
     
-    // Explicitly delete any legacy fields that might still be in the root doc
+    // We MUST use deleteField() to ensure old data isn't lingering in the root doc
     await setDoc(profileRef, { 
       profileData: basicInfo,
       publishedAt: serverTimestamp(),
-      // Force deletion of legacy array fields to prevent data mismatch
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),
@@ -77,22 +76,19 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       jobs: deleteField()
     }, { merge: true });
 
-    // 2. Reconcile each sub-collection
+    // 2. Reconcile each sub-collection to ensure perfect parity
     for (const colName of collections) {
-      // Get current private records
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
       const privateIds = new Set(privateSnap.docs.map(d => d.id));
 
-      // Get current public mirror records
       const publicColRef = collection(db, 'shared-profiles', uid, colName);
       const publicSnap = await getDocs(publicColRef);
 
-      console.log(`[Sync] Reconciling ${colName}: Private(${privateSnap.size}) vs Public(${publicSnap.size})`);
-
-      // Delete orphans in Public that aren't in Private
       const batch = writeBatch(db);
       let deleteCount = 0;
+      
+      // Step A: Delete records that exist in the mirror but NOT in your private vault
       publicSnap.docs.forEach(doc => {
         if (!privateIds.has(doc.id)) {
           batch.delete(doc.ref);
@@ -102,10 +98,10 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       
       if (deleteCount > 0) {
         await batch.commit();
-        console.log(`[Sync] Removed ${deleteCount} orphaned records from public ${colName}`);
+        console.log(`[Sync] Purged ${deleteCount} orphaned records from public ${colName}`);
       }
 
-      // Upload/Refresh all private records to mirror to ensure latest content
+      // Step B: Refresh/Upload all valid records to ensure they are current
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }

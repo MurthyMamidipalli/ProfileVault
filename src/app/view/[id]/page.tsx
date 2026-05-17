@@ -21,13 +21,19 @@ import {
   ShieldCheck,
   AlertCircle,
   Globe,
-  FolderCode
+  FolderCode,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+
+/**
+ * @fileOverview Optimized Public Vault Mirror
+ * Features granular sub-collection rendering and client-side sorting for perfect data parity.
+ */
 
 export default function PublicProfileView() {
   const params = useParams();
@@ -52,8 +58,9 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    console.log(`[PublicView] Synchronizing distributed mirror for UID: ${id}`);
+    console.log(`[PublicView] Accessing Distributed Vault: ${id}`);
     
+    // 1. Root Profile (Metadata only)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -63,7 +70,7 @@ export default function PublicProfileView() {
           setError(null);
         }
       } else {
-        setError("Vault mirror not found or is strictly private.");
+        setError("Vault mirror not found or access restricted.");
       }
       setLoading(false);
     }, (err) => {
@@ -72,12 +79,13 @@ export default function PublicProfileView() {
       setLoading(false);
     });
 
+    // 2. Sub-collection Fetching with Client-Side Sorting
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = query(collection(db, "shared-profiles", id, type));
       return onSnapshot(q, (snap) => {
         const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         
-        // Client-side sorting to bypass strict cloud indexing requirements
+        // Manual sort to prevent Firestore index requirements and ensure parity
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
@@ -89,16 +97,15 @@ export default function PublicProfileView() {
           return timeB - timeA;
         });
         
-        console.log(`[PublicView] Loaded ${docs.length} records for ${type}`);
         setter(docs);
       }, (err) => {
-        console.warn(`[PublicView] Could not load ${type}:`, err);
+        console.warn(`[PublicView] Skipping restricted sub-collection: ${type}`);
       });
     };
 
     const unsubJobs = fetchCollection('jobs', setJobs);
     const unsubExp = fetchCollection('experience', setExperience);
-    const unsubProj = fetchCollection('projects', setProjects); // FIXED: Was setJobs
+    const unsubProj = fetchCollection('projects', setProjects);
     const unsubEdu = fetchCollection('education', setEducation);
     const unsubLinks = fetchCollection('portfolioLinks', setLinks);
 
@@ -118,7 +125,7 @@ export default function PublicProfileView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Establishing Distributed Link...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">Syncing Distributed Mirror...</p>
       </div>
     );
   }
@@ -129,7 +136,7 @@ export default function PublicProfileView() {
         <div className="p-6 bg-destructive/10 rounded-full border border-destructive/20">
           <AlertCircle className="w-12 h-12 text-destructive" />
         </div>
-        <h1 className="text-3xl font-bold">Vault Mirror Restricted</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Vault Mirror Restricted</h1>
         <p className="text-muted-foreground max-w-sm mx-auto">{error}</p>
         <Button asChild variant="outline">
           <a href="/">Return Home</a>
@@ -144,14 +151,15 @@ export default function PublicProfileView() {
   const avatarUrl = p.avatarUrl || "";
 
   return (
-    <div className="min-h-screen bg-background pb-20 selection:bg-primary/30">
+    <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
+      {/* Header Banner */}
       <div className="relative h-[350px] md:h-[450px] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
         <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-12 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end gap-8 w-full">
             <div className="relative shrink-0">
-              <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
+              <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={fullName} fill className="object-cover" />
                 ) : (
@@ -184,8 +192,9 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-16">
+        {/* Sidebar Info */}
         <div className="lg:col-span-4 space-y-12">
-          <Card className="glass-card">
+          <Card className="glass-card border-none bg-white/[0.02]">
             <CardHeader className="pb-2 border-b border-white/5">
               <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Identity Hub</CardTitle>
             </CardHeader>
@@ -219,7 +228,7 @@ export default function PublicProfileView() {
 
           {links.length > 0 && (
             <div className="space-y-6">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Global Presence</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">Online Presence</h3>
               <div className="grid grid-cols-1 gap-3">
                 {links.map((link) => (
                   <a 
@@ -241,7 +250,8 @@ export default function PublicProfileView() {
           )}
         </div>
 
-        <div className="lg:col-span-8 space-y-16">
+        {/* Main Feed */}
+        <div className="lg:col-span-8 space-y-20">
           {bio && (
             <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Executive Summary</h2>
@@ -250,8 +260,6 @@ export default function PublicProfileView() {
               </p>
             </section>
           )}
-
-          <Separator className="opacity-10" />
 
           {experience.length > 0 && (
             <section className="space-y-10">
@@ -312,29 +320,34 @@ export default function PublicProfileView() {
             </section>
           )}
 
+          {/* SINGLE Projects & Products Section to prevent duplication */}
           {projects.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects & Products</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Work & Deliverables</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {projects.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-all duration-500">
-                    {proj.imageUrl && (
+                    {proj.imageUrl ? (
                       <div className="relative h-56 w-full border-b border-white/5 overflow-hidden">
-                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-110 transition-all duration-700" />
+                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-105 transition-all duration-700" />
+                      </div>
+                    ) : (
+                      <div className="h-56 w-full flex items-center justify-center bg-white/5 border-b border-white/5">
+                        <Package className="w-12 h-12 text-muted-foreground/20" />
                       </div>
                     )}
                     <CardHeader className="p-6 space-y-4">
                       <div className="flex items-start justify-between gap-2">
-                         <h3 className="text-xl font-bold">{proj.title}</h3>
-                         <Badge variant="secondary" className="text-[9px] font-black uppercase">
+                         <h3 className="text-xl font-bold line-clamp-1">{proj.title}</h3>
+                         <Badge variant="secondary" className="text-[9px] font-black uppercase shrink-0">
                            {proj.category}
                          </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed h-15">
                         {proj.description}
                       </p>
                       {proj.url && (
-                        <Button asChild size="sm" variant="secondary" className="w-fit h-8 text-[10px] font-black mt-2">
+                        <Button asChild size="sm" variant="secondary" className="w-full md:w-fit h-9 text-[10px] font-black mt-2">
                           <a href={proj.url} target="_blank" rel="noopener">
                             <ExternalLink className="w-3.5 h-3.5 mr-2" /> LIVE PREVIEW
                           </a>
@@ -349,10 +362,10 @@ export default function PublicProfileView() {
         </div>
       </div>
 
-      <footer className="mt-32 pt-16 border-t border-white/5 text-center">
-        <div className="flex flex-col items-center gap-4 opacity-20">
+      <footer className="mt-40 pt-16 border-t border-white/5 text-center">
+        <div className="flex flex-col items-center gap-4 opacity-10">
           <FolderCode className="w-6 h-6" />
-          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE DISTRIBUTED MIRROR</span>
+          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE DISTRIBUTED HUB</span>
         </div>
       </footer>
     </div>
