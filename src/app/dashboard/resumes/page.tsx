@@ -39,7 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function ResumesPage() {
-  const { profile, addResume, removeResume, addCoverLetter, removeCoverLetter, _hasHydrated } = useProfileStore();
+  const { profile, addResume, removeResume, addCoverLetter, removeCoverLetter } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -57,7 +57,7 @@ export default function ResumesPage() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

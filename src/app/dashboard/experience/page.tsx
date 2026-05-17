@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 export default function ExperiencePage() {
-  const { profile, addExperience, removeExperience, updateExperience, _hasHydrated } = useProfileStore();
+  const { profile, addExperience, removeExperience, updateExperience } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -113,7 +113,7 @@ export default function ExperiencePage() {
     setIsOpen(false);
   };
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

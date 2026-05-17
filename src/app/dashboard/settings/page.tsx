@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { _hasHydrated } = useProfileStore();
+  const { reset } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,11 +54,14 @@ export default function SettingsPage() {
   };
 
   const handleResetData = () => {
-    localStorage.removeItem('profile-vault-storage');
-    window.location.reload();
+    reset();
+    toast({ title: "Vault Reset", description: "All local data has been cleared." });
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

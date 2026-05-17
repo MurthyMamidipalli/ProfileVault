@@ -36,7 +36,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export default function ProjectsPage() {
-  const { profile, addProject, updateProject, removeProject, _hasHydrated } = useProfileStore();
+  const { profile, addProject, updateProject, removeProject } = useProfileStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +141,7 @@ export default function ProjectsPage() {
     setIsOpen(false);
   };
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

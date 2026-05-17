@@ -30,7 +30,7 @@ const PLATFORM_ICONS: Record<string, any> = {
 };
 
 export default function LinksPage() {
-  const { profile, addPortfolioLink, removePortfolioLink, _hasHydrated } = useProfileStore();
+  const { profile, addPortfolioLink, removePortfolioLink } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [platform, setPlatform] = useState('');
@@ -49,7 +49,7 @@ export default function LinksPage() {
     toast({ title: "Link Added", description: `Saved your ${platform} link.` });
   };
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
