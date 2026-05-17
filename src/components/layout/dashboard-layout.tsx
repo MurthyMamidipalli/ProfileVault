@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -31,7 +32,8 @@ import {
   CheckCircle2,
   RefreshCw,
   AlertCircle,
-  Package
+  Package,
+  Layers
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,7 +47,7 @@ const NAV_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Personal Profile", href: "/dashboard/profile", icon: User },
   { name: "Education", href: "/dashboard/education", icon: GraduationCap },
-  { name: "Products", href: "/dashboard/projects", icon: Package },
+  { name: "Projects & Products", href: "/dashboard/projects", icon: Layers },
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Current Job", href: "/dashboard/job", icon: Building2 },
   { name: "Documents", href: "/dashboard/resumes", icon: Files },

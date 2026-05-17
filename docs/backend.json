@@ -55,6 +55,7 @@
         "documentUrl": { "type": "string" },
         "documentName": { "type": "string" },
         "date": { "type": "string" },
+        "category": { "type": "string", "enum": ["project", "product"] },
         "userId": { "type": "string" }
       }
     }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { create } from 'zustand';
@@ -52,6 +53,7 @@ export interface ProjectEntry {
   documentUrl?: string;
   documentName?: string;
   date?: string;
+  category: 'project' | 'product';
 }
 
 export interface JobEntry {

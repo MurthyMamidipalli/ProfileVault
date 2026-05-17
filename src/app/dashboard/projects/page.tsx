@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -16,6 +17,12 @@ import {
   DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FolderCode, 
@@ -28,14 +35,15 @@ import {
   Calendar,
   FileText,
   Paperclip,
-  Package
+  Package,
+  Layers
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore } from "@/firebase";
 import { addProject, updateProject, deleteProject } from "@/firebase/services";
 
-export default function ProductsPage() {
+export default function ProjectsPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { profile } = useProfileStore();
@@ -47,6 +55,7 @@ export default function ProductsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"project" | "product">("project");
 
   const [formData, setFormData] = useState<Omit<ProjectEntry, 'id'>>({
     title: '',
@@ -55,7 +64,8 @@ export default function ProductsPage() {
     imageUrl: '',
     documentUrl: '',
     documentName: '',
-    date: ''
+    date: '',
+    category: 'project'
   });
 
   useEffect(() => {
@@ -72,7 +82,8 @@ export default function ProductsPage() {
         imageUrl: entry.imageUrl || '',
         documentUrl: entry.documentUrl || '',
         documentName: entry.documentName || '',
-        date: entry.date || ''
+        date: entry.date || '',
+        category: entry.category || activeTab
       });
     } else {
       setEditingId(null);
@@ -83,7 +94,8 @@ export default function ProductsPage() {
         imageUrl: '',
         documentUrl: '',
         documentName: '',
-        date: ''
+        date: '',
+        category: activeTab
       });
     }
     setIsOpen(true);
@@ -138,10 +150,10 @@ export default function ProductsPage() {
     try {
       if (editingId) {
         await updateProject(db, user.uid, editingId, formData);
-        toast({ title: "Updated", description: "Product updated successfully." });
+        toast({ title: "Updated", description: "Entry updated successfully." });
       } else {
         await addProject(db, user.uid, formData);
-        toast({ title: "Added", description: "New product added to your products catalog." });
+        toast({ title: "Added", description: `New ${formData.category} added.` });
       }
       setIsOpen(false);
     } catch (error) {
@@ -155,9 +167,9 @@ export default function ProductsPage() {
     if (!user || !db) return;
     try {
       await deleteProject(db, user.uid, id);
-      toast({ title: "Deleted", description: "Product removed." });
+      toast({ title: "Deleted", description: "Entry removed." });
     } catch (error) {
-      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove product." });
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove entry." });
     }
   };
 
@@ -169,37 +181,39 @@ export default function ProductsPage() {
     );
   }
 
-  const projects = profile.projects || [];
+  const allProjects = profile.projects || [];
+  const projects = allProjects.filter(p => p.category === 'project');
+  const products = allProjects.filter(p => p.category === 'product');
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
-            Products
-            <Package className="w-8 h-8 text-primary" />
+            Professional Folders
+            <Layers className="w-8 h-8 text-primary" />
           </h1>
-          <p className="text-muted-foreground">Showcase your products, developed tools, and key digital offerings.</p>
+          <p className="text-muted-foreground">Organize your technical projects and digital products.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpen()} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Add Product
+              Add {activeTab === 'project' ? 'Project' : 'Product'}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[650px] glass-card max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Edit' : 'Add'} Product</DialogTitle>
-              <DialogDescription>Provide details about your product, upload a cover image, or attach a technical PDF.</DialogDescription>
+              <DialogTitle>{editingId ? 'Edit' : 'Add'} {activeTab === 'project' ? 'Project' : 'Product'}</DialogTitle>
+              <DialogDescription>Provide details, upload visuals, or attach technical documentation.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSave} className="space-y-6 pt-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label>Product Title</Label>
+                  <Label>Title</Label>
                   <Input 
                     required 
-                    placeholder="e.g. ProfileVault Enterprise" 
+                    placeholder={`e.g. My Awesome ${activeTab}`} 
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                   />
@@ -207,7 +221,7 @@ export default function ProductsPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Release/Project Date (Optional)</Label>
+                    <Label>Date (Optional)</Label>
                     <Input 
                       type="date"
                       value={formData.date}
@@ -215,10 +229,10 @@ export default function ProductsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Product URL (Optional)</Label>
+                    <Label>URL (Optional)</Label>
                     <Input 
                       type="url"
-                      placeholder="https://product-demo.com" 
+                      placeholder="https://example.com" 
                       value={formData.url}
                       onChange={e => setFormData({...formData, url: e.target.value})}
                     />
@@ -226,10 +240,10 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Product Description</Label>
+                  <Label>Description</Label>
                   <Textarea 
                     required
-                    placeholder="Describe your product features and market impact..." 
+                    placeholder="Describe the features and impact..." 
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
                     className="resize-none h-24"
@@ -238,7 +252,7 @@ export default function ProductsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Product Visual / Logo</Label>
+                    <Label>Visual Cover</Label>
                     <div 
                       onClick={() => imageInputRef.current?.click()}
                       className={cn(
@@ -257,7 +271,7 @@ export default function ProductsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Technical Documentation (PDF)</Label>
+                    <Label>Documentation (PDF)</Label>
                     <div 
                       onClick={() => docInputRef.current?.click()}
                       className={cn(
@@ -283,7 +297,7 @@ export default function ProductsPage() {
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isProcessing}>
                   {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Add Product'}
+                  {editingId ? 'Save Changes' : 'Add to Folder'}
                 </Button>
               </DialogFooter>
             </form>
@@ -291,83 +305,109 @@ export default function ProductsPage() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((proj) => (
-          <Card key={proj.id} className="glass-card overflow-hidden group flex flex-col hover:border-accent/40 transition-smooth">
-            <div className="relative h-48 w-full border-b border-border bg-muted/20">
-              {proj.imageUrl ? (
-                <Image 
-                  src={proj.imageUrl} 
-                  alt={proj.title} 
-                  fill 
-                  className="object-cover group-hover:scale-105 transition-smooth" 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Package className="w-12 h-12 text-muted-foreground/30" />
-                </div>
+      <Tabs defaultValue="project" className="w-full" onValueChange={(v) => setActiveTab(v as any)}>
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px] h-12 bg-white/5 border border-white/5 p-1 rounded-xl">
+          <TabsTrigger value="project" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold flex items-center gap-2 transition-all">
+            <FolderCode className="w-4 h-4" />
+            Projects
+          </TabsTrigger>
+          <TabsTrigger value="product" className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold flex items-center gap-2 transition-all">
+            <Package className="w-4 h-4" />
+            Products
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="pt-8">
+          <TabsContent value="project" className="mt-0">
+            <ProjectGrid items={projects} onEdit={handleOpen} onDelete={handleDelete} type="Projects" />
+          </TabsContent>
+          <TabsContent value="product" className="mt-0">
+            <ProjectGrid items={products} onEdit={handleOpen} onDelete={handleDelete} type="Products" />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+function ProjectGrid({ items, onEdit, onDelete, type }: { items: ProjectEntry[], onEdit: (p: ProjectEntry) => void, onDelete: (id: string) => void, type: string }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {items.map((proj) => (
+        <Card key={proj.id} className="glass-card overflow-hidden group flex flex-col hover:border-accent/40 transition-smooth">
+          <div className="relative h-48 w-full border-b border-border bg-muted/20">
+            {proj.imageUrl ? (
+              <Image 
+                src={proj.imageUrl} 
+                alt={proj.title} 
+                fill 
+                className="object-cover group-hover:scale-105 transition-smooth" 
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Package className="w-12 h-12 text-muted-foreground/30" />
+              </div>
+            )}
+          </div>
+          <CardHeader className="p-5 pb-2">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-bold line-clamp-1">{proj.title}</CardTitle>
+                {proj.date && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{new Date(proj.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-smooth">
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => onEdit(proj)}>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(proj.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 pt-2 flex-1 flex flex-col justify-between space-y-4">
+            <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+              {proj.description}
+            </p>
+            
+            <div className="space-y-2 mt-auto">
+              {proj.url && (
+                <Button asChild variant="secondary" size="sm" className="w-full bg-white/5 hover:bg-white/10">
+                  <a href={proj.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                    Visit Site
+                  </a>
+                </Button>
+              )}
+              {proj.documentUrl && (
+                <Button asChild variant="outline" size="sm" className="w-full border-accent/20 text-accent hover:bg-accent/5">
+                  <a href={proj.documentUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="w-3.5 h-3.5 mr-2" />
+                    Documentation
+                  </a>
+                </Button>
               )}
             </div>
-            <CardHeader className="p-5 pb-2">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-xl font-bold line-clamp-1">{proj.title}</CardTitle>
-                  {proj.date && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{new Date(proj.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-smooth">
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(proj)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(proj.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 pt-2 flex-1 flex flex-col justify-between space-y-4">
-              <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                {proj.description}
-              </p>
-              
-              <div className="space-y-2 mt-auto">
-                {proj.url && (
-                  <Button asChild variant="secondary" size="sm" className="w-full bg-white/5 hover:bg-white/10">
-                    <a href={proj.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                      Product Site
-                    </a>
-                  </Button>
-                )}
-                {proj.documentUrl && (
-                  <Button asChild variant="outline" size="sm" className="w-full border-accent/20 text-accent hover:bg-accent/5">
-                    <a href={proj.documentUrl} target="_blank" rel="noopener noreferrer">
-                      <FileText className="w-3.5 h-3.5 mr-2" />
-                      View Product Doc
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+          </CardContent>
+        </Card>
+      ))}
 
-        {projects.length === 0 && (
-          <div className="col-span-full py-24 text-center border-2 border-dashed border-border rounded-xl bg-white/5">
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-4 bg-secondary rounded-full">
-                <Package className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <p className="text-lg font-semibold">No Products Registered</p>
-              <Button onClick={() => handleOpen()} variant="outline">Register Product Now</Button>
+      {items.length === 0 && (
+        <div className="col-span-full py-24 text-center border-2 border-dashed border-border rounded-xl bg-white/5">
+          <div className="flex flex-col items-center gap-4">
+            <div className="p-4 bg-secondary rounded-full">
+              <FolderCode className="w-8 h-8 text-muted-foreground" />
             </div>
+            <p className="text-lg font-semibold">Empty Folder</p>
+            <p className="text-sm text-muted-foreground">Add your first {type.slice(0, -1)} to this section.</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
