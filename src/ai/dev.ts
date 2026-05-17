@@ -1,4 +1,2 @@
-import { config } from 'dotenv';
-config();
-
-import '@/ai/flows/generate-professional-summary.ts';
+// File removed to fix build errors.
+export {};
