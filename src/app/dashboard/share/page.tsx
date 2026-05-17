@@ -11,7 +11,7 @@ import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, 
 import { cn } from "@/lib/utils";
 
 export default function SharePage() {
-  const { profile, _hasHydrated } = useProfileStore();
+  const { profile, isCloudLoaded } = useProfileStore();
   const { toast } = useToast();
   const { user, loading: authLoading } = useUser();
   
@@ -37,7 +37,7 @@ export default function SharePage() {
     setTimeout(() => setCopying(false), 2000);
   };
 
-  if (!mounted || !_hasHydrated || authLoading) {
+  if (!mounted || !isCloudLoaded || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
