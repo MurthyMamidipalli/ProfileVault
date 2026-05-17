@@ -5,7 +5,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { doc, onSnapshot, collection, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
+import { UserProfile, JobEntry, ExperienceEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
   Loader2, 
   MapPin, 
@@ -33,6 +33,7 @@ import Image from "next/image";
 /**
  * @fileOverview Professional Vault Public Mirror (Hardened Render-Time Deduplication)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
+ * Note: Projects and Products section has been removed per user request.
  */
 
 export default function PublicProfileView() {
@@ -43,7 +44,6 @@ export default function PublicProfileView() {
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null);
   const [jobs, setJobs] = useState<JobEntry[]>([]);
   const [experience, setExperience] = useState<ExperienceEntry[]>([]);
-  const [projects, setProjects] = useState<ProjectEntry[]>([]);
   const [education, setEducation] = useState<EducationEntry[]>([]);
   const [links, setLinks] = useState<SocialLink[]>([]);
   
@@ -99,7 +99,6 @@ export default function PublicProfileView() {
 
     const unsubJobs = fetchCollection('jobs', setJobs);
     const unsubExp = fetchCollection('experience', setExperience);
-    const unsubProj = fetchCollection('projects', setProjects);
     const unsubEdu = fetchCollection('education', setEducation);
     const unsubLinks = fetchCollection('portfolioLinks', setLinks);
 
@@ -107,7 +106,6 @@ export default function PublicProfileView() {
       unsubProfile();
       unsubJobs();
       unsubExp();
-      unsubProj();
       unsubEdu();
       unsubLinks();
     };
@@ -116,7 +114,6 @@ export default function PublicProfileView() {
   // --- IDENTITY LOCK (Strict Render-Time Deduplication) ---
   const uniqueJobs = useMemo(() => Array.from(new Map(jobs.map(item => [item.id, item])).values()), [jobs]);
   const uniqueExperience = useMemo(() => Array.from(new Map(experience.map(item => [item.id, item])).values()), [experience]);
-  const uniqueProjectsAndProducts = useMemo(() => Array.from(new Map(projects.map(item => [item.id, item])).values()), [projects]);
   const uniqueEducation = useMemo(() => Array.from(new Map(education.map(item => [item.id, item])).values()), [education]);
   const uniqueLinks = useMemo(() => Array.from(new Map(links.map(item => [item.id, item])).values()), [links]);
 
@@ -260,47 +257,6 @@ export default function PublicProfileView() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {uniqueProjectsAndProducts.length > 0 && (
-            <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Projects & Products</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {uniqueProjectsAndProducts.map((proj) => (
-                  <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-smooth h-full flex flex-col">
-                    <div className="relative h-52 w-full border-b border-white/5 bg-white/5">
-                      {proj.imageUrl ? (
-                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center opacity-20">
-                          <Package className="w-12 h-12" />
-                        </div>
-                      )}
-                    </div>
-                    <CardHeader className="p-6 space-y-4 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-xl font-bold line-clamp-1">{proj.title}</h3>
-                        <Badge className="text-[9px] font-black uppercase shrink-0">
-                          {proj.category || 'PROJECT'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                        {proj.description}
-                      </p>
-                    </CardHeader>
-                    <div className="p-6 pt-0 mt-auto">
-                      {proj.url && (
-                        <Button asChild size="sm" variant="secondary" className="w-full text-[10px] font-black">
-                          <a href={proj.url} target="_blank" rel="noopener">
-                            <ExternalLink className="w-3.5 h-3.5 mr-2" /> LIVE VIEW
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
                 ))}
               </div>
             </section>
