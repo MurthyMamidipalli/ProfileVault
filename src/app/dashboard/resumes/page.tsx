@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function ResumesPage() {
+export default function DocumentsPage() {
   const { profile, addResume, removeResume, addCoverLetter, removeCoverLetter } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,17 +67,9 @@ export default function ResumesPage() {
   const resumesList = profile?.resumes || [];
   const coverLettersList = profile?.coverLetters || [];
   const currentList = activeTab === "resumes" ? resumesList : coverLettersList;
-  
-  const maxDocuments = 10;
-  const currentCount = currentList.length;
-  const isLimitReached = currentCount >= maxDocuments;
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLimitReached) {
-       toast({ variant: "destructive", title: "Limit Reached", description: `Max ${maxDocuments} documents allowed per section.` });
-       return;
-    }
     if (!linkData.name || !linkData.url) return;
 
     const payload = {
@@ -113,7 +105,6 @@ export default function ResumesPage() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLimitReached) return;
     if (!selectedFile) return;
 
     setIsUploading(true);
@@ -174,7 +165,7 @@ export default function ResumesPage() {
         <div className="flex items-center gap-3">
           <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" disabled={isLimitReached} className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2">
                 <LinkIcon className="w-4 h-4" />
                 Add Link
               </Button>
@@ -213,7 +204,7 @@ export default function ResumesPage() {
 
           <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogTrigger asChild>
-              <Button disabled={isLimitReached} className="flex items-center gap-2">
+              <Button className="flex items-center gap-2">
                 <Upload className="w-4 h-4" />
                 Upload PDF
               </Button>

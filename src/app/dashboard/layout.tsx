@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, ShieldCheck, CloudCheck } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -47,14 +47,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       db, 
       user.uid, 
       (cloudData: UserProfile | null) => {
+        // Strip volatile fields for stable comparison
         const cloudDataToHash = cloudData ? { ...cloudData, lastSyncedAt: undefined } : DEFAULT_PROFILE;
         const cloudHash = JSON.stringify(cloudDataToHash);
         
         const localToHash = { ...currentProfileRef.current, lastSyncedAt: undefined };
         const localHash = JSON.stringify(localToHash);
 
-        // HYDRATION & SYNC LOGIC:
-        // We only overwrite local state if it's the initial load OR if the cloud changed while we were idle.
+        // SYNC LOGIC:
+        // We only overwrite local state if:
+        // A) This is the very first load (isCloudLoaded is false)
+        // B) The cloud hash genuinely changed from what we last thought the cloud looked like AND it's not what we currently have locally.
         const isExternalChange = cloudHash !== lastCloudHashRef.current && localHash === lastCloudHashRef.current;
 
         if (!isCloudLoaded || isExternalChange) {
@@ -78,10 +81,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db || !isCloudLoaded) return;
 
-    // Compare local vs last known baseline
     const localToHash = { ...profile, lastSyncedAt: undefined };
     const localHash = JSON.stringify(localToHash);
 
+    // If local state hasn't changed from the last known cloud state, do nothing.
     if (localHash === lastCloudHashRef.current) {
       setSyncStatus('synced');
       return;
@@ -96,7 +99,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         
         await saveProfile(db, user.uid, profileToSync);
         
-        // Update baseline to the state we just saved to prevent echo
+        // Update baseline immediately to the state we just saved to prevent echo from the listener
         lastCloudHashRef.current = JSON.stringify({ ...profileToSync, lastSyncedAt: undefined });
         markSynced(syncTimestamp);
         setSyncStatus('synced');
@@ -104,7 +107,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         console.error("[Sync] Save failed:", error);
         setSyncStatus('error');
       }
-    }, 400); // Fast pulse for near-instant persistence
+    }, 400); // Fast heartbeat for responsive multi-item persistence
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
