@@ -153,7 +153,7 @@ export async function updateExperience(db: Firestore, uid: string, expId: string
 export async function deleteExperience(db: Firestore, uid: string, expId: string) {
   try {
     const docRef = doc(db, 'users', uid, 'experience', expId);
-    await deleteDoc(ref);
+    await deleteDoc(docRef);
     log('delete experience', `users/${uid}/experience/${expId}`);
   } catch (error) {
     logError('delete experience', `users/${uid}/experience/${expId}`, error);
