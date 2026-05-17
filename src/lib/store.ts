@@ -1,3 +1,4 @@
+
 "use client";
 
 import { create } from 'zustand';
@@ -82,6 +83,7 @@ export interface UserProfile {
   socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
+  coverLetters: ResumeDocument[];
   jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
@@ -106,7 +108,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   projects: [],
   socialLinks: [],
   portfolioLinks: [],
-  resumes: []
+  resumes: [],
+  coverLetters: []
 };
 
 /**
@@ -133,6 +136,8 @@ interface ProfileStore {
   removePortfolioLink: (id: string) => void;
   addResume: (resume: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
   removeResume: (id: string) => void;
+  addCoverLetter: (doc: Omit<ResumeDocument, 'id' | 'uploadDate'>) => void;
+  removeCoverLetter: (id: string) => void;
   addJob: (job: Omit<JobEntry, 'id'>) => void;
   updateJob: (id: string, job: Partial<JobEntry>) => void;
   removeJob: (id: string) => void;
@@ -236,6 +241,22 @@ export const useProfileStore = create<ProfileStore>((set) => ({
     profile: {
       ...state.profile,
       resumes: (state.profile.resumes || []).filter((r) => r.id !== id)
+    }
+  })),
+  addCoverLetter: (doc) => set((state) => ({
+    profile: {
+      ...state.profile,
+      coverLetters: [...(state.profile.coverLetters || []), { 
+        ...doc, 
+        id: generateId(),
+        uploadDate: new Date().toISOString().split('T')[0]
+      }]
+    }
+  })),
+  removeCoverLetter: (id) => set((state) => ({
+    profile: {
+      ...state.profile,
+      coverLetters: (state.profile.coverLetters || []).filter((r) => r.id !== id)
     }
   })),
   addJob: (job) => set((state) => ({
