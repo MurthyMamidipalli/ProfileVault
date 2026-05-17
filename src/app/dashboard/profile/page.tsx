@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -141,11 +142,11 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <Input 
+                <input 
                   id="fullName" 
                   value={profile.fullName || ""} 
                   onChange={(e) => setProfile({ fullName: e.target.value })}
-                  className="bg-background/50" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" 
                   placeholder="e.g. John Doe"
                 />
               </div>
@@ -154,12 +155,12 @@ export default function ProfilePage() {
                 <Label htmlFor="email">Primary Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
+                  <input 
                     id="email" 
                     type="email" 
                     value={profile.email} 
                     onChange={(e) => setProfile({ email: e.target.value })}
-                    className="pl-10 bg-background/50" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background/50 pl-10 pr-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" 
                   />
                 </div>
               </div>
@@ -168,13 +169,13 @@ export default function ProfilePage() {
                 <Label htmlFor="secondaryEmail">Secondary Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input 
+                  <input 
                     id="secondaryEmail" 
                     type="email" 
                     placeholder="e.g. backup@example.com"
                     value={profile.secondaryEmail || ''} 
                     onChange={(e) => setProfile({ secondaryEmail: e.target.value })}
-                    className="pl-10 bg-background/50" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background/50 pl-10 pr-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" 
                   />
                 </div>
               </div>
@@ -199,7 +200,7 @@ export default function ProfilePage() {
                 <Label htmlFor="phone">Primary Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input id="phone" value={profile.phone} onChange={(e) => setProfile({ phone: e.target.value })} className="pl-10 bg-background/50" />
+                  <input id="phone" value={profile.phone} onChange={(e) => setProfile({ phone: e.target.value })} className="flex h-10 w-full rounded-md border border-input bg-background/50 pl-10 pr-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
                 </div>
               </div>
 
@@ -207,7 +208,7 @@ export default function ProfilePage() {
                 <Label htmlFor="website">Personal Website</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input id="website" placeholder="https://yourportfolio.com" value={profile.website} onChange={(e) => setProfile({ website: e.target.value })} className="pl-10 bg-background/50" />
+                  <input id="website" placeholder="https://yourportfolio.com" value={profile.website} onChange={(e) => setProfile({ website: e.target.value })} className="flex h-10 w-full rounded-md border border-input bg-background/50 pl-10 pr-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
                 </div>
               </div>
 
@@ -215,7 +216,7 @@ export default function ProfilePage() {
                 <Label htmlFor="address">Full Address / Location</Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input id="address" value={profile.address} onChange={(e) => setProfile({ address: e.target.value })} className="pl-10 bg-background/50" />
+                  <input id="address" value={profile.address} onChange={(e) => setProfile({ address: e.target.value })} className="flex h-10 w-full rounded-md border border-input bg-background/50 pl-10 pr-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" />
                 </div>
               </div>
             </div>

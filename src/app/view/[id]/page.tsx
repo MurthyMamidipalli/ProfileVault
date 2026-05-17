@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -143,11 +144,11 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner (Optimized for full identity visibility with headroom) */}
-      <div className="relative min-h-[600px] md:min-h-[450px] overflow-hidden">
+      {/* Hero Banner (Optimized for full identity visibility with headroom and reduced empty space) */}
+      <div className="relative min-h-[450px] md:min-h-[380px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-start md:justify-end pb-12 pt-32 md:pt-0 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-start md:justify-end pb-8 pt-20 md:pt-0 relative z-10">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-8 w-full text-center md:text-left">
             <div className="relative shrink-0 transition-smooth hover:scale-105">
               <div className="w-44 h-44 md:w-52 md:h-52 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
@@ -169,21 +170,21 @@ export default function PublicProfileView() {
                 <ShieldCheck className="w-3 h-3 mr-1" /> VERIFIED VAULT
               </Badge>
             </div>
-            <div className="space-y-4 pb-2">
+            <div className="space-y-3 pb-2">
               <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground leading-tight">{fullName}</h1>
-              <div className="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-3 text-muted-foreground font-semibold text-sm">
+              <div className="flex flex-col justify-center md:justify-start gap-y-2 text-muted-foreground font-semibold text-sm">
                 {uniqueJobs.length > 0 && (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center md:justify-start gap-2">
                     <Building2 className="w-4 h-4 text-primary" /> {uniqueJobs[0].role} @ {uniqueJobs[0].company}
                   </span>
                 )}
                 {p.address && (
-                  <span className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-accent" /> {p.address}
+                  <span className="flex items-center justify-center md:justify-start gap-2 text-xs leading-relaxed max-w-2xl opacity-80">
+                    <MapPin className="w-4 h-4 text-accent shrink-0" /> {p.address}
                   </span>
                 )}
                 {p.phone && (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center md:justify-start gap-2">
                     <Phone className="w-4 h-4 text-primary" /> {p.phone}
                   </span>
                 )}
@@ -193,13 +194,13 @@ export default function PublicProfileView() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-16">
-        <div className="lg:col-span-4 space-y-12">
+      <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 mt-6 md:mt-8">
+        <div className="lg:col-span-4 space-y-8">
           <Card className="glass-card border-none bg-white/[0.02]">
             <CardHeader className="pb-2 border-b border-white/5">
               <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Contact Hub</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8 pt-6">
+            <CardContent className="space-y-6 pt-6">
               {p.email && (
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Email</p>
@@ -239,20 +240,20 @@ export default function PublicProfileView() {
           </Card>
         </div>
 
-        <div className="lg:col-span-8 space-y-24">
+        <div className="lg:col-span-8 space-y-12 md:space-y-20">
           {p.bio && (
-            <section className="space-y-8">
+            <section className="space-y-6">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Summary</h2>
-              <p className="text-2xl md:text-3xl font-medium leading-relaxed italic text-foreground opacity-90">
+              <p className="text-xl md:text-2xl font-medium leading-relaxed italic text-foreground opacity-90">
                 "{p.bio}"
               </p>
             </section>
           )}
 
           {uniqueExperience.length > 0 && (
-            <section className="space-y-10">
+            <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Experience</h2>
-              <div className="space-y-12">
+              <div className="space-y-10">
                 {uniqueExperience.map((exp) => (
                   <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
                     <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
@@ -277,9 +278,9 @@ export default function PublicProfileView() {
           )}
 
           {uniqueEducation.length > 0 && (
-            <section className="space-y-10">
+            <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
-              <div className="space-y-12">
+              <div className="space-y-10">
                 {uniqueEducation.map((edu) => (
                   <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
                     <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
@@ -323,14 +324,14 @@ export default function PublicProfileView() {
           )}
 
           {projectsOnly.length > 0 && (
-            <section className="space-y-10">
+            <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {projectsOnly.map((proj) => (
                   <Card key={proj.id} className="glass-card overflow-hidden group hover:border-primary/40 transition-smooth flex flex-col">
                     <div className="relative h-48 w-full border-b border-white/5">
                       {proj.imageUrl ? (
-                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
+                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover object-top group-hover:scale-105 transition-smooth" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-white/5">
                           <FolderCode className="w-12 h-12 text-muted-foreground/30" />
@@ -365,14 +366,14 @@ export default function PublicProfileView() {
           )}
 
           {productsOnly.length > 0 && (
-            <section className="space-y-10">
+            <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Digital Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {productsOnly.map((prod) => (
                   <Card key={prod.id} className="glass-card overflow-hidden group hover:border-accent/40 transition-smooth flex flex-col">
                     <div className="relative h-48 w-full border-b border-white/5">
                       {prod.imageUrl ? (
-                        <Image src={prod.imageUrl} alt={prod.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
+                        <Image src={prod.imageUrl} alt={prod.title} fill className="object-cover object-top group-hover:scale-105 transition-smooth" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-white/5">
                           <Package className="w-12 h-12 text-muted-foreground/30" />
@@ -409,7 +410,7 @@ export default function PublicProfileView() {
         </div>
       </div>
 
-      <footer className="mt-40 pt-16 border-t border-white/5 text-center opacity-20">
+      <footer className="mt-20 pt-16 border-t border-white/5 text-center opacity-20">
         <FolderCode className="w-6 h-6 mx-auto mb-4" />
         <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE DISTRIBUTED MIRROR</span>
       </footer>
