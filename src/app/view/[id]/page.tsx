@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -148,14 +149,14 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner */}
-      <div className="relative h-[350px] md:h-[450px] overflow-hidden">
+      {/* Hero Banner - Increased height for mobile to prevent picture clipping */}
+      <div className="relative h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-12 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end gap-8 w-full">
+        <div className="max-w-6xl mx-auto px-6 h-full flex items-center md:items-end pb-12 relative z-10">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-8 w-full text-center md:text-left">
             <div className="relative shrink-0">
-              <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
+              <div className="w-32 h-32 md:w-44 md:h-44 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
                 {p.avatarUrl ? (
                   <Image src={p.avatarUrl} alt={fullName} fill className="object-cover" />
                 ) : (
@@ -170,7 +171,7 @@ export default function PublicProfileView() {
             </div>
             <div className="space-y-4 pb-2">
               <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground">{fullName}</h1>
-              <div className="flex flex-wrap gap-x-8 gap-y-3 text-muted-foreground font-semibold text-sm">
+              <div className="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-3 text-muted-foreground font-semibold text-sm">
                 {uniqueJobs.length > 0 && (
                   <span className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" /> {uniqueJobs[0].role} @ {uniqueJobs[0].company}
