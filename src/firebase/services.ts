@@ -8,8 +8,7 @@ import {
   onSnapshot, 
   serverTimestamp,
   DocumentReference,
-  Unsubscribe,
-  getDoc
+  Unsubscribe
 } from 'firebase/firestore';
 import { UserProfile } from '@/lib/store';
 
@@ -29,7 +28,13 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
   
   const ref = getProfileRef(db, uid);
   
-  console.log(`[Firestore] Writing vault at: ${ref.path}`);
+  // Detailed log to help debugging multiple item issues
+  console.log(`[Firestore] Writing vault at: ${ref.path}`, {
+    name: data.fullName,
+    projectsCount: data.projects?.length,
+    jobsCount: data.jobs?.length,
+    experienceCount: data.experience?.length
+  });
   
   const payload = {
     profileData: data,
@@ -38,6 +43,7 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
   };
 
   try {
+    // We overwrite the profileData field with the current local source of truth
     await setDoc(ref, payload, { merge: true });
     console.log(`[Firestore] Sync Success for UID: ${uid}`);
   } catch (error) {
@@ -61,8 +67,13 @@ export function subscribeToProfile(
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      console.log(`[Sync] Cloud update received for UID: ${uid}`);
-      onUpdate(data.profileData as UserProfile);
+      // Only fire update if profileData exists
+      if (data && data.profileData) {
+        console.log(`[Sync] Cloud update received for UID: ${uid} (Projects: ${data.profileData.projects?.length || 0})`);
+        onUpdate(data.profileData as UserProfile);
+      } else {
+        onUpdate(null);
+      }
     } else {
       console.log(`[Sync] No remote vault found for UID: ${uid}`);
       onUpdate(null);

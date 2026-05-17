@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
-import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
+import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
@@ -47,20 +47,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const unsubscribe = subscribeToProfile(
       db, 
       user.uid, 
-      (cloudData) => {
+      (cloudData: UserProfile | null) => {
         const cloudDataStr = cloudData ? JSON.stringify(cloudData) : JSON.stringify(DEFAULT_PROFILE);
         const localDataStr = JSON.stringify(currentLocalRef.current);
         
         // HYDRATION & SYNC LOGIC:
-        // Apply cloud data if it's the first load OR if it's an external change (local matches old cloud)
-        if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
+        // Only apply cloud data if:
+        // A) It's the first time we're loading (isCloudLoaded is false)
+        // B) The cloud data is different from our last known baseline AND our local changes are already in sync with that baseline
+        const isExternalChange = cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current;
+
+        if (!isCloudLoaded || isExternalChange) {
           console.log(`[Sync] Applying Cloud -> Local mirror for UID: ${user.uid}`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         } else if (cloudDataStr !== lastCloudDataRef.current) {
-          // Cloud changed but user is currently typing locally - suppress mid-edit overwrite
-          lastCloudDataRef.current = cloudDataStr;
-          console.log(`[Sync] Cloud update acknowledged (Mid-edit preservation active)`);
+          // The cloud changed, but we have un-saved local changes. We wait for our local changes to be saved.
+          console.log(`[Sync] Cloud update acknowledged. Suppressing overwrite to preserve local edits.`);
         }
         
         setIsCloudLoaded(true);
@@ -79,28 +82,36 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // CRITICAL: NEVER save until cloud is loaded to prevent blank overwrites
     if (!user || !db || !isCloudLoaded) return;
 
-    const currentLocalStr = JSON.stringify(profile);
+    // Create a version of the profile without the 'lastSyncedAt' for comparison to prevent infinite loop
+    const profileToCompare = { ...profile, lastSyncedAt: undefined };
+    const currentLocalStr = JSON.stringify(profileToCompare);
+    
+    // Also strip 'lastSyncedAt' from the baseline for accurate comparison
+    const lastCloudBaseline = lastCloudDataRef.current 
+      ? JSON.stringify({ ...JSON.parse(lastCloudDataRef.current), lastSyncedAt: undefined })
+      : null;
 
     // Skip if local state matches the last known cloud state (no change)
-    if (currentLocalStr === lastCloudDataRef.current) return;
+    if (currentLocalStr === lastCloudBaseline) {
+      return;
+    }
 
     const timer = setTimeout(async () => {
       try {
         const syncTimestamp = new Date().toISOString();
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
-        const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Firestore] Syncing change to: shared-profiles/${user.uid}`);
-        
-        // Optimistically update ref to prevent immediate loopback echo
-        lastCloudDataRef.current = dataToSaveStr;
+        console.log(`[Firestore] Syncing change (Items: ${profileToSync.projects?.length || 0} Projects, ${profileToSync.jobs?.length || 0} Jobs)`);
         
         await saveProfile(db, user.uid, profileToSync);
+        
+        // Update the baseline AFTER successful save to match what we just sent
+        lastCloudDataRef.current = JSON.stringify(profileToSync);
         markSynced(syncTimestamp);
       } catch (error) {
         console.error("[Firestore] Sync failed:", error);
       }
-    }, 2000); // 2s debounce for performance
+    }, 2000); // 2s debounce
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);

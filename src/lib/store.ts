@@ -155,20 +155,25 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   setProfile: (updates) => set((state) => ({ 
     profile: { ...state.profile, ...updates } 
   })),
-  replaceProfile: (fullProfile) => set((state) => ({ 
-    profile: { 
+  replaceProfile: (fullProfile) => set((state) => {
+    // Merge existing profile with incoming cloud data to ensure no fields are lost
+    const merged = { 
       ...DEFAULT_PROFILE, 
       ...fullProfile,
-      jobs: fullProfile.jobs || [],
-      education: fullProfile.education || [],
-      experience: fullProfile.experience || [],
-      projects: fullProfile.projects || [],
-      portfolioLinks: fullProfile.portfolioLinks || [],
-      resumes: fullProfile.resumes || [],
-      coverLetters: fullProfile.coverLetters || []
-    },
-    isCloudLoaded: true 
-  })),
+      fullName: fullProfile.fullName || fullProfile.name || '',
+      jobs: Array.isArray(fullProfile.jobs) ? fullProfile.jobs : [],
+      education: Array.isArray(fullProfile.education) ? fullProfile.education : [],
+      experience: Array.isArray(fullProfile.experience) ? fullProfile.experience : [],
+      projects: Array.isArray(fullProfile.projects) ? fullProfile.projects : [],
+      portfolioLinks: Array.isArray(fullProfile.portfolioLinks) ? fullProfile.portfolioLinks : [],
+      resumes: Array.isArray(fullProfile.resumes) ? fullProfile.resumes : [],
+      coverLetters: Array.isArray(fullProfile.coverLetters) ? fullProfile.coverLetters : []
+    };
+    return { 
+      profile: merged,
+      isCloudLoaded: true 
+    };
+  }),
   addEducation: (entry) => set((state) => ({
     profile: {
       ...state.profile,
