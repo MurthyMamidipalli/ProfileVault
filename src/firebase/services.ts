@@ -24,6 +24,8 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
  * Save profile data to Firestore using UID as ID.
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
+  if (!uid) return;
+  
   const ref = getProfileRef(db, uid);
   
   console.log(`[Firestore] Writing to path: ${ref.path}`);
@@ -50,8 +52,9 @@ export async function loadProfile(db: Firestore, uid: string): Promise<UserProfi
   const ref = getProfileRef(db, uid);
   const snap = await getDoc(ref);
   if (snap.exists()) {
+    const data = snap.data();
     console.log(`[Firestore] Read Success for path: ${ref.path}`);
-    return snap.data().profileData as UserProfile;
+    return data.profileData as UserProfile;
   }
   return null;
 }
