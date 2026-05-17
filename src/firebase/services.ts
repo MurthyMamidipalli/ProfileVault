@@ -21,8 +21,8 @@ import {
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
 /**
- * @fileOverview Atomic Firestore Service Layer
- * Hardened to prevent duplication and legacy array leakage.
+ * @fileOverview Atomic Firestore Service Layer (Optimized)
+ * Hardened to prevent duplication and aggressively purge legacy array data.
  */
 
 // --- Mirror Helpers ---
@@ -45,25 +45,29 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
 
 /**
  * Reconciles the public shared vault to perfectly match the private vault.
- * Explicitly removes legacy root-level arrays that cause duplication.
+ * Aggressively removes legacy root-level arrays that cause duplication in the UI.
  */
 export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
-  console.log("[Sync] Deep Reconciliation Start...");
+  console.log("[Sync] Deep Reconciliation & Legacy Purge Start...");
   
   const subCollections = [
     'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
   ];
 
   try {
-    // 1. MIRROR BASIC METADATA & PURGE LEGACY ARRAYS
-    // This step is critical: we use deleteField() to wipe out any old array data at the root.
+    // 1. MIRROR BASIC METADATA & DESTRUCTIVE PURGE OF LEGACY ARRAYS
     const profileRef = doc(db, 'shared-profiles', uid);
-    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profile;
     
-    await setDoc(profileRef, { 
-      profileData: basicInfo,
+    // Explicitly delete any legacy array fields that might be causing duplication
+    await updateDoc(profileRef, { 
+      'profileData.fullName': profile.fullName || '',
+      'profileData.bio': profile.bio || '',
+      'profileData.avatarUrl': profile.avatarUrl || '',
+      'profileData.address': profile.address || '',
+      'profileData.website': profile.website || '',
+      'profileData.email': profile.email || '',
       publishedAt: serverTimestamp(),
-      // Hard purge of legacy root fields
+      // Hard purge of all possible legacy array names (Standard and Capitalized)
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),
@@ -71,13 +75,29 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       resumes: deleteField(),
       coverLetters: deleteField(),
       jobs: deleteField(),
-      // Also check for common capitalized versions just in case
-      Projects: deleteField(),
+      Education: deleteField(),
       Experience: deleteField(),
-      Education: deleteField()
-    }, { merge: true });
+      Projects: deleteField(),
+      Jobs: deleteField(),
+      PortfolioLinks: deleteField(),
+      Resumes: deleteField(),
+      CoverLetters: deleteField()
+    }).catch(async (err) => {
+      // If doc doesn't exist, create it cleanly
+      await setDoc(profileRef, { 
+        profileData: {
+          fullName: profile.fullName || '',
+          bio: profile.bio || '',
+          avatarUrl: profile.avatarUrl || '',
+          address: profile.address || '',
+          website: profile.website || '',
+          email: profile.email || ''
+        },
+        publishedAt: serverTimestamp()
+      });
+    });
 
-    // 2. RECONCILE SUB-COLLECTIONS
+    // 2. RECONCILE SUB-COLLECTIONS (Clean sync)
     for (const colName of subCollections) {
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
@@ -86,25 +106,21 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       const publicColRef = collection(db, 'shared-profiles', uid, colName);
       const publicSnap = await getDocs(publicColRef);
 
+      // Remove items in public mirror that don't exist in private
       const batch = writeBatch(db);
-      let removed = 0;
-      
-      // Remove any items in public mirror that don't exist in private
       publicSnap.docs.forEach(doc => {
         if (!privateIds.has(doc.id)) {
           batch.delete(doc.ref);
-          removed++;
         }
       });
-      
-      if (removed > 0) await batch.commit();
+      await batch.commit();
 
-      // Refresh all valid records
+      // Refresh all valid records to public mirror
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
     }
-    console.log("[Sync] Reconciliation Complete. Duplicates purged.");
+    console.log("[Sync] Reconciliation Complete. Vault is clean.");
   } catch (error) {
     console.error("[Sync] Reconciliation Failed:", error);
     throw error;
@@ -113,21 +129,10 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
 
 // --- Profile Info ---
 export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<UserProfile>) {
-  try {
-    const ref = doc(db, 'users', uid, 'profile', 'basic');
-    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
-    const updateData = { ...cleanData, updatedAt: serverTimestamp() };
-    
-    await setDoc(ref, updateData, { merge: true });
-    
-    // Mirror basic metadata to root shared profile
-    await setDoc(doc(db, 'shared-profiles', uid), { 
-      profileData: updateData, 
-      publishedAt: serverTimestamp() 
-    }, { merge: true });
-  } catch (error) {
-    throw error;
-  }
+  const ref = doc(db, 'users', uid, 'profile', 'basic');
+  const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
+  const updateData = { ...cleanData, updatedAt: serverTimestamp() };
+  await setDoc(ref, updateData, { merge: true });
 }
 
 export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (data: any) => void): Unsubscribe {

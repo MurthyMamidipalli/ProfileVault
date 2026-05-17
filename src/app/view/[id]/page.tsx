@@ -30,8 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 /**
- * @fileOverview Professional Vault Public Mirror
- * Strictly uses sub-collections for all professional data to prevent duplication from legacy fields.
+ * @fileOverview Professional Vault Public Mirror (Optimized)
+ * Strictly uses distributed sub-collections with ID-based uniqueness filtering to prevent duplication.
  */
 
 export default function PublicProfileView() {
@@ -57,12 +57,11 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile (Basic metadata ONLY)
+    // 1. Root Profile (Metadata only - explicitly ignore legacy arrays)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        // We only take profileData. Anything else at the root level (like legacy arrays) is ignored.
         if (data && data.profileData) {
           setProfile(data.profileData);
           setError(null);
@@ -76,22 +75,29 @@ export default function PublicProfileView() {
       setLoading(false);
     });
 
-    // 2. Specialized Collection Fetcher (Client-side sorting)
+    // 2. Specialized Collection Fetcher (With ID Uniqueness filtering)
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = query(collection(db, "shared-profiles", id, type));
       return onSnapshot(q, (snap) => {
-        const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const docsMap = new Map();
         
-        // Manual sort by timestamp to ensure perfect parity without cloud index lag
+        snap.docs.forEach(doc => {
+          const data = doc.data();
+          // Use Map to ensure document ID uniqueness and prevent duplicates
+          docsMap.set(doc.id, { ...data, id: doc.id });
+        });
+
+        const docs = Array.from(docsMap.values());
+        
+        // Manual sort by timestamp
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
+            if (val?.createdAt?.seconds) return val.createdAt.seconds * 1000;
             return 0;
           };
-          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
-          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
-          return timeB - timeA;
+          return getTime(b) - getTime(a);
         });
         
         setter(docs);
@@ -280,7 +286,7 @@ export default function PublicProfileView() {
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-xl font-bold line-clamp-1">{proj.title}</h3>
                         <Badge className="text-[9px] font-black uppercase shrink-0">
-                          {proj.category}
+                          {proj.category || 'PROJECT'}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
