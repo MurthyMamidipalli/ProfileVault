@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -22,11 +21,12 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
 
 /**
  * Save profile data to Firestore using UID as ID.
+ * This is the single source of truth for the user's professional identity.
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
   
-  console.log(`[Firestore] Writing to document: ${ref.path}`);
+  console.log(`[Firestore] Writing to path: shared-profiles/${uid}`);
   
   const payload = {
     profileData: data,
@@ -36,16 +36,16 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 
   try {
     await setDoc(ref, payload, { merge: true });
-    console.log(`[Firestore] Write success for UID: ${uid}`);
+    console.log(`[Firestore] Write Success: shared-profiles/${uid}`);
   } catch (error) {
-    console.error('[Firestore] Write failed for UID:', uid, error);
+    console.error(`[Firestore] Write Failure for UID ${uid}:`, error);
     throw error;
   }
 }
 
 /**
  * Subscribe to real-time profile updates using UID.
- * Treats Firestore as the absolute source of truth.
+ * This listener handles cross-browser and cross-device synchronization.
  */
 export function subscribeToProfile(
   db: Firestore, 
@@ -59,14 +59,14 @@ export function subscribeToProfile(
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      console.log(`[Sync] Realtime sync received for path: ${ref.path}`);
+      console.log(`[Sync] Realtime change detected at: ${ref.path}`);
       onUpdate(data.profileData as UserProfile);
     } else {
-      console.log(`[Sync] No existing profile found at ${ref.path} (New user initialization)`);
+      console.log(`[Sync] No vault found at ${ref.path}. Initializing empty session.`);
       onUpdate(null);
     }
   }, (err) => {
-    console.error('[Sync] Realtime listener error for UID:', uid, err);
+    console.error(`[Sync] Listener error for UID ${uid}:`, err);
     onError(err);
   });
 }
