@@ -54,16 +54,14 @@ export default function SignupPage() {
       return;
     }
 
-    console.log(`[Auth] SIGNUP called for: ${email}`);
     setIsAuthenticating(true);
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log(`[Auth] SIGNUP success: ${userCredential.user.uid}`);
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       toast({ title: "Account created!", description: "Welcome to ProfileVault." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(`[Auth] SIGNUP error:`, error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
@@ -102,6 +100,8 @@ export default function SignupPage() {
                 id="email" 
                 type="email" 
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-background/50" 

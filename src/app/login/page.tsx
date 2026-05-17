@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -31,20 +32,21 @@ export default function LoginPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`[Auth] ATTEMPTING LOGIN for: ${email}`);
     setIsAuthenticating(true);
     
+    // Mobile resilience: trim email and password
+    const cleanEmail = email.trim().toLowerCase();
+    
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log(`[Auth] LOGIN SUCCESS: ${userCredential.user.uid}`);
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       toast({ title: "Welcome back!", description: "Opening your professional vault." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(`[Auth] LOGIN ERROR:`, error);
+      // We don't use console.error here to avoid triggering the Next.js dev overlay for bad credentials
       toast({
         variant: "destructive",
         title: "Access Denied",
-        description: error.message || "Invalid credentials.",
+        description: "The email or password you entered is incorrect. Please try again.",
       });
     } finally {
       setIsAuthenticating(false);
@@ -81,6 +83,8 @@ export default function LoginPage() {
                   id="email" 
                   type="email" 
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
