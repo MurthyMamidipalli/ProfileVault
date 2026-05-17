@@ -108,7 +108,7 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border/50">
               <div className="relative group">
                 <Avatar className="w-28 h-28 border-2 border-primary/20 shadow-xl group-hover:border-primary/50 transition-smooth">
-                  <AvatarImage src={profile.avatarUrl} className="object-cover" />
+                  <AvatarImage src={profile.avatarUrl} className="object-cover object-top" />
                   <AvatarFallback className="bg-secondary text-secondary-foreground text-2xl font-bold">
                     {profile.fullName?.charAt(0) || <User className="w-10 h-10" />}
                   </AvatarFallback>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -27,10 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 /**
- * @fileOverview Professional Vault Public Mirror (Optimized Render-Time Identity Lock)
- * Implements strict ID-based identity locking to ensure zero duplication of records.
- * Projects and Products are positioned at the bottom of the layout.
- * Hero section optimized for full profile picture visibility, specifically preventing hair clipping on mobile.
+ * @fileOverview Professional Vault Public Mirror (Optimized Identity Alignment)
+ * Implements strict object-top alignment for identity photos to prevent hair clipping.
+ * Mobile hero layout is expanded to provide maximum headroom for professional headshots.
  */
 
 export default function PublicProfileView() {
@@ -56,7 +54,6 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile (Primary Identity)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -74,13 +71,10 @@ export default function PublicProfileView() {
       setLoading(false);
     });
 
-    // 2. Collection Fetchers (Optimized State Mapping)
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = collection(db, "shared-profiles", id, type);
       return onSnapshot(q, (snap) => {
         const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        
-        // Consistent Descending Temporal Sort
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
@@ -89,7 +83,6 @@ export default function PublicProfileView() {
           };
           return getTime(b) - getTime(a);
         });
-        
         setter(docs);
       });
     };
@@ -110,7 +103,6 @@ export default function PublicProfileView() {
     };
   }, [id, db, mounted]);
 
-  // --- IDENTITY LOCK (Render-Time Deduplication) ---
   const uniqueJobs = useMemo(() => Array.from(new Map(jobs.map(item => [item.id, item])).values()), [jobs]);
   const uniqueExperience = useMemo(() => Array.from(new Map(experience.map(item => [item.id, item])).values()), [experience]);
   const uniqueEducation = useMemo(() => Array.from(new Map(education.map(item => [item.id, item])).values()), [education]);
@@ -151,11 +143,11 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner (Optimized for full identity visibility) */}
-      <div className="relative min-h-[550px] md:min-h-[450px] overflow-hidden">
+      {/* Hero Banner (Optimized for full identity visibility with headroom) */}
+      <div className="relative min-h-[600px] md:min-h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-start md:justify-end pb-12 pt-24 md:pt-0 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-start md:justify-end pb-12 pt-32 md:pt-0 relative z-10">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-8 w-full text-center md:text-left">
             <div className="relative shrink-0 transition-smooth hover:scale-105">
               <div className="w-44 h-44 md:w-52 md:h-52 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
@@ -188,6 +180,11 @@ export default function PublicProfileView() {
                 {p.address && (
                   <span className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-accent" /> {p.address}
+                  </span>
+                )}
+                {p.phone && (
+                  <span className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-primary" /> {p.phone}
                   </span>
                 )}
               </div>
