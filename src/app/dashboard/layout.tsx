@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { useProfileStore, DEFAULT_PROFILE } from "@/lib/store";
@@ -54,7 +54,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // Apply cloud data if it's the first load OR if it's an external change (local matches old cloud)
         // This prevents incoming cloud updates from clearing the user's active typing (echo-loop)
         if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
-          console.log(`[Sync] Applying Cloud -> Local mirror`);
+          console.log(`[Sync] Applying Cloud -> Local mirror for UID: ${user.uid}`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         } else if (cloudDataStr !== lastCloudDataRef.current) {
@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Firestore] Syncing change...`);
+        console.log(`[Firestore] Syncing change to path: shared-profiles/${user.uid}`);
         
         // Optimistically update ref to prevent immediate loopback echo
         lastCloudDataRef.current = dataToSaveStr;

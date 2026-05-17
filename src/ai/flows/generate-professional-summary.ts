@@ -1,4 +1,6 @@
-// File removed to fix build errors. AI Summary feature is disabled.
+/**
+ * @fileOverview AI summary flow disabled to fix build errors.
+ */
 export async function generateProfessionalSummary() {
   return { summary: "" };
 }

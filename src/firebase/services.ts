@@ -14,7 +14,7 @@ import { UserProfile } from '@/lib/store';
 
 /**
  * DETERMINISTIC PATH: shared-profiles/{uid}
- * This is the global source of truth for all devices.
+ * This ensures that Browser A and Browser B always open the same record.
  */
 const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
   return doc(db, 'shared-profiles', uid);
@@ -26,7 +26,7 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   const ref = getProfileRef(db, uid);
   
-  console.log(`[Firestore] Syncing vault at: ${ref.path}`);
+  console.log(`[Firestore] Writing to path: ${ref.path}`);
   
   const payload = {
     profileData: data,
@@ -36,9 +36,9 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 
   try {
     await setDoc(ref, payload, { merge: true });
-    console.log(`[Firestore] Sync Success: ${uid}`);
+    console.log(`[Firestore] Write Success for UID: ${uid}`);
   } catch (error) {
-    console.error(`[Firestore] Sync Failure:`, error);
+    console.error(`[Firestore] Write Failure:`, error);
     throw error;
   }
 }
@@ -50,6 +50,7 @@ export async function loadProfile(db: Firestore, uid: string): Promise<UserProfi
   const ref = getProfileRef(db, uid);
   const snap = await getDoc(ref);
   if (snap.exists()) {
+    console.log(`[Firestore] Read Success for path: ${ref.path}`);
     return snap.data().profileData as UserProfile;
   }
   return null;
@@ -65,19 +66,19 @@ export function subscribeToProfile(
   onError: (err: any) => void
 ): Unsubscribe {
   const ref = getProfileRef(db, uid);
-  console.log(`[Sync] Attaching cloud listener: ${ref.path}`);
+  console.log(`[Sync] Establishing real-time listener at: ${ref.path}`);
   
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      console.log(`[Sync] Remote update received for: ${uid}`);
+      console.log(`[Sync] Real-time update received for UID: ${uid}`);
       onUpdate(data.profileData as UserProfile);
     } else {
-      console.log(`[Sync] No cloud vault found for: ${uid}`);
+      console.log(`[Sync] No cloud vault found for UID: ${uid}`);
       onUpdate(null);
     }
   }, (err) => {
-    console.error(`[Sync] Cloud listener error:`, err);
+    console.error(`[Sync] Listener error at ${ref.path}:`, err);
     onError(err);
   });
 }

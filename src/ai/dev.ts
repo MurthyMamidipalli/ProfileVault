@@ -1,2 +1,4 @@
-// File removed to fix build errors.
+/**
+ * @fileOverview AI dev entry point disabled.
+ */
 export {};
