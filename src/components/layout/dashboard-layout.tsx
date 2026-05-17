@@ -98,11 +98,11 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
             }
             side="left"
           >
-            {/* Accessibility: Screen reader only headers */}
+            {/* Mobile Accessibility Fixed: Adding required Title and Description for screen readers */}
             <div className="sr-only">
               <SheetHeader>
                 <SheetTitle>Navigation Menu</SheetTitle>
-                <SheetDescription>Main navigation for the professional vault.</SheetDescription>
+                <SheetDescription>Main navigation for the professional vault dashboard.</SheetDescription>
               </SheetHeader>
             </div>
             
@@ -268,6 +268,7 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
              </div>
              <Link href="/dashboard/profile" className="transition-smooth hover:scale-110 active:scale-95">
                <Avatar className="w-10 h-10 border-2 border-primary/20 hover:border-primary transition-smooth shadow-lg">
+                  {/* Fixed Header Avatar: Object-top prioritized to prevent hair clipping */}
                   <AvatarImage src={profile.avatarUrl} className="object-cover object-top" />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm font-black">
                     {displayName.charAt(0)}

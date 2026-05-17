@@ -34,15 +34,15 @@ export default function LoginPage() {
     e.preventDefault();
     setIsAuthenticating(true);
     
-    // Mobile resilience: trim email and password
+    // Mobile resilience: trim whitespace and lowercase email
     const cleanEmail = email.trim().toLowerCase();
     
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
       toast({ title: "Welcome back!", description: "Opening your professional vault." });
       router.push("/dashboard");
     } catch (error: any) {
-      // We don't use console.error here to avoid triggering the Next.js dev overlay for bad credentials
+      // We skip console.error to avoid triggering the white dev error overlay on mobile
       toast({
         variant: "destructive",
         title: "Access Denied",

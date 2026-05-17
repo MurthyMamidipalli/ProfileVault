@@ -31,6 +31,7 @@ import Image from "next/image";
  * Implements strict object-top alignment for identity photos to prevent hair clipping.
  * Name size adjusted to "middle size" (text-2xl md:text-4xl).
  * Layout tightened to reduce space between identity and experience.
+ * Projects & Products positioned at the absolute bottom.
  */
 
 export default function PublicProfileView() {
@@ -324,6 +325,7 @@ export default function PublicProfileView() {
             </section>
           )}
 
+          {/* Projects and Products Reordered to Bottom */}
           {projectsOnly.length > 0 && (
             <section className="space-y-6">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>

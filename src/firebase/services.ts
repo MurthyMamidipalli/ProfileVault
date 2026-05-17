@@ -39,7 +39,7 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
       }, { merge: true });
     }
   } catch (err) {
-    console.error(`[Mirror Error] Failed to mirror ${type}:`, err);
+    // We avoid console.error to prevent dev overlay triggers on expected low-priority failures
   }
 }
 
@@ -50,8 +50,6 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
  * 3. Re-syncs all active vault data.
  */
 export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
-  console.log("[Nuclear Sync] Initiating Destructive Reconciliation...");
-  
   const subCollections = [
     'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
   ];
@@ -133,7 +131,6 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       
       if (deletedCount > 0) {
         await batch.commit();
-        console.log(`[Nuclear Sync] Purged ${deletedCount} orphans from ${colName}`);
       }
 
       // Re-upload current valid data
@@ -141,9 +138,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
     }
-    console.log("[Nuclear Sync] Success. Public mirror is now a perfect, single-source reflection.");
   } catch (error) {
-    console.error("[Nuclear Sync] Critical Failure:", error);
     throw error;
   }
 }
