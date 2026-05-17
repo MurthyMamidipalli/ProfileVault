@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from "react";
@@ -13,13 +12,15 @@ import {
   subscribeToExperience, 
   subscribeToProjects,
   subscribeToResumes,
-  subscribeToCoverLetters
+  subscribeToCoverLetters,
+  publishToPublicVault
 } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const { 
+    profile,
     setProfile, 
     setJobs, 
     setExperience, 
@@ -28,6 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setCoverLetters,
     setIsCloudLoaded, 
     isCloudLoaded,
+    markSynced,
     reset 
   } = useProfileStore();
   const router = useRouter();
@@ -74,7 +76,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => {
       setIsCloudLoaded(true);
       setSyncStatus('synced');
-    }, 1000);
+      markSynced();
+    }, 1200);
 
     return () => {
       unsubProfile();
@@ -85,9 +88,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       unsubCoverLetters();
       clearTimeout(timer);
     };
-  }, [user, db, setProfile, setJobs, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded]);
+  }, [user, db, setProfile, setJobs, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded, markSynced]);
 
-  // 3. Cleanup on Logout
+  // 3. Auto-Mirror to Public Vault
+  useEffect(() => {
+    if (!user || !db || !isCloudLoaded) return;
+    
+    const timer = setTimeout(() => {
+      publishToPublicVault(db, user.uid, profile).catch(err => {
+        console.error("Auto-mirror failed", err);
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [profile, user, db, isCloudLoaded]);
+
+  // 4. Cleanup on Logout
   useEffect(() => {
     if (!authLoading && !user) {
       reset();

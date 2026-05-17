@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -17,24 +16,17 @@ import {
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument } from '@/lib/store';
 
-// --- Generic Helpers ---
+// --- Logging Helpers ---
+const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
+const logError = (action: string, path: string, error: any) => console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
 
-const log = (action: string, path: string, data?: any) => {
-  console.log(`[Firestore] ${action.toUpperCase()} at ${path}`, data || '');
-};
-
-const logError = (action: string, path: string, error: any) => {
-  console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
-};
-
-// --- Profile Services ---
-
+// --- Profile Info (Single Doc) ---
 export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<UserProfile>) {
   const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
     await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-    log('save profile', path, data);
+    log('save profile', path);
   } catch (error) {
     logError('save profile', path, error);
     throw error;
@@ -48,41 +40,37 @@ export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (da
   });
 }
 
-// --- Jobs Services ---
-
+// --- Jobs (Sub-collection) ---
 export async function addJob(db: Firestore, uid: string, data: Omit<JobEntry, 'id'>) {
-  const path = `users/${uid}/jobs`;
   try {
     const colRef = collection(db, 'users', uid, 'jobs');
     const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    log('add job', `${path}/${docRef.id}`, data);
+    log('add job', `users/${uid}/jobs/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add job', path, error);
+    logError('add job', `users/${uid}/jobs`, error);
     throw error;
   }
 }
 
 export async function updateJob(db: Firestore, uid: string, jobId: string, data: Partial<JobEntry>) {
-  const path = `users/${uid}/jobs/${jobId}`;
   try {
     const docRef = doc(db, 'users', uid, 'jobs', jobId);
     await updateDoc(docRef, data);
-    log('update job', path, data);
+    log('update job', `users/${uid}/jobs/${jobId}`);
   } catch (error) {
-    logError('update job', path, error);
+    logError('update job', `users/${uid}/jobs/${jobId}`, error);
     throw error;
   }
 }
 
 export async function deleteJob(db: Firestore, uid: string, jobId: string) {
-  const path = `users/${uid}/jobs/${jobId}`;
   try {
     const docRef = doc(db, 'users', uid, 'jobs', jobId);
     await deleteDoc(docRef);
-    log('delete job', path);
+    log('delete job', `users/${uid}/jobs/${jobId}`);
   } catch (error) {
-    logError('delete job', path, error);
+    logError('delete job', `users/${uid}/jobs/${jobId}`, error);
     throw error;
   }
 }
@@ -91,46 +79,41 @@ export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: Job
   const colRef = collection(db, 'users', uid, 'jobs');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    const jobs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as JobEntry));
-    onUpdate(jobs);
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as JobEntry)));
   });
 }
 
-// --- Experience Services ---
-
+// --- Experience (Sub-collection) ---
 export async function addExperience(db: Firestore, uid: string, data: Omit<ExperienceEntry, 'id'>) {
-  const path = `users/${uid}/experience`;
   try {
     const colRef = collection(db, 'users', uid, 'experience');
     const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    log('add experience', `${path}/${docRef.id}`, data);
+    log('add experience', `users/${uid}/experience/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add experience', path, error);
+    logError('add experience', `users/${uid}/experience`, error);
     throw error;
   }
 }
 
 export async function updateExperience(db: Firestore, uid: string, expId: string, data: Partial<ExperienceEntry>) {
-  const path = `users/${uid}/experience/${expId}`;
   try {
     const docRef = doc(db, 'users', uid, 'experience', expId);
     await updateDoc(docRef, data);
-    log('update experience', path, data);
+    log('update experience', `users/${uid}/experience/${expId}`);
   } catch (error) {
-    logError('update experience', path, error);
+    logError('update experience', `users/${uid}/experience/${expId}`, error);
     throw error;
   }
 }
 
 export async function deleteExperience(db: Firestore, uid: string, expId: string) {
-  const path = `users/${uid}/experience/${expId}`;
   try {
     const docRef = doc(db, 'users', uid, 'experience', expId);
     await deleteDoc(docRef);
-    log('delete experience', path);
+    log('delete experience', `users/${uid}/experience/${expId}`);
   } catch (error) {
-    logError('delete experience', path, error);
+    logError('delete experience', `users/${uid}/experience/${expId}`, error);
     throw error;
   }
 }
@@ -139,46 +122,41 @@ export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (dat
   const colRef = collection(db, 'users', uid, 'experience');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    const exp = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExperienceEntry));
-    onUpdate(exp);
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExperienceEntry)));
   });
 }
 
-// --- Projects Services ---
-
+// --- Projects (Sub-collection) ---
 export async function addProject(db: Firestore, uid: string, data: Omit<ProjectEntry, 'id'>) {
-  const path = `users/${uid}/projects`;
   try {
     const colRef = collection(db, 'users', uid, 'projects');
     const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    log('add project', `${path}/${docRef.id}`, data);
+    log('add project', `users/${uid}/projects/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add project', path, error);
+    logError('add project', `users/${uid}/projects`, error);
     throw error;
   }
 }
 
 export async function updateProject(db: Firestore, uid: string, projId: string, data: Partial<ProjectEntry>) {
-  const path = `users/${uid}/projects/${projId}`;
   try {
     const docRef = doc(db, 'users', uid, 'projects', projId);
     await updateDoc(docRef, data);
-    log('update project', path, data);
+    log('update project', `users/${uid}/projects/${projId}`);
   } catch (error) {
-    logError('update project', path, error);
+    logError('update project', `users/${uid}/projects/${projId}`, error);
     throw error;
   }
 }
 
 export async function deleteProject(db: Firestore, uid: string, projId: string) {
-  const path = `users/${uid}/projects/${projId}`;
   try {
     const docRef = doc(db, 'users', uid, 'projects', projId);
     await deleteDoc(docRef);
-    log('delete project', path);
+    log('delete project', `users/${uid}/projects/${projId}`);
   } catch (error) {
-    logError('delete project', path, error);
+    logError('delete project', `users/${uid}/projects/${projId}`, error);
     throw error;
   }
 }
@@ -187,15 +165,12 @@ export function subscribeToProjects(db: Firestore, uid: string, onUpdate: (data:
   const colRef = collection(db, 'users', uid, 'projects');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    const projects = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ProjectEntry));
-    onUpdate(projects);
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ProjectEntry)));
   });
 }
 
-// --- Resume Services ---
-
+// --- Resumes (Sub-collection) ---
 export async function addResume(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
-  const path = `users/${uid}/resumes`;
   try {
     const colRef = collection(db, 'users', uid, 'resumes');
     const docRef = await addDoc(colRef, { 
@@ -203,22 +178,20 @@ export async function addResume(db: Firestore, uid: string, data: Omit<ResumeDoc
       uploadDate: new Date().toLocaleDateString(),
       createdAt: serverTimestamp() 
     });
-    log('add resume', `${path}/${docRef.id}`, data);
+    log('add resume', `users/${uid}/resumes/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add resume', path, error);
+    logError('add resume', `users/${uid}/resumes`, error);
     throw error;
   }
 }
 
 export async function deleteResume(db: Firestore, uid: string, id: string) {
-  const path = `users/${uid}/resumes/${id}`;
   try {
-    const docRef = doc(db, 'users', uid, 'resumes', id);
-    await deleteDoc(docRef);
-    log('delete resume', path);
+    await deleteDoc(doc(db, 'users', uid, 'resumes', id));
+    log('delete resume', id);
   } catch (error) {
-    logError('delete resume', path, error);
+    logError('delete resume', id, error);
     throw error;
   }
 }
@@ -227,15 +200,12 @@ export function subscribeToResumes(db: Firestore, uid: string, onUpdate: (data: 
   const colRef = collection(db, 'users', uid, 'resumes');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument));
-    onUpdate(docs);
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument)));
   });
 }
 
-// --- Cover Letter Services ---
-
+// --- Cover Letters (Sub-collection) ---
 export async function addCoverLetter(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
-  const path = `users/${uid}/coverLetters`;
   try {
     const colRef = collection(db, 'users', uid, 'coverLetters');
     const docRef = await addDoc(colRef, { 
@@ -243,22 +213,20 @@ export async function addCoverLetter(db: Firestore, uid: string, data: Omit<Resu
       uploadDate: new Date().toLocaleDateString(),
       createdAt: serverTimestamp() 
     });
-    log('add cover letter', `${path}/${docRef.id}`, data);
+    log('add cover letter', `users/${uid}/coverLetters/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add cover letter', path, error);
+    logError('add cover letter', `users/${uid}/coverLetters`, error);
     throw error;
   }
 }
 
 export async function deleteCoverLetter(db: Firestore, uid: string, id: string) {
-  const path = `users/${uid}/coverLetters/${id}`;
   try {
-    const docRef = doc(db, 'users', uid, 'coverLetters', id);
-    await deleteDoc(docRef);
-    log('delete cover letter', path);
+    await deleteDoc(doc(db, 'users', uid, 'coverLetters', id));
+    log('delete cover letter', id);
   } catch (error) {
-    logError('delete cover letter', path, error);
+    logError('delete cover letter', id, error);
     throw error;
   }
 }
@@ -267,7 +235,21 @@ export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (d
   const colRef = collection(db, 'users', uid, 'coverLetters');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument));
-    onUpdate(docs);
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument)));
   });
+}
+
+// --- Public Sharing (Mirroring for view) ---
+export async function publishToPublicVault(db: Firestore, uid: string, profileData: UserProfile) {
+  try {
+    const ref = doc(db, 'shared-profiles', uid);
+    await setDoc(ref, { 
+      profileData, 
+      publishedAt: serverTimestamp() 
+    });
+    log('publish profile', `shared-profiles/${uid}`);
+  } catch (error) {
+    logError('publish profile', `shared-profiles/${uid}`, error);
+    throw error;
+  }
 }

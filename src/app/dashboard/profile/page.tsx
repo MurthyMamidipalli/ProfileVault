@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,22 +16,41 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Cake, Users, Camera, Trash2, AlertCircle } from "lucide-react";
+import { Save, User, Mail, Phone, MapPin, Globe, Loader2, Camera, Trash2 } from "lucide-react";
+import { useUser, useFirestore } from "@/firebase";
+import { saveProfileInfo } from "@/firebase/services";
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 export default function ProfilePage() {
+  const { user } = useUser();
+  const db = useFirestore();
   const { profile, setProfile } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Profile Updated",
-      description: "Your personal details have been saved successfully.",
-    });
+    if (!user || !db) return;
+    setIsSaving(true);
+    try {
+      await saveProfileInfo(db, user.uid, profile);
+      toast({
+        title: "Profile Updated",
+        description: "Your personal details have been saved to the cloud.",
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not persist changes." });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,27 +73,20 @@ export default function ProfilePage() {
       setIsUploading(true);
       const reader = new FileReader();
       reader.onload = (event) => {
-        try {
-          setProfile({ avatarUrl: event.target?.result as string });
-          toast({ title: "Avatar Updated", description: "Your profile picture has been updated locally." });
-        } catch (err) {
-          toast({ 
-            variant: "destructive", 
-            title: "Storage Error", 
-            description: "Image too large for local cache." 
-          });
-        } finally {
-          setIsUploading(false);
-        }
+        setProfile({ avatarUrl: event.target?.result as string });
+        setIsUploading(false);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const removeAvatar = () => {
-    setProfile({ avatarUrl: '' });
-    toast({ title: "Avatar Removed", description: "Profile picture has been cleared." });
-  };
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -118,7 +129,7 @@ export default function ProfilePage() {
                     Change Photo
                   </Button>
                   {profile.avatarUrl && (
-                    <Button type="button" variant="ghost" size="sm" onClick={removeAvatar} className="text-destructive hover:bg-destructive/10">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setProfile({ avatarUrl: '' })} className="text-destructive hover:bg-destructive/10">
                       <Trash2 className="w-4 h-4 mr-2" />
                       Remove
                     </Button>
@@ -132,7 +143,7 @@ export default function ProfilePage() {
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input 
                   id="fullName" 
-                  value={profile.fullName || profile.name || ""} 
+                  value={profile.fullName || ""} 
                   onChange={(e) => setProfile({ fullName: e.target.value })}
                   className="bg-background/50" 
                   placeholder="e.g. John Doe"
@@ -170,21 +181,18 @@ export default function ProfilePage() {
               
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground z-10" />
-                  <Select value={profile.gender || "Prefer not to say"} onValueChange={(value) => setProfile({ gender: value })}>
-                    <SelectTrigger className="pl-10 bg-background/50">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Non-binary">Non-binary</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={profile.gender || "Prefer not to say"} onValueChange={(value) => setProfile({ gender: value })}>
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Non-binary">Non-binary</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -235,9 +243,9 @@ export default function ProfilePage() {
         </Card>
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" size="lg" className="px-8 flex items-center gap-2">
-            <Save className="w-4 h-4" />
-            Save Changes
+          <Button type="submit" size="lg" disabled={isSaving} className="px-8 flex items-center gap-2">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save Profile
           </Button>
         </div>
       </form>

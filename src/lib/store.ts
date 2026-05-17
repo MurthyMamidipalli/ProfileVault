@@ -1,4 +1,3 @@
-
 "use client";
 
 import { create } from 'zustand';
@@ -70,22 +69,18 @@ export interface UserProfile {
   email: string;
   secondaryEmail: string;
   phone: string;
-  secondaryPhone: string;
   address: string;
   website: string;
   gender: string;
-  age: string;
   bio: string;
   avatarUrl?: string;
   education: EducationEntry[];
   experience: ExperienceEntry[];
   projects: ProjectEntry[];
-  socialLinks: SocialLink[];
   portfolioLinks: SocialLink[];
   resumes: ResumeDocument[];
   coverLetters: ResumeDocument[];
   jobs: JobEntry[];
-  sharedId?: string;
   lastSyncedAt?: string;
   name?: string; 
 }
@@ -95,18 +90,15 @@ export const DEFAULT_PROFILE: UserProfile = {
   email: '',
   secondaryEmail: '',
   phone: '',
-  secondaryPhone: '',
   address: '',
   website: '',
   gender: 'Prefer not to say',
-  age: '',
   bio: '',
   avatarUrl: '',
   jobs: [],
   education: [],
   experience: [],
   projects: [],
-  socialLinks: [],
   portfolioLinks: [],
   resumes: [],
   coverLetters: []

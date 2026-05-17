@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -94,7 +93,6 @@ export default function DocumentsPage() {
     } catch (error) {
       toast({ variant: "destructive", title: "Save Failed", description: "Could not add document link." });
     } finally {
-      setIsProcessing(true);
       setIsProcessing(false);
     }
   };
@@ -139,7 +137,7 @@ export default function DocumentsPage() {
         setUploadData({ name: '' });
         setSelectedFile(null);
       } catch (error) {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Error storing file in vault." });
+        toast({ variant: "destructive", title: "Upload Failed", description: "Error storing file." });
       } finally {
         setIsProcessing(false);
       }
@@ -165,7 +163,7 @@ export default function DocumentsPage() {
       } else {
         await deleteCoverLetter(db, user.uid, id);
       }
-      toast({ title: "Removed", description: "Document deleted from cloud." });
+      toast({ title: "Removed", description: "Document deleted." });
     } catch (error) {
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove document." });
     }
@@ -193,7 +191,7 @@ export default function DocumentsPage() {
             <DialogContent className="glass-card">
               <DialogHeader>
                 <DialogTitle>Add {activeTab === 'resumes' ? 'Resume' : 'Cover Letter'} Link</DialogTitle>
-                <DialogDescription>Link to an externally hosted document (e.g., Google Drive, Personal Site).</DialogDescription>
+                <DialogDescription>Link to an externally hosted document.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddLink} className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -234,7 +232,7 @@ export default function DocumentsPage() {
             <DialogContent className="glass-card">
               <DialogHeader>
                 <DialogTitle>Upload {activeTab === 'resumes' ? 'Resume' : 'Cover Letter'} PDF</DialogTitle>
-                <DialogDescription>Your file will be base64 encoded and stored in your cloud vault.</DialogDescription>
+                <DialogDescription>Your file will be safely stored in your cloud vault.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleUploadSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -360,7 +358,7 @@ function EmptyState({ type }: { type: string }) {
       </div>
       <div className="space-y-1">
         <p className="text-lg font-semibold">No {type} found</p>
-        <p className="text-sm text-muted-foreground">Upload your first {type.slice(0, -1)} to your secure vault.</p>
+        <p className="text-sm text-muted-foreground">Add your first {type.slice(0, -1)} to your secure vault.</p>
       </div>
     </div>
   );

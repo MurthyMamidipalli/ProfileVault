@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -15,7 +14,7 @@ import {
   SidebarInset,
   useSidebar
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/avatar";
 import { 
   User, 
   GraduationCap, 
@@ -76,7 +75,7 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
     }
   };
 
-  const displayName = profile.fullName || profile.name || "Vault Owner";
+  const displayName = profile.fullName || "Vault Owner";
 
   return (
     <div className="flex min-h-screen w-full bg-background overflow-hidden">
@@ -159,8 +158,7 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
             <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-smooth h-10 w-10" />
             <div className="h-8 w-px bg-border/50 hidden md:block" />
             <h2 className="font-headline font-black text-xl tracking-tight text-foreground hidden sm:block">
-              {NAV_ITEMS.find(item => item.href === pathname)?.name || 
-               (pathname === "/dashboard/settings" ? "Settings" : "Dashboard")}
+              {NAV_ITEMS.find(item => item.href === pathname)?.name || "Dashboard"}
             </h2>
           </div>
           <div className="flex items-center gap-6">
@@ -174,12 +172,12 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
                  )}
                  {syncStatus === 'syncing' && (
                    <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                     <RefreshCw className="w-3 h-3 animate-spin" /> Syncing Vault...
+                     <RefreshCw className="w-3 h-3 animate-spin" /> Syncing...
                    </span>
                  )}
                  {syncStatus === 'error' && (
                    <span className="text-[10px] text-destructive font-bold uppercase tracking-wider flex items-center gap-1">
-                     <AlertCircle className="w-3 h-3" /> Sync Failed
+                     <AlertCircle className="w-3 h-3" /> Sync Error
                    </span>
                  )}
                </div>
