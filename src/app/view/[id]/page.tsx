@@ -33,7 +33,7 @@ import Image from "next/image";
 /**
  * @fileOverview Professional Vault Public Mirror (Hardened Render-Time Deduplication)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
- * Projects and Products are now restored with unique filtering.
+ * Sections reordered: Projects and Products are now at the bottom.
  */
 
 export default function PublicProfileView() {
@@ -59,7 +59,7 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile (Ignore any array data here - exclusively use sub-collections)
+    // 1. Root Profile (Ignore legacy array data - render exclusively from sub-collections)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -242,6 +242,79 @@ export default function PublicProfileView() {
             </section>
           )}
 
+          {uniqueExperience.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Experience</h2>
+              <div className="space-y-12">
+                {uniqueExperience.map((exp) => (
+                  <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
+                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <h3 className="text-2xl font-bold">{exp.title}</h3>
+                        <Badge variant="outline" className="w-fit border-primary/30 text-[10px] font-black">
+                          {exp.startDate} — {exp.endDate || 'PRESENT'}
+                        </Badge>
+                      </div>
+                      <p className="text-primary text-sm font-black uppercase tracking-widest">{exp.company}</p>
+                      {exp.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line opacity-80 max-w-2xl">
+                          {exp.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {uniqueEducation.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
+              <div className="space-y-12">
+                {uniqueEducation.map((edu) => (
+                  <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
+                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
+                    <div className="space-y-3">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold">{edu.institution}</h3>
+                          <div className="flex items-center gap-3 text-accent font-bold">
+                            <GraduationCap className="w-4 h-4" />
+                            <span>{edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}</span>
+                          </div>
+                        </div>
+                        {(edu.cgpa || edu.percentage) && (
+                          <div className="flex flex-wrap gap-2">
+                            {edu.cgpa && (
+                              <Badge className="bg-accent/10 text-accent border-accent/20 font-black text-[10px]">
+                                CGPA: {edu.cgpa}
+                              </Badge>
+                            )}
+                            {edu.percentage && (
+                              <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px]">
+                                SCORE: {edu.percentage}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">
+                        {edu.startDate} — {edu.endDate || 'PRESENT'}
+                      </p>
+                      {edu.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed italic opacity-80 pt-2">
+                          "{edu.description}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {uniqueProjects.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>
@@ -326,78 +399,6 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {uniqueExperience.length > 0 && (
-            <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Experience</h2>
-              <div className="space-y-12">
-                {uniqueExperience.map((exp) => (
-                  <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
-                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-                    <div className="space-y-4">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <h3 className="text-2xl font-bold">{exp.title}</h3>
-                        <Badge variant="outline" className="w-fit border-primary/30 text-[10px] font-black">
-                          {exp.startDate} — {exp.endDate || 'PRESENT'}
-                        </Badge>
-                      </div>
-                      <p className="text-primary text-sm font-black uppercase tracking-widest">{exp.company}</p>
-                      {exp.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line opacity-80 max-w-2xl">
-                          {exp.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {uniqueEducation.length > 0 && (
-            <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
-              <div className="space-y-12">
-                {uniqueEducation.map((edu) => (
-                  <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
-                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
-                    <div className="space-y-3">
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <h3 className="text-xl font-bold">{edu.institution}</h3>
-                          <div className="flex items-center gap-3 text-accent font-bold">
-                            <GraduationCap className="w-4 h-4" />
-                            <span>{edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}</span>
-                          </div>
-                        </div>
-                        {(edu.cgpa || edu.percentage) && (
-                          <div className="flex flex-wrap gap-2">
-                            {edu.cgpa && (
-                              <Badge className="bg-accent/10 text-accent border-accent/20 font-black text-[10px]">
-                                CGPA: {edu.cgpa}
-                              </Badge>
-                            )}
-                            {edu.percentage && (
-                              <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px]">
-                                SCORE: {edu.percentage}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">
-                        {edu.startDate} — {edu.endDate || 'PRESENT'}
-                      </p>
-                      {edu.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed italic opacity-80 pt-2">
-                          "{edu.description}"
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </div>
 
