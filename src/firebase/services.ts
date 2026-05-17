@@ -14,7 +14,8 @@ import {
   query,
   orderBy,
   Unsubscribe,
-  Timestamp
+  Timestamp,
+  getDocs
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
@@ -28,20 +29,15 @@ const log = (action: string, path: string) => console.log(`[Firestore] ${action.
 const logError = (action: string, path: string, error: any) => console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
 
 // --- Mirror Helpers ---
-// Distributed mirroring to public vault to bypass 1MB document limit
 async function mirrorToPublic(db: Firestore, uid: string, type: string, id: string, data: any, isDelete = false) {
-  const path = `shared-profiles/${uid}/${type}/${id}`;
   try {
     const ref = doc(db, 'shared-profiles', uid, type, id);
     if (isDelete) {
       await deleteDoc(ref);
     } else {
-      // Ensure the mirror always has a timestamp for sorting in the public view
-      // We use serverTimestamp to ensure consistency, falling back to current Timestamp if needed
       await setDoc(ref, { 
         ...data, 
         updatedAt: serverTimestamp(),
-        // We preserve original createdAt if it exists, otherwise set it
         createdAt: data.createdAt || serverTimestamp()
       }, { merge: true });
     }
@@ -50,12 +46,43 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
   }
 }
 
+/**
+ * Force mirrors all private collections to the public vault.
+ * This ensures existing data is correctly reflected in the public mirror.
+ */
+export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
+  console.log("[Sync] Initializing Deep Cloud Sync...");
+  
+  const collections = [
+    'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
+  ];
+
+  try {
+    // 1. Mirror Basic Profile
+    await saveProfileInfo(db, uid, profile);
+
+    // 2. Mirror Sub-collections
+    for (const colName of collections) {
+      const colRef = collection(db, 'users', uid, colName);
+      const snap = await getDocs(colRef);
+      console.log(`[Sync] Mirroring ${snap.size} records from ${colName}...`);
+      
+      for (const d of snap.docs) {
+        await mirrorToPublic(db, uid, colName, d.id, d.data());
+      }
+    }
+    console.log("[Sync] Deep Cloud Sync Complete.");
+  } catch (error) {
+    console.error("[Sync] Deep Cloud Sync Failed:", error);
+    throw error;
+  }
+}
+
 // --- Profile Info (Single Doc) ---
 export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<UserProfile>) {
   const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
-    // Ensure we don't accidentally save huge nested arrays to the basic profile doc
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
     const updateData = { ...cleanData, updatedAt: serverTimestamp() };
     
@@ -79,8 +106,6 @@ export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (da
 }
 
 // --- CRUD Factory for Sub-collections ---
-// Generic handler for multi-item sub-collections (Jobs, Education, Experience, Projects, Links)
-
 async function addItem(db: Firestore, uid: string, collectionName: string, data: any) {
   try {
     const colRef = collection(db, 'users', uid, collectionName);
@@ -88,7 +113,6 @@ async function addItem(db: Firestore, uid: string, collectionName: string, data:
     const docData = { ...data, createdAt: timestamp, updatedAt: timestamp };
     const docRef = await addDoc(colRef, docData);
     
-    // Mirror the exact data to the public shared profile
     await mirrorToPublic(db, uid, collectionName, docRef.id, docData);
     
     log(`add ${collectionName}`, docRef.path);
@@ -129,7 +153,6 @@ async function deleteItem(db: Firestore, uid: string, collectionName: string, id
 
 // --- Exported Professional Services ---
 
-// Jobs
 export const addJob = (db: Firestore, uid: string, data: Omit<JobEntry, 'id'>) => addItem(db, uid, 'jobs', data);
 export const updateJob = (db: Firestore, uid: string, id: string, data: Partial<JobEntry>) => updateItem(db, uid, 'jobs', id, data);
 export const deleteJob = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'jobs', id);
@@ -138,7 +161,6 @@ export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: Job
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as JobEntry))));
 }
 
-// Education
 export const addEducation = (db: Firestore, uid: string, data: Omit<EducationEntry, 'id'>) => addItem(db, uid, 'education', data);
 export const updateEducation = (db: Firestore, uid: string, id: string, data: Partial<EducationEntry>) => updateItem(db, uid, 'education', id, data);
 export const deleteEducation = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'education', id);
@@ -147,7 +169,6 @@ export function subscribeToEducation(db: Firestore, uid: string, onUpdate: (data
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as EducationEntry))));
 }
 
-// Experience
 export const addExperience = (db: Firestore, uid: string, data: Omit<ExperienceEntry, 'id'>) => addItem(db, uid, 'experience', data);
 export const updateExperience = (db: Firestore, uid: string, id: string, data: Partial<ExperienceEntry>) => updateItem(db, uid, 'experience', id, data);
 export const deleteExperience = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'experience', id);
@@ -156,7 +177,6 @@ export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (dat
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ExperienceEntry))));
 }
 
-// Projects & Products
 export const addProject = (db: Firestore, uid: string, data: Omit<ProjectEntry, 'id'>) => addItem(db, uid, 'projects', data);
 export const updateProject = (db: Firestore, uid: string, id: string, data: Partial<ProjectEntry>) => updateItem(db, uid, 'projects', id, data);
 export const deleteProject = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'projects', id);
@@ -165,7 +185,6 @@ export function subscribeToProjects(db: Firestore, uid: string, onUpdate: (data:
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProjectEntry))));
 }
 
-// Portfolio Links
 export const addPortfolioLink = (db: Firestore, uid: string, data: Omit<SocialLink, 'id'>) => addItem(db, uid, 'portfolioLinks', data);
 export const deletePortfolioLink = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'portfolioLinks', id);
 export function subscribeToPortfolioLinks(db: Firestore, uid: string, onUpdate: (data: SocialLink[]) => void) {
@@ -173,7 +192,6 @@ export function subscribeToPortfolioLinks(db: Firestore, uid: string, onUpdate: 
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as SocialLink))));
 }
 
-// Resumes & Cover Letters
 export const addResume = (db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) => 
   addItem(db, uid, 'resumes', { ...data, uploadDate: new Date().toLocaleDateString() });
 export const deleteResume = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'resumes', id);
@@ -190,7 +208,6 @@ export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (d
   return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ResumeDocument))));
 }
 
-// Bulk Mirroring metadata only
 export async function publishToPublicVault(db: Firestore, uid: string, profileData: UserProfile) {
   try {
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profileData;

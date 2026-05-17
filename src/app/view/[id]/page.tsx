@@ -77,15 +77,20 @@ export default function PublicProfileView() {
       return onSnapshot(q, (snap) => {
         const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         
+        // Client-side sorting to bypass strict cloud indexing requirements
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
+            // Fallback for missing timestamps
             return 0;
           };
-          return getTime(b.updatedAt) - getTime(a.updatedAt);
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
+          return timeB - timeA;
         });
         
+        console.log(`[PublicView] Loaded ${docs.length} records for ${type}`);
         setter(docs);
       }, (err) => {
         console.warn(`[PublicView] Could not load ${type}:`, err);
@@ -310,7 +315,7 @@ export default function PublicProfileView() {
 
           {projects.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects & Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {projects.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-all duration-500">
@@ -320,7 +325,12 @@ export default function PublicProfileView() {
                       </div>
                     )}
                     <CardHeader className="p-6 space-y-4">
-                      <h3 className="text-xl font-bold">{proj.title}</h3>
+                      <div className="flex items-start justify-between gap-2">
+                         <h3 className="text-xl font-bold">{proj.title}</h3>
+                         <Badge variant="secondary" className="text-[9px] font-black uppercase">
+                           {proj.category}
+                         </Badge>
+                      </div>
                       <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
                         {proj.description}
                       </p>

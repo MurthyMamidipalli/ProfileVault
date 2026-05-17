@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from "react";
@@ -15,7 +16,8 @@ import {
   subscribeToResumes,
   subscribeToCoverLetters,
   subscribeToPortfolioLinks,
-  publishToPublicVault
+  publishToPublicVault,
+  forceMirrorAll
 } from "@/firebase/services";
 
 /**
@@ -89,12 +91,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setPortfolioLinks(data || []);
     });
 
-    // Stabilize and mark as loaded
-    const timer = setTimeout(() => {
-      setIsCloudLoaded(true);
-      setSyncStatus('synced');
-      markSynced();
-    }, 1200);
+    // Initial Deep Sync to ensure Public Mirror is healthy
+    const initSync = async () => {
+      try {
+        // Delay slightly to ensure listeners have initial data
+        setTimeout(async () => {
+          await forceMirrorAll(db, user.uid, profile);
+          setIsCloudLoaded(true);
+          setSyncStatus('synced');
+          markSynced();
+        }, 2000);
+      } catch (err) {
+        console.error("Initial Sync Failed", err);
+        setSyncStatus('error');
+        setIsCloudLoaded(true); // Don't block UI forever
+      }
+    };
+
+    initSync();
 
     return () => {
       unsubProfile();
@@ -105,7 +119,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       unsubResumes();
       unsubCoverLetters();
       unsubLinks();
-      clearTimeout(timer);
     };
   }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setPortfolioLinks, setIsCloudLoaded, markSynced]);
 
@@ -141,7 +154,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ShieldCheck className="w-5 h-5 text-accent" />
               Verifying Professional Link
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Syncing distributed professional vault...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Establishing deep cloud mirror for your vault...</p>
           </div>
         </div>
       </div>

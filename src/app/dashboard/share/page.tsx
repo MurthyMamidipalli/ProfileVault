@@ -6,25 +6,25 @@ import { useProfileStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase";
-import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw } from "lucide-react";
+import { useUser, useFirestore } from "@/firebase";
+import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { forceMirrorAll } from "@/firebase/services";
 
 export default function SharePage() {
   const { profile, isCloudLoaded } = useProfileStore();
   const { toast } = useToast();
   const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
   
   const [mounted, setMounted] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  /**
-   * Deterministic Share URL using Auth UID
-   */
   const shareUrl = typeof window !== 'undefined' && user?.uid 
     ? `${window.location.origin}/view/${user.uid}` 
     : '';
@@ -35,6 +35,26 @@ export default function SharePage() {
     navigator.clipboard.writeText(shareUrl);
     toast({ title: "Link Copied", description: "Your secure portfolio link is ready to share." });
     setTimeout(() => setCopying(false), 2000);
+  };
+
+  const handleForceSync = async () => {
+    if (!user || !db) return;
+    setSyncing(true);
+    try {
+      await forceMirrorAll(db, user.uid, profile);
+      toast({ 
+        title: "Vault Deep Sync Complete", 
+        description: "All professional records are now mirrored to your public vault." 
+      });
+    } catch (err) {
+      toast({ 
+        variant: "destructive", 
+        title: "Sync Failed", 
+        description: "Could not mirror data to the public vault." 
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   if (!mounted || !isCloudLoaded || authLoading) {
@@ -66,12 +86,16 @@ export default function SharePage() {
             <p className="text-sm font-bold text-accent">Real-Time Sync Active</p>
             <p className="text-xs text-muted-foreground">Every edit you make is instantly saved and shared via your unique UID-based link.</p>
           </div>
-          {isSynced && (
-            <div className="text-right">
-              <p className="text-[10px] text-muted-foreground uppercase font-black">Latest Sync</p>
-              <p className="text-xs font-bold text-foreground">{new Date(profile.lastSyncedAt!).toLocaleTimeString()}</p>
-            </div>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleForceSync} 
+            disabled={syncing}
+            className="border-accent/20 hover:bg-accent/10"
+          >
+            {syncing ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Database className="w-4 h-4 mr-2" />}
+            {syncing ? "Syncing..." : "Force Sync All"}
+          </Button>
         </div>
 
         <Card className="glass-card border-primary/20 relative overflow-hidden">
@@ -108,16 +132,18 @@ export default function SharePage() {
                 <div className="flex-1 bg-background/50 border border-border p-4 rounded-lg font-mono text-sm truncate select-all text-foreground">
                   {shareUrl || "Connecting to Cloud..."}
                 </div>
-                <Button 
-                  onClick={handleCopy} 
-                  size="lg" 
-                  variant="secondary" 
-                  className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0"
-                  disabled={!shareUrl}
-                >
-                  {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                  {copying ? 'Copied' : 'Copy URL'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleCopy} 
+                    size="lg" 
+                    variant="secondary" 
+                    className="bg-accent/20 text-accent hover:bg-accent/30 font-bold shrink-0"
+                    disabled={!shareUrl}
+                  >
+                    {copying ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                    {copying ? 'Copied' : 'Copy URL'}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
