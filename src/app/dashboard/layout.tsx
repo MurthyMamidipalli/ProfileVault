@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, ShieldCheck, RefreshCw, CloudCheck } from "lucide-react";
+import { Loader2, ShieldCheck, CloudCheck } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -25,17 +25,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
   
   // Ref-based state tracking to prevent echo-loops
-  const lastCloudDataRef = useRef<string | null>(null);
-  const currentLocalRef = useRef(profile);
+  const lastCloudHashRef = useRef<string | null>(null);
+  const currentProfileRef = useRef(profile);
 
   useEffect(() => {
-    currentLocalRef.current = profile;
+    currentProfileRef.current = profile;
   }, [profile]);
 
   // 1. Auth Guard
   useEffect(() => {
     if (!authLoading && !user) {
-      console.log("[Auth] Session missing, redirecting to login.");
       router.push("/login");
     }
   }, [user, authLoading, router]);
@@ -44,31 +43,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db) return;
 
-    console.log(`[Auth] Authenticated as UID: ${user.uid}`);
-
     const unsubscribe = subscribeToProfile(
       db, 
       user.uid, 
       (cloudData: UserProfile | null) => {
-        const cloudDataStr = cloudData ? JSON.stringify(cloudData) : JSON.stringify(DEFAULT_PROFILE);
-        const localDataStr = JSON.stringify(currentLocalRef.current);
+        const cloudDataToHash = cloudData ? { ...cloudData, lastSyncedAt: undefined } : DEFAULT_PROFILE;
+        const cloudHash = JSON.stringify(cloudDataToHash);
         
+        const localToHash = { ...currentProfileRef.current, lastSyncedAt: undefined };
+        const localHash = JSON.stringify(localToHash);
+
         // HYDRATION & SYNC LOGIC:
-        // We only overwrite local state if:
-        // A) We haven't loaded from cloud yet
-        // B) The cloud data is genuinely different from our last known baseline AND we have no local pending changes
-        const isExternalChange = cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current;
+        // We only overwrite local state if it's the initial load OR if the cloud changed while we were idle.
+        const isExternalChange = cloudHash !== lastCloudHashRef.current && localHash === lastCloudHashRef.current;
 
         if (!isCloudLoaded || isExternalChange) {
-          console.log(`[Sync] Applying Cloud -> Local mirror for UID: ${user.uid}`);
-          lastCloudDataRef.current = cloudDataStr;
+          console.log(`[Sync] Cloud Mirror -> Local Store Update`);
+          lastCloudHashRef.current = cloudHash;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         }
         
         setIsCloudLoaded(true);
       },
       (err) => {
-        console.error('[Sync] Listener failure:', err);
+        console.error('[Sync] Listener error:', err);
         setIsCloudLoaded(true);
       }
     );
@@ -76,20 +74,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [user, db, isCloudLoaded, replaceProfile, setIsCloudLoaded]);
 
-  // 3. Debounced Auto-Save (Write Path) - Faster 500ms debounce
+  // 3. Debounced Auto-Save (Write Path)
   useEffect(() => {
     if (!user || !db || !isCloudLoaded) return;
 
-    // Compare local vs last known baseline (ignoring the sync timestamp itself)
-    const profileToCompare = { ...profile, lastSyncedAt: undefined };
-    const currentLocalStr = JSON.stringify(profileToCompare);
-    
-    const parsedLastCloud = lastCloudDataRef.current ? JSON.parse(lastCloudDataRef.current) : null;
-    const lastCloudBaseline = parsedLastCloud 
-      ? JSON.stringify({ ...parsedLastCloud, lastSyncedAt: undefined })
-      : null;
+    // Compare local vs last known baseline
+    const localToHash = { ...profile, lastSyncedAt: undefined };
+    const localHash = JSON.stringify(localToHash);
 
-    if (currentLocalStr === lastCloudBaseline) {
+    if (localHash === lastCloudHashRef.current) {
       setSyncStatus('synced');
       return;
     }
@@ -101,18 +94,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const syncTimestamp = new Date().toISOString();
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         
-        console.log(`[Firestore] Syncing change (Projects: ${profileToSync.projects?.length || 0})`);
-        
         await saveProfile(db, user.uid, profileToSync);
         
-        lastCloudDataRef.current = JSON.stringify(profileToSync);
+        // Update baseline to the state we just saved to prevent echo
+        lastCloudHashRef.current = JSON.stringify({ ...profileToSync, lastSyncedAt: undefined });
         markSynced(syncTimestamp);
         setSyncStatus('synced');
       } catch (error) {
-        console.error("[Firestore] Sync failed:", error);
+        console.error("[Sync] Save failed:", error);
         setSyncStatus('error');
       }
-    }, 500); // 500ms for near-instant persistence
+    }, 400); // Fast pulse for near-instant persistence
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -121,7 +113,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authLoading && !user) {
       reset();
-      lastCloudDataRef.current = null;
+      lastCloudHashRef.current = null;
     }
   }, [user, authLoading, reset]);
 
@@ -135,9 +127,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-center space-y-2">
             <h3 className="text-xl font-bold flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent" />
-              Verifying Professional Vault
+              Syncing Professional Vault
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Establishing secure link...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Establishing cloud mirror...</p>
           </div>
         </div>
       </div>

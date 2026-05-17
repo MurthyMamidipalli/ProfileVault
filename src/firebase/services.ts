@@ -14,7 +14,6 @@ import { UserProfile } from '@/lib/store';
 
 /**
  * DETERMINISTIC PATH: shared-profiles/{uid}
- * This ensures that Browser A and Browser B always open the same vault.
  */
 const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
   return doc(db, 'shared-profiles', uid);
@@ -22,18 +21,19 @@ const getProfileRef = (db: Firestore, uid: string): DocumentReference => {
 
 /**
  * Save profile data to Firestore using UID as ID.
+ * Performs an atomic write of the entire profileData object.
  */
 export async function saveProfile(db: Firestore, uid: string, data: UserProfile) {
   if (!uid) return;
   
   const ref = getProfileRef(db, uid);
   
-  // Detailed log to help debugging multiple item issues
-  console.log(`[Firestore] Writing vault at: ${ref.path}`, {
+  console.log(`[Firestore] Syncing vault at: ${ref.path}`, {
     name: data.fullName,
-    projectsCount: data.projects?.length,
-    jobsCount: data.jobs?.length,
-    experienceCount: data.experience?.length
+    projects: data.projects?.length,
+    jobs: data.jobs?.length,
+    experience: data.experience?.length,
+    education: data.education?.length
   });
   
   const payload = {
@@ -43,7 +43,7 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
   };
 
   try {
-    // We overwrite the profileData field with the current local source of truth
+    // We overwrite the profileData field completely to ensure collection consistency
     await setDoc(ref, payload, { merge: true });
     console.log(`[Firestore] Sync Success for UID: ${uid}`);
   } catch (error) {
@@ -62,24 +62,22 @@ export function subscribeToProfile(
   onError: (err: any) => void
 ): Unsubscribe {
   const ref = getProfileRef(db, uid);
-  console.log(`[Sync] Attaching real-time mirror at: ${ref.path}`);
+  console.log(`[Sync] Attached to vault mirror at: ${ref.path}`);
   
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      // Only fire update if profileData exists
       if (data && data.profileData) {
-        console.log(`[Sync] Cloud update received for UID: ${uid} (Projects: ${data.profileData.projects?.length || 0})`);
         onUpdate(data.profileData as UserProfile);
       } else {
         onUpdate(null);
       }
     } else {
-      console.log(`[Sync] No remote vault found for UID: ${uid}`);
+      console.log(`[Sync] No vault found for UID: ${uid}`);
       onUpdate(null);
     }
   }, (err) => {
-    console.error(`[Sync] Mirror error at ${ref.path}:`, err);
+    console.error(`[Sync] Listener error:`, err);
     onError(err);
   });
 }

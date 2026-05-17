@@ -114,7 +114,6 @@ export const DEFAULT_PROFILE: UserProfile = {
 
 interface ProfileStore {
   profile: UserProfile;
-  _hasHydrated: boolean;
   isCloudLoaded: boolean;
   setIsCloudLoaded: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
@@ -149,25 +148,24 @@ const generateId = () => {
 
 export const useProfileStore = create<ProfileStore>((set) => ({
   profile: DEFAULT_PROFILE,
-  _hasHydrated: true, 
   isCloudLoaded: false,
   setIsCloudLoaded: (state) => set({ isCloudLoaded: state }),
   setProfile: (updates) => set((state) => ({ 
     profile: { ...state.profile, ...updates } 
   })),
   replaceProfile: (fullProfile) => set((state) => {
-    // Merge existing profile with incoming cloud data to ensure no fields are lost
-    const merged = { 
+    const incoming = fullProfile || DEFAULT_PROFILE;
+    const merged: UserProfile = { 
       ...DEFAULT_PROFILE, 
-      ...fullProfile,
-      fullName: fullProfile.fullName || fullProfile.name || '',
-      jobs: Array.isArray(fullProfile.jobs) ? fullProfile.jobs : [],
-      education: Array.isArray(fullProfile.education) ? fullProfile.education : [],
-      experience: Array.isArray(fullProfile.experience) ? fullProfile.experience : [],
-      projects: Array.isArray(fullProfile.projects) ? fullProfile.projects : [],
-      portfolioLinks: Array.isArray(fullProfile.portfolioLinks) ? fullProfile.portfolioLinks : [],
-      resumes: Array.isArray(fullProfile.resumes) ? fullProfile.resumes : [],
-      coverLetters: Array.isArray(fullProfile.coverLetters) ? fullProfile.coverLetters : []
+      ...incoming,
+      fullName: incoming.fullName || incoming.name || '',
+      jobs: Array.isArray(incoming.jobs) ? incoming.jobs : [],
+      education: Array.isArray(incoming.education) ? incoming.education : [],
+      experience: Array.isArray(incoming.experience) ? incoming.experience : [],
+      projects: Array.isArray(incoming.projects) ? incoming.projects : [],
+      portfolioLinks: Array.isArray(incoming.portfolioLinks) ? incoming.portfolioLinks : [],
+      resumes: Array.isArray(incoming.resumes) ? incoming.resumes : [],
+      coverLetters: Array.isArray(incoming.coverLetters) ? incoming.coverLetters : []
     };
     return { 
       profile: merged,
