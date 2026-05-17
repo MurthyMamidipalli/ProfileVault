@@ -87,7 +87,7 @@ export interface UserProfile {
   jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
-  name?: string;
+  name?: string; // Legacy support
 }
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -142,7 +142,9 @@ interface ProfileStore {
 }
 
 const generateId = () => {
-  return crypto.randomUUID?.() || Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  return typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
 };
 
 export const useProfileStore = create<ProfileStore>((set) => ({
@@ -157,7 +159,6 @@ export const useProfileStore = create<ProfileStore>((set) => ({
     profile: { 
       ...DEFAULT_PROFILE, 
       ...fullProfile,
-      // Ensure arrays are initialized even if cloud returns null/undefined
       jobs: fullProfile.jobs || [],
       education: fullProfile.education || [],
       experience: fullProfile.experience || [],
