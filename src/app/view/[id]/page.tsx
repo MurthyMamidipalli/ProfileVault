@@ -5,7 +5,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { doc, onSnapshot, collection, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { UserProfile, JobEntry, ExperienceEntry, SocialLink, EducationEntry } from "@/lib/store";
+import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
   Loader2, 
   MapPin, 
@@ -33,7 +33,7 @@ import Image from "next/image";
 /**
  * @fileOverview Professional Vault Public Mirror (Hardened Render-Time Deduplication)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
- * Note: Projects and Products section has been removed per user request.
+ * Projects and Products are now restored with unique filtering.
  */
 
 export default function PublicProfileView() {
@@ -45,6 +45,7 @@ export default function PublicProfileView() {
   const [jobs, setJobs] = useState<JobEntry[]>([]);
   const [experience, setExperience] = useState<ExperienceEntry[]>([]);
   const [education, setEducation] = useState<EducationEntry[]>([]);
+  const [projects, setProjects] = useState<ProjectEntry[]>([]);
   const [links, setLinks] = useState<SocialLink[]>([]);
   
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,7 @@ export default function PublicProfileView() {
     const unsubJobs = fetchCollection('jobs', setJobs);
     const unsubExp = fetchCollection('experience', setExperience);
     const unsubEdu = fetchCollection('education', setEducation);
+    const unsubProj = fetchCollection('projects', setProjects);
     const unsubLinks = fetchCollection('portfolioLinks', setLinks);
 
     return () => {
@@ -107,6 +109,7 @@ export default function PublicProfileView() {
       unsubJobs();
       unsubExp();
       unsubEdu();
+      unsubProj();
       unsubLinks();
     };
   }, [id, db, mounted]);
@@ -115,7 +118,11 @@ export default function PublicProfileView() {
   const uniqueJobs = useMemo(() => Array.from(new Map(jobs.map(item => [item.id, item])).values()), [jobs]);
   const uniqueExperience = useMemo(() => Array.from(new Map(experience.map(item => [item.id, item])).values()), [experience]);
   const uniqueEducation = useMemo(() => Array.from(new Map(education.map(item => [item.id, item])).values()), [education]);
+  const uniqueProjectsList = useMemo(() => Array.from(new Map(projects.map(item => [item.id, item])).values()), [projects]);
   const uniqueLinks = useMemo(() => Array.from(new Map(links.map(item => [item.id, item])).values()), [links]);
+
+  const uniqueProjects = uniqueProjectsList.filter(p => p.category === 'project');
+  const uniqueProducts = uniqueProjectsList.filter(p => p.category === 'product');
 
   if (!mounted) return null;
 
@@ -232,6 +239,90 @@ export default function PublicProfileView() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed italic text-foreground opacity-90">
                 "{p.bio}"
               </p>
+            </section>
+          )}
+
+          {uniqueProjects.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {uniqueProjects.map((proj) => (
+                  <Card key={proj.id} className="glass-card overflow-hidden group hover:border-primary/40 transition-smooth flex flex-col">
+                    <div className="relative h-48 w-full border-b border-white/5">
+                      {proj.imageUrl ? (
+                        <Image src={proj.imageUrl} alt={proj.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-white/5">
+                          <FolderCode className="w-12 h-12 text-muted-foreground/30" />
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader className="p-6 pb-2">
+                      <CardTitle className="text-xl font-bold">{proj.title}</CardTitle>
+                      {proj.date && <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{new Date(proj.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</p>}
+                    </CardHeader>
+                    <CardContent className="p-6 pt-2 space-y-6 flex-1 flex flex-col">
+                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed flex-1">
+                        {proj.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-4">
+                        {proj.url && (
+                          <Button asChild size="sm" variant="outline" className="h-8 text-xs font-bold border-primary/20 hover:bg-primary/10">
+                            <a href={proj.url} target="_blank" rel="noopener"><ExternalLink className="w-3 h-3 mr-2" /> Live Demo</a>
+                          </Button>
+                        )}
+                        {proj.documentUrl && (
+                          <Button asChild size="sm" variant="secondary" className="h-8 text-xs font-bold bg-white/5 hover:bg-white/10">
+                            <a href={proj.documentUrl} target="_blank" rel="noopener"><LinkIcon className="w-3 h-3 mr-2" /> Docs</a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {uniqueProducts.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Digital Products</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {uniqueProducts.map((prod) => (
+                  <Card key={prod.id} className="glass-card overflow-hidden group hover:border-accent/40 transition-smooth flex flex-col">
+                    <div className="relative h-48 w-full border-b border-white/5">
+                      {prod.imageUrl ? (
+                        <Image src={prod.imageUrl} alt={prod.title} fill className="object-cover group-hover:scale-105 transition-smooth" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-white/5">
+                          <Package className="w-12 h-12 text-muted-foreground/30" />
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader className="p-6 pb-2">
+                      <CardTitle className="text-xl font-bold">{prod.title}</CardTitle>
+                      {prod.date && <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{new Date(prod.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</p>}
+                    </CardHeader>
+                    <CardContent className="p-6 pt-2 space-y-6 flex-1 flex flex-col">
+                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed flex-1">
+                        {prod.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-4">
+                        {prod.url && (
+                          <Button asChild size="sm" variant="outline" className="h-8 text-xs font-bold border-accent/20 hover:bg-accent/10">
+                            <a href={prod.url} target="_blank" rel="noopener"><Globe className="w-3 h-3 mr-2" /> Site</a>
+                          </Button>
+                        )}
+                        {prod.documentUrl && (
+                          <Button asChild size="sm" variant="secondary" className="h-8 text-xs font-bold bg-white/5 hover:bg-white/10">
+                            <a href={prod.documentUrl} target="_blank" rel="noopener"><LinkIcon className="w-3 h-3 mr-2" /> Tech Specs</a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </section>
           )}
 
