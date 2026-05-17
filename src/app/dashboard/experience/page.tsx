@@ -26,17 +26,22 @@ import {
   Pencil, 
   MapPin, 
   Loader2, 
-  Github, 
   ExternalLink,
   Link as LinkIcon
 } from "lucide-react";
+import { useUser, useFirestore } from "@/firebase";
+import { addExperience, updateExperience, deleteExperience } from "@/firebase/services";
 
 export default function ExperiencePage() {
-  const { profile, addExperience, removeExperience, updateExperience } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState<Omit<ExperienceEntry, 'id'>>({
     company: '',
     title: '',
@@ -101,16 +106,34 @@ export default function ExperiencePage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateExperience(editingId, formData);
-      toast({ title: "Updated", description: "Experience record updated." });
-    } else {
-      addExperience(formData);
-      toast({ title: "Added", description: "New work experience added." });
+    if (!user || !db) return;
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        await updateExperience(db, user.uid, editingId, formData);
+        toast({ title: "Updated", description: "Experience record updated." });
+      } else {
+        await addExperience(db, user.uid, formData);
+        toast({ title: "Added", description: "New work experience added." });
+      }
+      setIsOpen(false);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not persist changes." });
+    } finally {
+      setIsSaving(false);
     }
-    setIsOpen(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      await deleteExperience(db, user.uid, id);
+      toast({ title: "Deleted", description: "Record removed." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove record." });
+    }
   };
 
   if (!mounted) {
@@ -142,7 +165,7 @@ export default function ExperiencePage() {
               <DialogTitle>{editingId ? 'Edit' : 'Add'} Work Experience</DialogTitle>
               <DialogDescription>Enter the details of your role and add links to projects you worked on.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+            <form onSubmit={handleSave} className="space-y-6 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Company Name</Label>
@@ -243,7 +266,9 @@ export default function ExperiencePage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit">Add Record</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Save Record'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -275,7 +300,7 @@ export default function ExperiencePage() {
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(exp)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeExperience(exp.id)}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(exp.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>

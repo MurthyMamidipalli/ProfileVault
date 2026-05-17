@@ -1,22 +1,61 @@
 
 {
   "entities": {
-    "SharedProfile": {
-      "title": "SharedProfile",
-      "description": "A publicly accessible professional profile snapshot.",
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User's basic profile information.",
       "type": "object",
       "properties": {
-        "profileData": {
-          "type": "object",
-          "description": "The full user profile data."
-        },
-        "ownerId": {
-          "type": "string"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "secondaryEmail": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "website": { "type": "string" },
+        "gender": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Job": {
+      "title": "Job",
+      "type": "object",
+      "properties": {
+        "company": { "type": "string" },
+        "role": { "type": "string" },
+        "joiningDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "employmentType": { "type": "string" },
+        "workSetting": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "Experience": {
+      "title": "Experience",
+      "type": "object",
+      "properties": {
+        "company": { "type": "string" },
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "description": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "Project": {
+      "title": "Project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "documentUrl": { "type": "string" },
+        "documentName": { "type": "string" },
+        "date": { "type": "string" },
+        "userId": { "type": "string" }
       }
     }
   },
@@ -24,9 +63,17 @@
     "providers": ["password"]
   },
   "firestore": {
-    "/shared-profiles/{uid}": {
-      "schema": { "$ref": "#/backend/entities/SharedProfile" },
-      "description": "The primary source of truth for user profiles, keyed by Auth UID."
+    "/users/{uid}/profile": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" }
+    },
+    "/users/{uid}/jobs/{jobId}": {
+      "schema": { "$ref": "#/backend/entities/Job" }
+    },
+    "/users/{uid}/experience/{expId}": {
+      "schema": { "$ref": "#/backend/entities/Experience" }
+    },
+    "/users/{uid}/projects/{projId}": {
+      "schema": { "$ref": "#/backend/entities/Project" }
     }
   }
 }

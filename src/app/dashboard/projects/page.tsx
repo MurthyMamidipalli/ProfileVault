@@ -32,9 +32,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore } from "@/firebase";
+import { addProject, updateProject, deleteProject } from "@/firebase/services";
 
 export default function ProjectsPage() {
-  const { profile, addProject, updateProject, removeProject } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -127,16 +131,34 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateProject(editingId, formData);
-      toast({ title: "Updated", description: "Project updated successfully." });
-    } else {
-      addProject(formData);
-      toast({ title: "Added", description: "New project added to your vault." });
+    if (!user || !db) return;
+    setIsProcessing(true);
+    try {
+      if (editingId) {
+        await updateProject(db, user.uid, editingId, formData);
+        toast({ title: "Updated", description: "Project updated successfully." });
+      } else {
+        await addProject(db, user.uid, formData);
+        toast({ title: "Added", description: "New project added to your vault." });
+      }
+      setIsOpen(false);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not persist changes." });
+    } finally {
+      setIsProcessing(false);
     }
-    setIsOpen(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      await deleteProject(db, user.uid, id);
+      toast({ title: "Deleted", description: "Project removed." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove project." });
+    }
   };
 
   if (!mounted) {
@@ -168,7 +190,7 @@ export default function ProjectsPage() {
               <DialogTitle>{editingId ? 'Edit' : 'Add'} Project</DialogTitle>
               <DialogDescription>Provide details about your project, upload a cover image, or attach a PDF document.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+            <form onSubmit={handleSave} className="space-y-6 pt-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label>Project Title</Label>
@@ -298,7 +320,7 @@ export default function ProjectsPage() {
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(proj)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeProject(proj.id)}>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(proj.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

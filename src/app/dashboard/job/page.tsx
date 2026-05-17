@@ -34,15 +34,21 @@ import {
   Users, 
   Trash2, 
   Pencil,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore } from "@/firebase";
+import { addJob, updateJob, deleteJob } from "@/firebase/services";
 
 export default function JobPage() {
-  const { profile, addJob, updateJob, removeJob } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<Omit<JobEntry, 'id'>>({
     company: '',
@@ -78,16 +84,34 @@ export default function JobPage() {
     setIsOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateJob(editingId, formData);
-      toast({ title: "Job Updated", description: "The job details have been saved." });
-    } else {
-      addJob(formData);
-      toast({ title: "Job Added", description: "A new job role has been added to your profile." });
+    if (!user || !db) return;
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        await updateJob(db, user.uid, editingId, formData);
+        toast({ title: "Job Updated", description: "The job details have been saved." });
+      } else {
+        await addJob(db, user.uid, formData);
+        toast({ title: "Job Added", description: "A new job role has been added to your profile." });
+      }
+      setIsOpen(false);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not persist changes." });
+    } finally {
+      setIsSaving(false);
     }
-    setIsOpen(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      await deleteJob(db, user.uid, id);
+      toast({ title: "Job Deleted", description: "The record has been removed." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove record." });
+    }
   };
 
   const jobs = profile.jobs || [];
@@ -217,8 +241,8 @@ export default function JobPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit">
-                  {editingId ? 'Update Job' : 'Add Job'}
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (editingId ? 'Update Job' : 'Add Job')}
                 </Button>
               </DialogFooter>
             </form>
@@ -239,7 +263,7 @@ export default function JobPage() {
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(job)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeJob(job.id)}>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(job.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
