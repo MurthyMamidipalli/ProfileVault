@@ -115,6 +115,7 @@ interface ProfileStore {
   setProjects: (proj: ProjectEntry[]) => void;
   setResumes: (resumes: ResumeDocument[]) => void;
   setCoverLetters: (coverLetters: ResumeDocument[]) => void;
+  setPortfolioLinks: (links: SocialLink[]) => void;
   markSynced: (timestamp?: string) => void;
   reset: () => void;
 }
@@ -143,6 +144,9 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   })),
   setCoverLetters: (coverLetters) => set((state) => ({
     profile: { ...state.profile, coverLetters }
+  })),
+  setPortfolioLinks: (portfolioLinks) => set((state) => ({
+    profile: { ...state.profile, portfolioLinks }
   })),
   markSynced: (timestamp) => set((state) => ({
     profile: {

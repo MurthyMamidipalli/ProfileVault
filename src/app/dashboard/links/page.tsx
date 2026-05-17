@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -20,6 +19,8 @@ import {
   Code,
   Loader2
 } from "lucide-react";
+import { useUser, useFirestore } from "@/firebase";
+import { addPortfolioLink, deletePortfolioLink } from "@/firebase/services";
 
 const PLATFORM_ICONS: Record<string, any> = {
   Github: Github,
@@ -30,23 +31,43 @@ const PLATFORM_ICONS: Record<string, any> = {
 };
 
 export default function LinksPage() {
-  const { profile, addPortfolioLink, removePortfolioLink } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [platform, setPlatform] = useState('');
   const [url, setUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!platform || !url) return;
-    addPortfolioLink({ platform, url });
-    setPlatform('');
-    setUrl('');
-    toast({ title: "Link Added", description: `Saved your ${platform} link.` });
+    if (!platform || !url || !user || !db) return;
+    setIsSaving(true);
+    try {
+      await addPortfolioLink(db, user.uid, { platform, url });
+      setPlatform('');
+      setUrl('');
+      toast({ title: "Link Added", description: `Saved your ${platform} link.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Failed", description: "Could not save link." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      await deletePortfolioLink(db, user.uid, id);
+      toast({ title: "Link Removed", description: "The link has been deleted." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Failed", description: "Could not remove link." });
+    }
   };
 
   if (!mounted) {
@@ -56,6 +77,8 @@ export default function LinksPage() {
       </div>
     );
   }
+
+  const portfolioLinks = profile.portfolioLinks || [];
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
@@ -92,8 +115,8 @@ export default function LinksPage() {
                   className="bg-background/50"
                 />
               </div>
-              <Button type="submit" className="w-full flex items-center gap-2" disabled={!platform || !url}>
-                <Plus className="w-4 h-4" />
+              <Button type="submit" className="w-full flex items-center gap-2" disabled={!platform || !url || isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Add Link
               </Button>
             </form>
@@ -103,10 +126,10 @@ export default function LinksPage() {
         <div className="space-y-4">
           <h3 className="font-headline font-semibold flex items-center gap-2">
             <LinkIcon className="w-4 h-4 text-primary" />
-            Active Links ({profile.portfolioLinks.length})
+            Active Links ({portfolioLinks.length})
           </h3>
           <div className="space-y-3">
-            {profile.portfolioLinks.map((link) => {
+            {portfolioLinks.map((link) => {
               const Icon = PLATFORM_ICONS[link.platform] || PLATFORM_ICONS.Default;
               return (
                 <Card key={link.id} className="glass-card hover:border-primary/30 transition-smooth group overflow-hidden">
@@ -126,7 +149,7 @@ export default function LinksPage() {
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-smooth" onClick={() => removePortfolioLink(link.id)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-smooth" onClick={() => handleRemove(link.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -134,7 +157,7 @@ export default function LinksPage() {
                 </Card>
               );
             })}
-            {profile.portfolioLinks.length === 0 && (
+            {portfolioLinks.length === 0 && (
               <div className="py-12 text-center bg-white/5 border border-dashed border-border rounded-xl">
                 <p className="text-sm text-muted-foreground">No links added yet.</p>
               </div>

@@ -14,6 +14,7 @@ import {
   subscribeToProjects,
   subscribeToResumes,
   subscribeToCoverLetters,
+  subscribeToPortfolioLinks,
   publishToPublicVault
 } from "@/firebase/services";
 
@@ -29,6 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setProjects,
     setResumes,
     setCoverLetters,
+    setPortfolioLinks,
     setIsCloudLoaded, 
     isCloudLoaded,
     markSynced,
@@ -78,6 +80,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setCoverLetters(data || []);
     });
 
+    const unsubLinks = subscribeToPortfolioLinks(db, user.uid, (data) => {
+      setPortfolioLinks(data || []);
+    });
+
     // Mark as loaded once initial listeners have likely fired
     const timer = setTimeout(() => {
       setIsCloudLoaded(true);
@@ -93,9 +99,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       unsubProjects();
       unsubResumes();
       unsubCoverLetters();
+      unsubLinks();
       clearTimeout(timer);
     };
-  }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded, markSynced]);
+  }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setPortfolioLinks, setIsCloudLoaded, markSynced]);
 
   // 3. Auto-Mirror to Public Vault
   useEffect(() => {

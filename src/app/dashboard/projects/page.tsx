@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -28,14 +27,15 @@ import {
   Image as ImageIcon,
   Calendar,
   FileText,
-  Paperclip
+  Paperclip,
+  Package
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore } from "@/firebase";
 import { addProject, updateProject, deleteProject } from "@/firebase/services";
 
-export default function ProjectsPage() {
+export default function ProductsPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { profile } = useProfileStore();
@@ -138,10 +138,10 @@ export default function ProjectsPage() {
     try {
       if (editingId) {
         await updateProject(db, user.uid, editingId, formData);
-        toast({ title: "Updated", description: "Project updated successfully." });
+        toast({ title: "Updated", description: "Product updated successfully." });
       } else {
         await addProject(db, user.uid, formData);
-        toast({ title: "Added", description: "New project added to your vault." });
+        toast({ title: "Added", description: "New product added to your products catalog." });
       }
       setIsOpen(false);
     } catch (error) {
@@ -155,9 +155,9 @@ export default function ProjectsPage() {
     if (!user || !db) return;
     try {
       await deleteProject(db, user.uid, id);
-      toast({ title: "Deleted", description: "Project removed." });
+      toast({ title: "Deleted", description: "Product removed." });
     } catch (error) {
-      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove project." });
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove product." });
     }
   };
 
@@ -175,28 +175,31 @@ export default function ProjectsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-headline font-bold">Projects</h1>
-          <p className="text-muted-foreground">Showcase your best work, side projects, and open-source contributions.</p>
+          <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
+            Products
+            <Package className="w-8 h-8 text-primary" />
+          </h1>
+          <p className="text-muted-foreground">Showcase your products, developed tools, and key digital offerings.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpen()} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Add Project
+              Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[650px] glass-card max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Edit' : 'Add'} Project</DialogTitle>
-              <DialogDescription>Provide details about your project, upload a cover image, or attach a PDF document.</DialogDescription>
+              <DialogTitle>{editingId ? 'Edit' : 'Add'} Product</DialogTitle>
+              <DialogDescription>Provide details about your product, upload a cover image, or attach a technical PDF.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSave} className="space-y-6 pt-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label>Project Title</Label>
+                  <Label>Product Title</Label>
                   <Input 
                     required 
-                    placeholder="e.g. ProfileVault Dashboard" 
+                    placeholder="e.g. ProfileVault Enterprise" 
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                   />
@@ -204,7 +207,7 @@ export default function ProjectsPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Project Date (Optional)</Label>
+                    <Label>Release/Project Date (Optional)</Label>
                     <Input 
                       type="date"
                       value={formData.date}
@@ -212,10 +215,10 @@ export default function ProjectsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Live URL (Optional)</Label>
+                    <Label>Product URL (Optional)</Label>
                     <Input 
                       type="url"
-                      placeholder="https://github.com/..." 
+                      placeholder="https://product-demo.com" 
                       value={formData.url}
                       onChange={e => setFormData({...formData, url: e.target.value})}
                     />
@@ -223,10 +226,10 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label>Product Description</Label>
                   <Textarea 
                     required
-                    placeholder="Describe what you built and the impact it had..." 
+                    placeholder="Describe your product features and market impact..." 
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
                     className="resize-none h-24"
@@ -235,7 +238,7 @@ export default function ProjectsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Cover Image</Label>
+                    <Label>Product Visual / Logo</Label>
                     <div 
                       onClick={() => imageInputRef.current?.click()}
                       className={cn(
@@ -249,12 +252,12 @@ export default function ProjectsPage() {
                       ) : (
                         <ImageIcon className="w-6 h-6 text-muted-foreground mb-1" />
                       )}
-                      <span className="text-xs font-medium z-10">{formData.imageUrl ? "Change Image" : "Upload Image"}</span>
+                      <span className="text-xs font-medium z-10">{formData.imageUrl ? "Change Visual" : "Upload Visual"}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Project Document (PDF)</Label>
+                    <Label>Technical Documentation (PDF)</Label>
                     <div 
                       onClick={() => docInputRef.current?.click()}
                       className={cn(
@@ -280,7 +283,7 @@ export default function ProjectsPage() {
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isProcessing}>
                   {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Add Project'}
+                  {editingId ? 'Save Changes' : 'Add Product'}
                 </Button>
               </DialogFooter>
             </form>
@@ -301,7 +304,7 @@ export default function ProjectsPage() {
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <FolderCode className="w-12 h-12 text-muted-foreground/30" />
+                  <Package className="w-12 h-12 text-muted-foreground/30" />
                 </div>
               )}
             </div>
@@ -336,7 +339,7 @@ export default function ProjectsPage() {
                   <Button asChild variant="secondary" size="sm" className="w-full bg-white/5 hover:bg-white/10">
                     <a href={proj.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                      View Live Project
+                      Product Site
                     </a>
                   </Button>
                 )}
@@ -344,7 +347,7 @@ export default function ProjectsPage() {
                   <Button asChild variant="outline" size="sm" className="w-full border-accent/20 text-accent hover:bg-accent/5">
                     <a href={proj.documentUrl} target="_blank" rel="noopener noreferrer">
                       <FileText className="w-3.5 h-3.5 mr-2" />
-                      View Project PDF
+                      View Product Doc
                     </a>
                   </Button>
                 )}
@@ -357,10 +360,10 @@ export default function ProjectsPage() {
           <div className="col-span-full py-24 text-center border-2 border-dashed border-border rounded-xl bg-white/5">
             <div className="flex flex-col items-center gap-4">
               <div className="p-4 bg-secondary rounded-full">
-                <FolderCode className="w-8 h-8 text-muted-foreground" />
+                <Package className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-lg font-semibold">No Projects Found</p>
-              <Button onClick={() => handleOpen()} variant="outline">Add Project Now</Button>
+              <p className="text-lg font-semibold">No Products Registered</p>
+              <Button onClick={() => handleOpen()} variant="outline">Register Product Now</Button>
             </div>
           </div>
         )}

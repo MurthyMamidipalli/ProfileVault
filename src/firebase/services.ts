@@ -14,7 +14,7 @@ import {
   orderBy,
   Unsubscribe
 } from 'firebase/firestore';
-import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry } from '@/lib/store';
+import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
 // --- Logging Helpers ---
 const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
@@ -169,15 +169,15 @@ export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (dat
   });
 }
 
-// --- Projects (Sub-collection) ---
+// --- Products (Sub-collection, previously Projects) ---
 export async function addProject(db: Firestore, uid: string, data: Omit<ProjectEntry, 'id'>) {
   try {
     const colRef = collection(db, 'users', uid, 'projects');
     const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    log('add project', `users/${uid}/projects/${docRef.id}`);
+    log('add product', `users/${uid}/projects/${docRef.id}`);
     return docRef.id;
   } catch (error) {
-    logError('add project', `users/${uid}/projects`, error);
+    logError('add product', `users/${uid}/projects`, error);
     throw error;
   }
 }
@@ -186,9 +186,9 @@ export async function updateProject(db: Firestore, uid: string, projId: string, 
   try {
     const docRef = doc(db, 'users', uid, 'projects', projId);
     await updateDoc(docRef, data);
-    log('update project', `users/${uid}/projects/${projId}`);
+    log('update product', `users/${uid}/projects/${projId}`);
   } catch (error) {
-    logError('update project', `users/${uid}/projects/${projId}`, error);
+    logError('update product', `users/${uid}/projects/${projId}`, error);
     throw error;
   }
 }
@@ -197,9 +197,9 @@ export async function deleteProject(db: Firestore, uid: string, projId: string) 
   try {
     const docRef = doc(db, 'users', uid, 'projects', projId);
     await deleteDoc(docRef);
-    log('delete project', `users/${uid}/projects/${projId}`);
+    log('delete product', `users/${uid}/projects/${projId}`);
   } catch (error) {
-    logError('delete project', `users/${uid}/projects/${projId}`, error);
+    logError('delete product', `users/${uid}/projects/${projId}`, error);
     throw error;
   }
 }
@@ -279,6 +279,38 @@ export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (d
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
     onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument)));
+  });
+}
+
+// --- Portfolio Links (Sub-collection) ---
+export async function addPortfolioLink(db: Firestore, uid: string, data: Omit<SocialLink, 'id'>) {
+  try {
+    const colRef = collection(db, 'users', uid, 'portfolioLinks');
+    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
+    log('add portfolio link', `users/${uid}/portfolioLinks/${docRef.id}`);
+    return docRef.id;
+  } catch (error) {
+    logError('add portfolio link', `users/${uid}/portfolioLinks`, error);
+    throw error;
+  }
+}
+
+export async function deletePortfolioLink(db: Firestore, uid: string, linkId: string) {
+  try {
+    const docRef = doc(db, 'users', uid, 'portfolioLinks', linkId);
+    await deleteDoc(docRef);
+    log('delete portfolio link', linkId);
+  } catch (error) {
+    logError('delete portfolio link', linkId, error);
+    throw error;
+  }
+}
+
+export function subscribeToPortfolioLinks(db: Firestore, uid: string, onUpdate: (data: SocialLink[]) => void): Unsubscribe {
+  const colRef = collection(db, 'users', uid, 'portfolioLinks');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as SocialLink)));
   });
 }
 
