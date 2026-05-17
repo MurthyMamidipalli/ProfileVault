@@ -69,6 +69,8 @@
         "startDate": { "type": "string" },
         "endDate": { "type": "string" },
         "description": { "type": "string" },
+        "cgpa": { "type": "string" },
+        "percentage": { "type": "string" },
         "userId": { "type": "string" }
       }
     },

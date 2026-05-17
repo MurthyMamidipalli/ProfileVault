@@ -1,3 +1,4 @@
+
 "use client";
 
 import { create } from 'zustand';
@@ -21,6 +22,8 @@ export interface EducationEntry {
   startDate: string;
   endDate?: string;
   description?: string;
+  cgpa?: string;
+  percentage?: string;
 }
 
 export interface ExperienceEntry {

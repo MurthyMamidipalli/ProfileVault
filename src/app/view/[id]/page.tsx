@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Globe,
   FolderCode,
-  Package
+  Package,
+  Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -322,14 +323,37 @@ export default function PublicProfileView() {
                   <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
                     <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
                     <div className="space-y-3">
-                      <h3 className="text-xl font-bold">{edu.institution}</h3>
-                      <div className="flex items-center gap-3 text-accent font-bold">
-                        <GraduationCap className="w-4 h-4" />
-                        <span>{edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}</span>
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold">{edu.institution}</h3>
+                          <div className="flex items-center gap-3 text-accent font-bold">
+                            <GraduationCap className="w-4 h-4" />
+                            <span>{edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}</span>
+                          </div>
+                        </div>
+                        {(edu.cgpa || edu.percentage) && (
+                          <div className="flex flex-wrap gap-2">
+                            {edu.cgpa && (
+                              <Badge className="bg-accent/10 text-accent border-accent/20 font-black text-[10px]">
+                                CGPA: {edu.cgpa}
+                              </Badge>
+                            )}
+                            {edu.percentage && (
+                              <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px]">
+                                SCORE: {edu.percentage}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">
                         {edu.startDate} — {edu.endDate || 'PRESENT'}
                       </p>
+                      {edu.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed italic opacity-80 pt-2">
+                          "{edu.description}"
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

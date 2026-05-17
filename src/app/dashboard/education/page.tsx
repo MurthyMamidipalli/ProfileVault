@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -17,7 +18,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Plus, Trash2, Calendar, Pencil, Loader2 } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Calendar, Pencil, Loader2, Award } from "lucide-react";
 import { useUser, useFirestore } from "@/firebase";
 import { addEducation, updateEducation, deleteEducation } from "@/firebase/services";
 
@@ -37,7 +38,9 @@ export default function EducationPage() {
     fieldOfStudy: '',
     startDate: '',
     endDate: '',
-    description: ''
+    description: '',
+    cgpa: '',
+    percentage: ''
   });
 
   useEffect(() => {
@@ -53,7 +56,9 @@ export default function EducationPage() {
         fieldOfStudy: entry.fieldOfStudy || '',
         startDate: entry.startDate,
         endDate: entry.endDate || '',
-        description: entry.description || ''
+        description: entry.description || '',
+        cgpa: entry.cgpa || '',
+        percentage: entry.percentage || ''
       });
     } else {
       setEditingId(null);
@@ -63,7 +68,9 @@ export default function EducationPage() {
         fieldOfStudy: '',
         startDate: '',
         endDate: '',
-        description: ''
+        description: '',
+        cgpa: '',
+        percentage: ''
       });
     }
     setIsOpen(true);
@@ -173,6 +180,22 @@ export default function EducationPage() {
                     onChange={e => setFormData({...formData, endDate: e.target.value})}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>CGPA (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. 3.8/4.0" 
+                    value={formData.cgpa}
+                    onChange={e => setFormData({...formData, cgpa: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Percentage (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. 92%" 
+                    value={formData.percentage}
+                    onChange={e => setFormData({...formData, percentage: e.target.value})}
+                  />
+                </div>
                 <div className="col-span-2 space-y-2">
                   <Label>Achievements / Description (Optional)</Label>
                   <Textarea 
@@ -217,9 +240,27 @@ export default function EducationPage() {
               </div>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="w-4 h-4" />
-                <span>{edu.startDate} — {edu.endDate || 'Present'}</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>{edu.startDate} — {edu.endDate || 'Present'}</span>
+                </div>
+                {(edu.cgpa || edu.percentage) && (
+                  <div className="flex flex-wrap gap-3">
+                    {edu.cgpa && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">
+                        <Award className="w-3.5 h-3.5" />
+                        CGPA: {edu.cgpa}
+                      </div>
+                    )}
+                    {edu.percentage && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-accent bg-accent/10 px-2 py-1 rounded-md">
+                        <Award className="w-3.5 h-3.5" />
+                        Score: {edu.percentage}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               {edu.fieldOfStudy && (
                 <div className="text-sm">
