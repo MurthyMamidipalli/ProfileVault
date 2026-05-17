@@ -167,7 +167,7 @@ export default function ProjectsPage() {
     if (!user || !db) return;
     try {
       await deleteProject(db, user.uid, id);
-      toast({ title: "Deleted", description: "Entry removed." });
+      toast({ title: "Deleted", description: "Entry removed from your vault." });
     } catch (error) {
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove entry." });
     }
@@ -190,10 +190,10 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
-            Professional Folders
+            Projects
             <Layers className="w-8 h-8 text-primary" />
           </h1>
-          <p className="text-muted-foreground">Organize your technical projects and digital products.</p>
+          <p className="text-muted-foreground">Manage your technical projects and digital products.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -297,7 +297,7 @@ export default function ProjectsPage() {
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isProcessing}>
                   {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Add to Folder'}
+                  {editingId ? 'Save Changes' : 'Add to Vault'}
                 </Button>
               </DialogFooter>
             </form>

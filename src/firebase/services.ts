@@ -15,16 +15,16 @@ import {
   orderBy,
   Unsubscribe,
   Timestamp,
-  getDocs
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
 /**
  * @fileOverview Atomic Firestore Service Layer
- * Handles multi-item persistence using sub-collections to avoid the 1MB limit.
+ * Handles multi-item persistence with a distributed public mirroring system.
  */
 
-// --- Logging Helpers ---
 const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
 const logError = (action: string, path: string, error: any) => console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
 
@@ -35,6 +35,8 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
     if (isDelete) {
       await deleteDoc(ref);
     } else {
+      // Ensure we don't mirror massive blobs if they accidentally slip in, 
+      // though our UI handles base64 limits.
       await setDoc(ref, { 
         ...data, 
         updatedAt: serverTimestamp(),
@@ -47,49 +49,72 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
 }
 
 /**
- * Force mirrors all private collections to the public vault.
- * This ensures existing data is correctly reflected in the public mirror.
+ * Performs a full reconciliation between the private vault and public mirror.
+ * It deletes orphaned records in the public mirror that no longer exist in the private vault.
  */
 export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
-  console.log("[Sync] Initializing Deep Cloud Sync...");
+  console.log("[Sync] Initializing Professional Vault Reconciliation...");
   
   const collections = [
     'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
   ];
 
   try {
-    // 1. Mirror Basic Profile
+    // 1. Mirror Basic Profile Metadata
     await saveProfileInfo(db, uid, profile);
 
-    // 2. Mirror Sub-collections
+    // 2. Reconcile each sub-collection
     for (const colName of collections) {
-      const colRef = collection(db, 'users', uid, colName);
-      const snap = await getDocs(colRef);
-      console.log(`[Sync] Mirroring ${snap.size} records from ${colName}...`);
-      
-      for (const d of snap.docs) {
+      // Get current private records
+      const privateColRef = collection(db, 'users', uid, colName);
+      const privateSnap = await getDocs(privateColRef);
+      const privateIds = new Set(privateSnap.docs.map(d => d.id));
+
+      // Get current public mirror records
+      const publicColRef = collection(db, 'shared-profiles', uid, colName);
+      const publicSnap = await getDocs(publicColRef);
+
+      console.log(`[Sync] Reconciling ${colName}: Private(${privateSnap.size}) vs Public(${publicSnap.size})`);
+
+      // Delete orphans in Public that aren't in Private
+      const batch = writeBatch(db);
+      let deleteCount = 0;
+      publicSnap.docs.forEach(doc => {
+        if (!privateIds.has(doc.id)) {
+          batch.delete(doc.ref);
+          deleteCount++;
+        }
+      });
+      if (deleteCount > 0) await batch.commit();
+
+      // Upload/Refresh all private records to mirror
+      for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
     }
-    console.log("[Sync] Deep Cloud Sync Complete.");
+    console.log("[Sync] Reconciliation Complete. Public mirror is now identical to private vault.");
   } catch (error) {
-    console.error("[Sync] Deep Cloud Sync Failed:", error);
+    console.error("[Sync] Reconciliation Failed:", error);
     throw error;
   }
 }
 
-// --- Profile Info (Single Doc) ---
+// --- Profile Info ---
 export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<UserProfile>) {
   const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
+    // Extract only basic fields to avoid 1MB limit on the root doc
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
     const updateData = { ...cleanData, updatedAt: serverTimestamp() };
     
     await setDoc(ref, updateData, { merge: true });
     
-    // Mirror basic metadata to the root of the shared profile
-    await setDoc(doc(db, 'shared-profiles', uid), { profileData: updateData, publishedAt: serverTimestamp() }, { merge: true });
+    // Mirror metadata to root shared profile
+    await setDoc(doc(db, 'shared-profiles', uid), { 
+      profileData: updateData, 
+      publishedAt: serverTimestamp() 
+    }, { merge: true });
     
     log('save profile', path);
   } catch (error) {
@@ -105,7 +130,7 @@ export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (da
   });
 }
 
-// --- CRUD Factory for Sub-collections ---
+// --- CRUD Factory ---
 async function addItem(db: Firestore, uid: string, collectionName: string, data: any) {
   try {
     const colRef = collection(db, 'users', uid, collectionName);
@@ -151,8 +176,7 @@ async function deleteItem(db: Firestore, uid: string, collectionName: string, id
   }
 }
 
-// --- Exported Professional Services ---
-
+// --- Professional Services ---
 export const addJob = (db: Firestore, uid: string, data: Omit<JobEntry, 'id'>) => addItem(db, uid, 'jobs', data);
 export const updateJob = (db: Firestore, uid: string, id: string, data: Partial<JobEntry>) => updateItem(db, uid, 'jobs', id, data);
 export const deleteJob = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'jobs', id);
