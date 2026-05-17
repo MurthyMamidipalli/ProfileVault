@@ -1,4 +1,3 @@
-
 "use client";
 
 import { create } from 'zustand';
@@ -66,7 +65,7 @@ export interface JobEntry {
 }
 
 export interface UserProfile {
-  fullName: string; // Changed from 'name' to 'fullName' to match Firestore migration requirement
+  fullName: string;
   email: string;
   secondaryEmail: string;
   phone: string;
@@ -86,7 +85,7 @@ export interface UserProfile {
   jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
-  name?: string; // Legacy field fallback
+  name?: string; // Fallback for migration
 }
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -111,8 +110,8 @@ export const DEFAULT_PROFILE: UserProfile = {
 };
 
 /**
- * ZUSTAND STORE: NO LOCALSTORAGE PERSISTENCE.
- * The Cloud is the only source of truth.
+ * ZUSTAND STORE: NO LOCAL PERSISTENCE.
+ * Cloud is the absolute source of truth.
  */
 interface ProfileStore {
   profile: UserProfile;

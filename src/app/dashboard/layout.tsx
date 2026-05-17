@@ -21,9 +21,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   } = useProfileStore();
   const router = useRouter();
   
-  // Tracks the last stringified version from Cloud to prevent echo-loops
+  // Ref-based state tracking to prevent echo-loops while typing
   const lastCloudDataRef = useRef<string | null>(null);
-  // Tracks current local state to avoid stale closure issues
   const currentLocalRef = useRef(profile);
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db) return;
 
-    console.log(`[Sync] OPENING VAULT for UID: ${user.uid}`);
+    console.log(`[Auth] Authenticated as: ${user.uid}`);
 
     const unsubscribe = subscribeToProfile(
       db, 
@@ -53,20 +52,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         
         // HYDRATION LOGIC:
         // Apply cloud data if it's the first load OR if it's an external change (local matches old cloud)
+        // This prevents incoming cloud updates from clearing the user's active typing (echo-loop)
         if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
-          console.log(`[Sync] Applying Cloud -> Local mirror (Path: shared-profiles/${user.uid})`);
+          console.log(`[Sync] Applying Cloud -> Local mirror`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         } else if (cloudDataStr !== lastCloudDataRef.current) {
-          // Change acknowledged but ignored to prevent overwriting user's active typing
+          // Cloud changed but user is currently typing locally
           lastCloudDataRef.current = cloudDataStr;
-          console.log(`[Sync] Background cloud update acknowledged (Suppressed mid-edit)`);
+          console.log(`[Sync] Cloud update acknowledged (Suppressing mid-edit overwrite)`);
         }
         
         setIsCloudLoaded(true);
       },
       (err) => {
-        console.error('[Sync] Vault access error:', err);
+        console.error('[Sync] Listener failure:', err);
         setIsCloudLoaded(true);
       }
     );
@@ -76,12 +76,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // 3. Debounced Auto-Save (Write Path)
   useEffect(() => {
-    // CRITICAL: NEVER save until isCloudLoaded is true to prevent blank overwrites
+    // CRITICAL: NEVER save until cloud is loaded to prevent blank overwrites
     if (!user || !db || !isCloudLoaded) return;
 
     const currentLocalStr = JSON.stringify(profile);
 
-    // Skip if local state matches the last known cloud state (no real change)
+    // Skip if local state matches the last known cloud state (no change)
     if (currentLocalStr === lastCloudDataRef.current) return;
 
     const timer = setTimeout(async () => {
@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Firestore] Syncing change to: shared-profiles/${user.uid}`);
+        console.log(`[Firestore] Syncing change...`);
         
         // Optimistically update ref to prevent immediate loopback echo
         lastCloudDataRef.current = dataToSaveStr;
@@ -100,7 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("[Firestore] Sync failed:", error);
       }
-    }, 2000); // 2s debounce for UX stability
+    }, 2000); // 2s debounce for performance
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -121,11 +121,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-bold flex items-center justify-center gap-2">
+            <h3 className="text-xl font-bold flex items-center justify-center gap-2 text-foreground">
               <ShieldCheck className="w-5 h-5 text-accent" />
               Verifying Professional Vault
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Syncing your cross-device achievements...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Syncing your cross-device records...</p>
           </div>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
@@ -12,9 +11,9 @@ export function initializeFirebase() {
   const firestore = getFirestore(app);
   const auth = getAuth(app);
 
-  // Requirement: Ensure login persists across browser sessions and devices
+  // Requirement: Ensure login persists across browser sessions
   setPersistence(auth, browserLocalPersistence)
-    .then(() => console.log('[Auth] Global Persistence set to browserLocalPersistence'))
+    .then(() => console.log('[Auth] Session persistence set to browserLocalPersistence'))
     .catch((err) => console.error('[Auth] Persistence setup failed:', err));
 
   return { app, firestore, auth };

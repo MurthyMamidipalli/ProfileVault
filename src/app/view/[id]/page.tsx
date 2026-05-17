@@ -44,24 +44,25 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    console.log(`[View] Accessing vault at: shared-profiles/${id}`);
+    console.log(`[View] Connecting to public vault: shared-profiles/${id}`);
     const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data && data.profileData) {
+          console.log(`[View] Vault Data Received`, data.profileData);
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
           setError("This vault is currently empty.");
         }
       } else {
-        setError("Professional vault not found for this identifier.");
+        setError("Professional vault not found for this ID.");
       }
       setLoading(false);
     }, (err) => {
-      console.error(`[View] Cloud Sync Error:`, err);
+      console.error(`[View] Connection Error:`, err);
       setError("Secure access restricted or vault is private.");
       setLoading(false);
     });
@@ -75,7 +76,7 @@ export default function PublicProfileView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Accessing Vault...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Opening Vault...</p>
       </div>
     );
   }
@@ -108,12 +109,12 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary/30">
-      {/* Dynamic Hero Section */}
+      {/* Hero Header */}
       <div className="relative h-[350px] md:h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
         <div className="max-w-6xl mx-auto px-6 h-full flex items-end pb-12 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end gap-8 w-full animate-fade-in">
+          <div className="flex flex-col md:flex-row md:items-end gap-8 w-full">
             <div className="relative shrink-0">
               <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
                 {avatarUrl ? (
@@ -148,8 +149,8 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-16">
-        {/* Sidebar */}
-        <div className="lg:col-span-4 space-y-12 animate-fade-in">
+        {/* Contact & Links Sidebar */}
+        <div className="lg:col-span-4 space-y-12">
           <Card className="glass-card">
             <CardHeader className="pb-2 border-b border-white/5">
               <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Identity Hub</CardTitle>
@@ -169,6 +170,14 @@ export default function PublicProfileView() {
                   <a href={p.website} target="_blank" rel="noopener" className="text-sm font-bold text-accent hover:underline flex items-center gap-2">
                     <Globe className="w-3.5 h-3.5" /> {p.website.replace(/^https?:\/\//, '')}
                   </a>
+                </div>
+              )}
+              {p.phone && (
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Contact Number</p>
+                  <p className="text-sm font-bold flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-muted-foreground" /> {p.phone}
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -198,8 +207,8 @@ export default function PublicProfileView() {
           )}
         </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-8 space-y-16 animate-fade-in [animation-delay:200ms]">
+        {/* Main Feed */}
+        <div className="lg:col-span-8 space-y-16">
           {bio && (
             <section className="space-y-8">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Executive Summary</h2>
@@ -211,9 +220,71 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-10" />
 
+          {/* Career Experience Section */}
+          {experience.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Journey</h2>
+              <div className="space-y-12">
+                {experience.map((exp) => (
+                  <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
+                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <h3 className="text-2xl font-bold">{exp.title}</h3>
+                        <Badge variant="outline" className="w-fit border-primary/30 text-[10px] font-black uppercase">
+                          {exp.startDate} — {exp.endDate || 'PRESENT'}
+                        </Badge>
+                      </div>
+                      <p className="text-primary text-sm font-black uppercase tracking-[0.1em]">{exp.company}</p>
+                      {exp.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line opacity-80 max-w-2xl">
+                          {exp.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Education Section */}
+          {education.length > 0 && (
+            <section className="space-y-10">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
+              <div className="space-y-12">
+                {education.map((edu) => (
+                  <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
+                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <h3 className="text-2xl font-bold">{edu.institution}</h3>
+                        <Badge variant="outline" className="w-fit border-accent/30 text-accent text-[10px] font-black">
+                          {edu.startDate} — {edu.endDate || 'PRESENT'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <GraduationCap className="w-5 h-5 text-accent" />
+                        <p className="text-lg font-bold opacity-90">
+                          {edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
+                        </p>
+                      </div>
+                      {edu.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed italic border-l-2 border-white/5 pl-6 py-2">
+                          {edu.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Signature Projects Section */}
           {projects.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Signature Projects</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {projects.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-all duration-500">
@@ -240,72 +311,13 @@ export default function PublicProfileView() {
               </div>
             </section>
           )}
-
-          {experience.length > 0 && (
-            <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Journey</h2>
-              <div className="space-y-12">
-                {experience.map((exp) => (
-                  <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
-                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-                    <div className="space-y-4">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <h3 className="text-2xl font-bold">{exp.title}</h3>
-                        <Badge variant="outline" className="w-fit border-primary/30 text-[10px] font-black">
-                          {exp.startDate.split('-')[0]} — {exp.endDate ? exp.endDate.split('-')[0] : 'PRESENT'}
-                        </Badge>
-                      </div>
-                      <p className="text-primary text-sm font-black uppercase tracking-[0.1em]">{exp.company}</p>
-                      {exp.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line opacity-80 max-w-2xl">
-                          {exp.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {education.length > 0 && (
-            <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Foundations</h2>
-              <div className="space-y-12">
-                {education.map((edu) => (
-                  <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
-                    <div className="absolute top-0 left-[-7px] w-3 h-3 rounded-full bg-accent" />
-                    <div className="space-y-4">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <h3 className="text-2xl font-bold">{edu.institution}</h3>
-                        <Badge variant="outline" className="w-fit border-accent/30 text-accent text-[10px] font-black">
-                          {edu.startDate.split('-')[0]} — {edu.endDate ? edu.endDate.split('-')[0] : 'PRESENT'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <GraduationCap className="w-5 h-5 text-accent" />
-                        <p className="text-lg font-bold opacity-90">
-                          {edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
-                        </p>
-                      </div>
-                      {edu.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed italic border-l-2 border-white/5 pl-6 py-2">
-                          {edu.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </div>
 
       <footer className="mt-32 pt-16 border-t border-white/5 text-center">
         <div className="flex flex-col items-center gap-4 opacity-20">
           <FolderCode className="w-6 h-6" />
-          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILVVAULT SECURE MIRROR</span>
+          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE VAULT MIRROR</span>
         </div>
       </footer>
     </div>
