@@ -1,4 +1,3 @@
-
 "use client";
 
 import { create } from 'zustand';
@@ -155,18 +154,21 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   })),
   replaceProfile: (fullProfile) => set((state) => {
     const incoming = fullProfile || DEFAULT_PROFILE;
+    
+    // Defensive initialization of all collections to ensure arrays are stable
     const merged: UserProfile = { 
       ...DEFAULT_PROFILE, 
       ...incoming,
       fullName: incoming.fullName || incoming.name || '',
-      jobs: Array.isArray(incoming.jobs) ? incoming.jobs : [],
-      education: Array.isArray(incoming.education) ? incoming.education : [],
-      experience: Array.isArray(incoming.experience) ? incoming.experience : [],
-      projects: Array.isArray(incoming.projects) ? incoming.projects : [],
-      portfolioLinks: Array.isArray(incoming.portfolioLinks) ? incoming.portfolioLinks : [],
-      resumes: Array.isArray(incoming.resumes) ? incoming.resumes : [],
-      coverLetters: Array.isArray(incoming.coverLetters) ? incoming.coverLetters : []
+      jobs: Array.isArray(incoming.jobs) ? [...incoming.jobs] : [],
+      education: Array.isArray(incoming.education) ? [...incoming.education] : [],
+      experience: Array.isArray(incoming.experience) ? [...incoming.experience] : [],
+      projects: Array.isArray(incoming.projects) ? [...incoming.projects] : [],
+      portfolioLinks: Array.isArray(incoming.portfolioLinks) ? [...incoming.portfolioLinks] : [],
+      resumes: Array.isArray(incoming.resumes) ? [...incoming.resumes] : [],
+      coverLetters: Array.isArray(incoming.coverLetters) ? [...incoming.coverLetters] : []
     };
+    
     return { 
       profile: merged,
       isCloudLoaded: true 

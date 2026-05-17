@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
@@ -8,6 +7,30 @@ import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
+
+/**
+ * Stable, Order-Independent Hashing for State Comparison
+ */
+function getDeterministicHash(obj: any): string {
+  if (!obj) return "null";
+  
+  // Strip volatile fields that shouldn't trigger sync logic
+  const cleaned = { ...obj, lastSyncedAt: undefined };
+  
+  // Sort keys deeply to ensure JSON.stringify is deterministic
+  const sortObject = (o: any): any => {
+    if (Array.isArray(o)) return o.map(sortObject);
+    if (o !== null && typeof o === 'object') {
+      return Object.keys(o).sort().reduce((acc: any, key) => {
+        acc[key] = sortObject(o[key]);
+        return acc;
+      }, {});
+    }
+    return o;
+  };
+
+  return JSON.stringify(sortObject(cleaned));
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
@@ -47,23 +70,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       db, 
       user.uid, 
       (cloudData: UserProfile | null) => {
-        // Strip volatile fields for stable comparison
-        const cloudDataToHash = cloudData ? { ...cloudData, lastSyncedAt: undefined } : DEFAULT_PROFILE;
-        const cloudHash = JSON.stringify(cloudDataToHash);
-        
-        const localToHash = { ...currentProfileRef.current, lastSyncedAt: undefined };
-        const localHash = JSON.stringify(localToHash);
+        const cloudHash = getDeterministicHash(cloudData || DEFAULT_PROFILE);
+        const localHash = getDeterministicHash(currentProfileRef.current);
 
         // SYNC LOGIC:
         // We only overwrite local state if:
         // A) This is the very first load (isCloudLoaded is false)
-        // B) The cloud hash genuinely changed from what we last thought the cloud looked like AND it's not what we currently have locally.
+        // B) The cloud hash genuinely changed from what we last thought the cloud looked like 
+        //    AND our local state hasn't moved past that baseline yet.
         const isExternalChange = cloudHash !== lastCloudHashRef.current && localHash === lastCloudHashRef.current;
 
         if (!isCloudLoaded || isExternalChange) {
-          console.log(`[Sync] Cloud Mirror -> Local Store Update`);
+          console.log(`[Sync] Cloud -> Local: Update applying`);
           lastCloudHashRef.current = cloudHash;
           replaceProfile(cloudData || DEFAULT_PROFILE);
+        } else if (cloudHash !== localHash) {
+          console.log(`[Sync] Local state is 'Ahead' of Cloud Snapshot. Ignoring echo.`);
         }
         
         setIsCloudLoaded(true);
@@ -81,8 +103,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db || !isCloudLoaded) return;
 
-    const localToHash = { ...profile, lastSyncedAt: undefined };
-    const localHash = JSON.stringify(localToHash);
+    const localHash = getDeterministicHash(profile);
 
     // If local state hasn't changed from the last known cloud state, do nothing.
     if (localHash === lastCloudHashRef.current) {
@@ -99,15 +120,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         
         await saveProfile(db, user.uid, profileToSync);
         
-        // Update baseline immediately to the state we just saved to prevent echo from the listener
-        lastCloudHashRef.current = JSON.stringify({ ...profileToSync, lastSyncedAt: undefined });
+        // Update baseline immediately to prevent echo from the snapshot listener
+        lastCloudHashRef.current = getDeterministicHash(profileToSync);
         markSynced(syncTimestamp);
         setSyncStatus('synced');
       } catch (error) {
         console.error("[Sync] Save failed:", error);
         setSyncStatus('error');
       }
-    }, 400); // Fast heartbeat for responsive multi-item persistence
+    }, 400); // 400ms pulse for high-integrity mirroring
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -130,7 +151,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-center space-y-2">
             <h3 className="text-xl font-bold flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent" />
-              Syncing Professional Vault
+              Initializing Professional Vault
             </h3>
             <p className="text-sm text-muted-foreground animate-pulse">Establishing cloud mirror...</p>
           </div>
