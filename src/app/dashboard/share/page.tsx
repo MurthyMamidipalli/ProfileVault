@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
-import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw, Database, Trash2 } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw, Database, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { forceMirrorAll } from "@/firebase/services";
+
+/**
+ * @fileOverview Professional Vault Mirror & Reconciliation
+ * Provides tools to fix "ghost data" or sync mismatches.
+ */
 
 export default function SharePage() {
   const { profile, isCloudLoaded } = useProfileStore();
@@ -79,15 +84,21 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        <Card className="border-accent/20 bg-accent/5">
+        {/* Reconciliation Alert / Tool */}
+        <Card className="border-accent/20 bg-accent/5 overflow-hidden">
+          <div className="bg-accent/10 p-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-accent">
+            <Zap className="w-3 h-3" /> System Health Tool
+          </div>
           <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
             <div className="p-4 bg-accent/20 rounded-full shrink-0">
               <RefreshCw className={cn("w-8 h-8 text-accent", syncing && "animate-spin")} />
             </div>
             <div className="flex-1 text-center md:text-left space-y-2">
-              <h3 className="font-bold text-accent">Clean Sync & Reconciliation</h3>
+              <h3 className="font-bold text-accent flex items-center justify-center md:justify-start gap-2">
+                Clean Sync & Reconciliation
+              </h3>
               <p className="text-sm text-muted-foreground">
-                If your public link is showing deleted data or is out of sync, use this button to perform a deep reconciliation. This will remove any orphaned records and ensure a perfect match.
+                If your public link is showing deleted data, "ghost" projects, or is out of sync, use this button to perform a **Deep Reconciliation**. This will permanently delete any orphaned records from your public mirror to match your dashboard exactly.
               </p>
             </div>
             <Button 
@@ -95,10 +106,10 @@ export default function SharePage() {
               variant="default"
               onClick={handleForceSync} 
               disabled={syncing}
-              className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0 font-bold"
+              className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0 font-bold shadow-xl shadow-accent/20"
             >
               {syncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-              {syncing ? "Reconciling..." : "Force Sync All"}
+              {syncing ? "Cleaning Mirror..." : "Force Sync All"}
             </Button>
           </CardContent>
         </Card>

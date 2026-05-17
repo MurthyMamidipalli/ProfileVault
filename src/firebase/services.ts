@@ -104,21 +104,21 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
 
     // 2. RECONCILE SUB-COLLECTIONS (Orphan Removal)
     for (const colName of subCollections) {
-      // Get what SHOULD exist
+      // Get what SHOULD exist (Private Vault)
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
       const privateIds = new Set(privateSnap.docs.map(d => d.id));
 
-      // Get what currently exists in mirror
+      // Get what CURRENTLY exists in Mirror
       const publicColRef = collection(db, 'shared-profiles', uid, colName);
       const publicSnap = await getDocs(publicColRef);
 
       // DESTRUCTIVE CLEANUP: Remove items in public mirror that NO LONGER exist in private vault
       const batch = writeBatch(db);
       let deletedCount = 0;
-      publicSnap.docs.forEach(doc => {
-        if (!privateIds.has(doc.id)) {
-          batch.delete(doc.ref);
+      publicSnap.docs.forEach(docSnap => {
+        if (!privateIds.has(docSnap.id)) {
+          batch.delete(docSnap.ref);
           deletedCount++;
         }
       });
