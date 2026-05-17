@@ -16,8 +16,7 @@ import {
   subscribeToResumes,
   subscribeToCoverLetters,
   subscribeToPortfolioLinks,
-  publishToPublicVault,
-  forceMirrorAll
+  publishToPublicVault
 } from "@/firebase/services";
 
 /**
@@ -59,8 +58,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     setSyncStatus('syncing');
 
+    // Subscribe to all collections
     const unsubProfile = subscribeToProfileInfo(db, user.uid, (data) => {
       if (data) setProfile(data);
+      // Mark cloud as loaded once we get the primary profile doc
+      setIsCloudLoaded(true);
+      setSyncStatus('synced');
+      markSynced();
     });
 
     const unsubJobs = subscribeToJobs(db, user.uid, (data) => {
@@ -91,25 +95,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setPortfolioLinks(data || []);
     });
 
-    // Initial Deep Sync to ensure Public Mirror is healthy
-    const initSync = async () => {
-      try {
-        // Delay slightly to ensure listeners have initial data
-        setTimeout(async () => {
-          await forceMirrorAll(db, user.uid, profile);
-          setIsCloudLoaded(true);
-          setSyncStatus('synced');
-          markSynced();
-        }, 2000);
-      } catch (err) {
-        console.error("Initial Sync Failed", err);
-        setSyncStatus('error');
-        setIsCloudLoaded(true); // Don't block UI forever
-      }
-    };
-
-    initSync();
-
     return () => {
       unsubProfile();
       unsubJobs();
@@ -122,15 +107,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     };
   }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setPortfolioLinks, setIsCloudLoaded, markSynced]);
 
-  // 3. Mirroring to Public Metadata
+  // 3. Mirroring to Public Metadata (Debounced)
   useEffect(() => {
-    if (!user || !db || !isCloudLoaded) return;
+    if (!user || !db || !isCloudLoaded || !profile.fullName) return;
     
     const timer = setTimeout(() => {
       publishToPublicVault(db, user.uid, profile).catch(err => {
         console.error("Mirror metadata update failed", err);
       });
-    }, 5000);
+    }, 10000); // 10s debounce to prevent unnecessary writes
 
     return () => clearTimeout(timer);
   }, [profile.fullName, profile.bio, profile.avatarUrl, user, db, isCloudLoaded]);
