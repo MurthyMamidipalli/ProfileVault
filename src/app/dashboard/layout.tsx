@@ -11,7 +11,9 @@ import {
   subscribeToProfileInfo, 
   subscribeToJobs, 
   subscribeToExperience, 
-  subscribeToProjects 
+  subscribeToProjects,
+  subscribeToResumes,
+  subscribeToCoverLetters
 } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -22,6 +24,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setJobs, 
     setExperience, 
     setProjects,
+    setResumes,
+    setCoverLetters,
     setIsCloudLoaded, 
     isCloudLoaded,
     reset 
@@ -58,6 +62,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setProjects(data || []);
     });
 
+    const unsubResumes = subscribeToResumes(db, user.uid, (data) => {
+      setResumes(data || []);
+    });
+
+    const unsubCoverLetters = subscribeToCoverLetters(db, user.uid, (data) => {
+      setCoverLetters(data || []);
+    });
+
     // Mark as loaded once initial listeners have likely fired
     const timer = setTimeout(() => {
       setIsCloudLoaded(true);
@@ -69,9 +81,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       unsubJobs();
       unsubExp();
       unsubProjects();
+      unsubResumes();
+      unsubCoverLetters();
       clearTimeout(timer);
     };
-  }, [user, db, setProfile, setJobs, setExperience, setProjects, setIsCloudLoaded]);
+  }, [user, db, setProfile, setJobs, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded]);
 
   // 3. Cleanup on Logout
   useEffect(() => {

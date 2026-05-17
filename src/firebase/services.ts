@@ -12,12 +12,12 @@ import {
   deleteDoc,
   updateDoc,
   query,
-  where,
+  orderBy,
   Unsubscribe
 } from 'firebase/firestore';
-import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry } from '@/lib/store';
+import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument } from '@/lib/store';
 
-// --- Generic CRUD Operations ---
+// --- Generic Helpers ---
 
 const log = (action: string, path: string, data?: any) => {
   console.log(`[Firestore] ${action.toUpperCase()} at ${path}`, data || '');
@@ -89,7 +89,8 @@ export async function deleteJob(db: Firestore, uid: string, jobId: string) {
 
 export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: JobEntry[]) => void): Unsubscribe {
   const colRef = collection(db, 'users', uid, 'jobs');
-  return onSnapshot(colRef, (snap) => {
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
     const jobs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as JobEntry));
     onUpdate(jobs);
   });
@@ -136,7 +137,8 @@ export async function deleteExperience(db: Firestore, uid: string, expId: string
 
 export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (data: ExperienceEntry[]) => void): Unsubscribe {
   const colRef = collection(db, 'users', uid, 'experience');
-  return onSnapshot(colRef, (snap) => {
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
     const exp = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExperienceEntry));
     onUpdate(exp);
   });
@@ -183,8 +185,89 @@ export async function deleteProject(db: Firestore, uid: string, projId: string) 
 
 export function subscribeToProjects(db: Firestore, uid: string, onUpdate: (data: ProjectEntry[]) => void): Unsubscribe {
   const colRef = collection(db, 'users', uid, 'projects');
-  return onSnapshot(colRef, (snap) => {
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
     const projects = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ProjectEntry));
     onUpdate(projects);
+  });
+}
+
+// --- Resume Services ---
+
+export async function addResume(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
+  const path = `users/${uid}/resumes`;
+  try {
+    const colRef = collection(db, 'users', uid, 'resumes');
+    const docRef = await addDoc(colRef, { 
+      ...data, 
+      uploadDate: new Date().toLocaleDateString(),
+      createdAt: serverTimestamp() 
+    });
+    log('add resume', `${path}/${docRef.id}`, data);
+    return docRef.id;
+  } catch (error) {
+    logError('add resume', path, error);
+    throw error;
+  }
+}
+
+export async function deleteResume(db: Firestore, uid: string, id: string) {
+  const path = `users/${uid}/resumes/${id}`;
+  try {
+    const docRef = doc(db, 'users', uid, 'resumes', id);
+    await deleteDoc(docRef);
+    log('delete resume', path);
+  } catch (error) {
+    logError('delete resume', path, error);
+    throw error;
+  }
+}
+
+export function subscribeToResumes(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void): Unsubscribe {
+  const colRef = collection(db, 'users', uid, 'resumes');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
+    const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument));
+    onUpdate(docs);
+  });
+}
+
+// --- Cover Letter Services ---
+
+export async function addCoverLetter(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
+  const path = `users/${uid}/coverLetters`;
+  try {
+    const colRef = collection(db, 'users', uid, 'coverLetters');
+    const docRef = await addDoc(colRef, { 
+      ...data, 
+      uploadDate: new Date().toLocaleDateString(),
+      createdAt: serverTimestamp() 
+    });
+    log('add cover letter', `${path}/${docRef.id}`, data);
+    return docRef.id;
+  } catch (error) {
+    logError('add cover letter', path, error);
+    throw error;
+  }
+}
+
+export async function deleteCoverLetter(db: Firestore, uid: string, id: string) {
+  const path = `users/${uid}/coverLetters/${id}`;
+  try {
+    const docRef = doc(db, 'users', uid, 'coverLetters', id);
+    await deleteDoc(docRef);
+    log('delete cover letter', path);
+  } catch (error) {
+    logError('delete cover letter', path, error);
+    throw error;
+  }
+}
+
+export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void): Unsubscribe {
+  const colRef = collection(db, 'users', uid, 'coverLetters');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
+    const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument));
+    onUpdate(docs);
   });
 }

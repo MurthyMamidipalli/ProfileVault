@@ -120,6 +120,8 @@ interface ProfileStore {
   setJobs: (jobs: JobEntry[]) => void;
   setExperience: (exp: ExperienceEntry[]) => void;
   setProjects: (proj: ProjectEntry[]) => void;
+  setResumes: (resumes: ResumeDocument[]) => void;
+  setCoverLetters: (coverLetters: ResumeDocument[]) => void;
   markSynced: (timestamp?: string) => void;
   reset: () => void;
 }
@@ -139,6 +141,12 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   })),
   setProjects: (projects) => set((state) => ({
     profile: { ...state.profile, projects }
+  })),
+  setResumes: (resumes) => set((state) => ({
+    profile: { ...state.profile, resumes }
+  })),
+  setCoverLetters: (coverLetters) => set((state) => ({
+    profile: { ...state.profile, coverLetters }
   })),
   markSynced: (timestamp) => set((state) => ({
     profile: {

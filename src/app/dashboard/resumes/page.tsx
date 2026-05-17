@@ -25,27 +25,30 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
-  Plus, 
-  Trash2, 
-  ExternalLink, 
   Upload, 
   Link as LinkIcon,
   FileSearch,
   Loader2,
   ScrollText,
-  FolderOpen
+  FolderOpen,
+  Trash2,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore } from "@/firebase";
+import { addResume, deleteResume, addCoverLetter, deleteCoverLetter } from "@/firebase/services";
 
 export default function DocumentsPage() {
-  const { profile, addResume, removeResume, addCoverLetter, removeCoverLetter } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [mounted, setMounted] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("resumes");
   
   const [linkData, setLinkData] = useState({ name: '', url: '' });
@@ -66,27 +69,34 @@ export default function DocumentsPage() {
 
   const resumesList = profile?.resumes || [];
   const coverLettersList = profile?.coverLetters || [];
-  const currentList = activeTab === "resumes" ? resumesList : coverLettersList;
 
-  const handleAddLink = (e: React.FormEvent) => {
+  const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!linkData.name || !linkData.url) return;
+    if (!user || !db || !linkData.name || !linkData.url) return;
+    setIsProcessing(true);
 
-    const payload = {
-      name: linkData.name,
-      url: linkData.url,
-      type: 'link' as const
-    };
+    try {
+      const payload = {
+        name: linkData.name,
+        url: linkData.url,
+        type: 'link' as const
+      };
 
-    if (activeTab === "resumes") {
-      addResume(payload);
-    } else {
-      addCoverLetter(payload);
+      if (activeTab === "resumes") {
+        await addResume(db, user.uid, payload);
+      } else {
+        await addCoverLetter(db, user.uid, payload);
+      }
+
+      setLinkData({ name: '', url: '' });
+      setIsLinkDialogOpen(false);
+      toast({ title: "Link Saved", description: "Document added to your secure vault." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not add document link." });
+    } finally {
+      setIsProcessing(true);
+      setIsProcessing(false);
     }
-
-    setLinkData({ name: '', url: '' });
-    setIsLinkDialogOpen(false);
-    toast({ title: "Link Saved", description: "Document added to your secure vault." });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,34 +115,39 @@ export default function DocumentsPage() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!user || !db || !selectedFile) return;
 
-    setIsUploading(true);
+    setIsProcessing(true);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const payload = {
-        name: uploadData.name || selectedFile.name,
-        url: event.target?.result as string,
-        type: 'file' as const
-      };
+    reader.onload = async (event) => {
+      try {
+        const payload = {
+          name: uploadData.name || selectedFile.name,
+          url: event.target?.result as string,
+          type: 'file' as const
+        };
 
-      if (activeTab === "resumes") {
-        addResume(payload);
-      } else {
-        addCoverLetter(payload);
+        if (activeTab === "resumes") {
+          await addResume(db, user.uid, payload);
+        } else {
+          await addCoverLetter(db, user.uid, payload);
+        }
+
+        toast({ title: "Upload Success", description: `${selectedFile.name} stored safely.` });
+        setIsUploadDialogOpen(false);
+        setUploadData({ name: '' });
+        setSelectedFile(null);
+      } catch (error) {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Error storing file in vault." });
+      } finally {
+        setIsProcessing(false);
       }
-
-      toast({ title: "Upload Success", description: `${selectedFile.name} stored safely.` });
-      setIsUploading(false);
-      setIsUploadDialogOpen(false);
-      setUploadData({ name: '' });
-      setSelectedFile(null);
     };
 
     reader.onerror = () => {
       toast({ variant: "destructive", title: "Upload Failed", description: "Error reading file." });
-      setIsUploading(false);
+      setIsProcessing(false);
     };
 
     reader.readAsDataURL(selectedFile);
@@ -142,13 +157,18 @@ export default function DocumentsPage() {
     fileInputRef.current?.click();
   };
 
-  const handleRemove = (id: string) => {
-    if (activeTab === "resumes") {
-      removeResume(id);
-    } else {
-      removeCoverLetter(id);
+  const handleRemove = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      if (activeTab === "resumes") {
+        await deleteResume(db, user.uid, id);
+      } else {
+        await deleteCoverLetter(db, user.uid, id);
+      }
+      toast({ title: "Removed", description: "Document deleted from cloud." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove document." });
     }
-    toast({ title: "Removed", description: "Document deleted from cloud." });
   };
 
   return (
@@ -196,7 +216,9 @@ export default function DocumentsPage() {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Save Link</Button>
+                  <Button type="submit" disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Save Link'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -246,8 +268,8 @@ export default function DocumentsPage() {
                    <p className="text-sm font-medium">{selectedFile ? selectedFile.name : "Select PDF"}</p>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={!selectedFile || isUploading}>
-                    {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Store in Vault'}
+                  <Button type="submit" disabled={!selectedFile || isProcessing}>
+                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Store in Vault'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -317,7 +339,7 @@ function DocumentCard({ doc, onRemove, isAccent = false }: { doc: ResumeDocument
       <CardContent className="p-4 pt-2 space-y-4">
         <div className="space-y-1">
           <h3 className="font-bold truncate" title={doc.name}>{doc.name}</h3>
-          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Modified {doc.uploadDate}</p>
+          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Added {doc.uploadDate}</p>
         </div>
         <Button asChild variant="secondary" size="sm" className="w-full text-xs bg-white/5 hover:bg-white/10 font-bold">
           <a href={doc.url} target="_blank" rel="noopener noreferrer">
