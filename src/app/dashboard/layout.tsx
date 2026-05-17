@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef } from "react";
@@ -50,17 +51,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const cloudDataStr = cloudData ? JSON.stringify(cloudData) : JSON.stringify(DEFAULT_PROFILE);
         const localDataStr = JSON.stringify(currentLocalRef.current);
         
-        // HYDRATION LOGIC:
+        // HYDRATION & SYNC LOGIC:
         // Apply cloud data if it's the first load OR if it's an external change (local matches old cloud)
-        // This prevents incoming cloud updates from clearing the user's active typing (echo-loop)
         if (!isCloudLoaded || (cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current)) {
           console.log(`[Sync] Applying Cloud -> Local mirror for UID: ${user.uid}`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
         } else if (cloudDataStr !== lastCloudDataRef.current) {
-          // Cloud changed but user is currently typing locally
+          // Cloud changed but user is currently typing locally - suppress mid-edit overwrite
           lastCloudDataRef.current = cloudDataStr;
-          console.log(`[Sync] Cloud update acknowledged (Suppressing mid-edit overwrite)`);
+          console.log(`[Sync] Cloud update acknowledged (Mid-edit preservation active)`);
         }
         
         setIsCloudLoaded(true);
@@ -90,7 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         const dataToSaveStr = JSON.stringify(profileToSync);
         
-        console.log(`[Firestore] Syncing change to path: shared-profiles/${user.uid}`);
+        console.log(`[Firestore] Syncing change to: shared-profiles/${user.uid}`);
         
         // Optimistically update ref to prevent immediate loopback echo
         lastCloudDataRef.current = dataToSaveStr;

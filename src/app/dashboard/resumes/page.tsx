@@ -33,7 +33,8 @@ import {
   FileSearch,
   AlertCircle,
   Loader2,
-  ScrollText
+  ScrollText,
+  FolderOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -75,7 +76,7 @@ export default function ResumesPage() {
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLimitReached) {
-       toast({ variant: "destructive", title: "Limit Reached", description: `You have reached the maximum of ${maxDocuments} documents in this section.` });
+       toast({ variant: "destructive", title: "Limit Reached", description: `Max ${maxDocuments} documents allowed per section.` });
        return;
     }
     if (!linkData.name || !linkData.url) return;
@@ -94,18 +95,14 @@ export default function ResumesPage() {
 
     setLinkData({ name: '', url: '' });
     setIsLinkDialogOpen(false);
-    toast({ title: "Link Saved", description: `Your ${activeTab === 'resumes' ? 'resume' : 'cover letter'} link has been added.` });
+    toast({ title: "Link Saved", description: "Document added to your secure vault." });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        toast({ 
-          variant: "destructive", 
-          title: "Invalid File Type", 
-          description: "Please upload a PDF document." 
-        });
+        toast({ variant: "destructive", title: "Invalid File", description: "Please upload a PDF document." });
         return;
       }
       setSelectedFile(file);
@@ -118,48 +115,37 @@ export default function ResumesPage() {
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLimitReached) return;
-    if (!selectedFile) {
-      toast({ variant: "destructive", title: "No file selected", description: "Please choose a PDF to upload." });
-      return;
-    }
+    if (!selectedFile) return;
 
     setIsUploading(true);
 
-    try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        
-        const payload = {
-          name: uploadData.name || selectedFile.name,
-          url: dataUrl,
-          type: 'file' as const
-        };
-
-        if (activeTab === "resumes") {
-          addResume(payload);
-        } else {
-          addCoverLetter(payload);
-        }
-
-        toast({ title: "Upload Success", description: `${selectedFile.name} has been added to your vault.` });
-        setIsUploading(false);
-        setIsUploadDialogOpen(false);
-        setUploadData({ name: '' });
-        setSelectedFile(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const payload = {
+        name: uploadData.name || selectedFile.name,
+        url: event.target?.result as string,
+        type: 'file' as const
       };
 
-      reader.onerror = () => {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not read the file." });
-        setIsUploading(false);
-      };
+      if (activeTab === "resumes") {
+        addResume(payload);
+      } else {
+        addCoverLetter(payload);
+      }
 
-      reader.readAsDataURL(selectedFile);
-    } catch (error) {
-      console.error(error);
+      toast({ title: "Upload Success", description: `${selectedFile.name} stored safely.` });
       setIsUploading(false);
-      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred during upload." });
-    }
+      setIsUploadDialogOpen(false);
+      setUploadData({ name: '' });
+      setSelectedFile(null);
+    };
+
+    reader.onerror = () => {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Error reading file." });
+      setIsUploading(false);
+    };
+
+    reader.readAsDataURL(selectedFile);
   };
 
   const triggerFileSelect = () => {
@@ -172,28 +158,21 @@ export default function ResumesPage() {
     } else {
       removeCoverLetter(id);
     }
-    toast({ title: "Removed", description: "Document deleted from your vault." });
+    toast({ title: "Removed", description: "Document deleted from cloud." });
   };
 
   return (
-    <div className="max-w-6xl space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-6xl space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-headline font-bold">Resumes & Cover Letters</h1>
-          <p className="text-muted-foreground">Keep your professional application documents organized and ready to share.</p>
+          <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
+            Document Vault
+            <FolderOpen className="w-7 h-7 text-primary" />
+          </h1>
+          <p className="text-muted-foreground">Manage your professional CVs and targeted cover letters in secure cloud folders.</p>
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Storage Usage</p>
-            <p className={cn(
-              "text-sm font-bold",
-              isLimitReached ? "text-destructive" : "text-primary"
-            )}>
-              {currentCount} / {maxDocuments} documents
-            </p>
-          </div>
-
           <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" disabled={isLimitReached} className="flex items-center gap-2">
@@ -243,11 +222,11 @@ export default function ResumesPage() {
             <DialogContent className="glass-card">
               <DialogHeader>
                 <DialogTitle>Upload {activeTab === 'resumes' ? 'Resume' : 'Cover Letter'} PDF</DialogTitle>
-                <DialogDescription>Securely store your PDF document in your professional vault.</DialogDescription>
+                <DialogDescription>Your file will be base64 encoded and stored in your cloud vault.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleUploadSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Document Name (Display Label)</Label>
+                  <Label>Document Name</Label>
                   <Input 
                     required 
                     placeholder="e.g. Senior_Engineer_2024.pdf" 
@@ -274,23 +253,11 @@ export default function ResumesPage() {
                    ) : (
                      <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                    )}
-                   <p className="text-sm font-medium">
-                     {selectedFile ? selectedFile.name : "Click to select PDF"}
-                   </p>
-                   <p className="text-xs text-muted-foreground/50 mt-1">
-                     Only PDF files are supported.
-                   </p>
+                   <p className="text-sm font-medium">{selectedFile ? selectedFile.name : "Select PDF"}</p>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={!selectedFile || isUploading}>
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Store in Vault'
-                    )}
+                    {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Store in Vault'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -301,24 +268,17 @@ export default function ResumesPage() {
 
       <Tabs defaultValue="resumes" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 max-w-[400px] h-12 bg-white/5 border border-white/5 p-1 rounded-xl">
-          <TabsTrigger value="resumes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold flex items-center gap-2">
+          <TabsTrigger value="resumes" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold flex items-center gap-2 transition-all">
             <FileText className="w-4 h-4" />
             Resumes
           </TabsTrigger>
-          <TabsTrigger value="cover_letters" className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold flex items-center gap-2">
+          <TabsTrigger value="cover_letters" className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold flex items-center gap-2 transition-all">
             <ScrollText className="w-4 h-4" />
             Cover Letters
           </TabsTrigger>
         </TabsList>
 
         <div className="pt-8">
-          {isLimitReached && (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm mb-6">
-              <AlertCircle className="w-4 h-4" />
-              Document limit reached for this section. Please remove an old document to add a new one.
-            </div>
-          )}
-
           <TabsContent value="resumes" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {resumesList.map((doc) => (
@@ -345,12 +305,12 @@ export default function ResumesPage() {
 function DocumentCard({ doc, onRemove, isAccent = false }: { doc: ResumeDocument, onRemove: () => void, isAccent?: boolean }) {
   return (
     <Card className={cn(
-      "glass-card group hover:border-primary/40 transition-smooth",
+      "glass-card group hover:border-primary/40 transition-smooth overflow-hidden",
       isAccent && "hover:border-accent/40"
     )}>
       <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
         <div className={cn(
-          "p-2.5 rounded-xl bg-primary/10 text-primary shadow-sm",
+          "p-2.5 rounded-xl bg-primary/10 text-primary",
           isAccent && "bg-accent/10 text-accent"
         )}>
           {doc.type === 'file' ? <FileText className="w-6 h-6" /> : <LinkIcon className="w-6 h-6" />}
@@ -358,7 +318,7 @@ function DocumentCard({ doc, onRemove, isAccent = false }: { doc: ResumeDocument
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-smooth hover:bg-destructive/10"
+          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-smooth"
           onClick={onRemove}
         >
           <Trash2 className="w-4 h-4" />
@@ -366,13 +326,13 @@ function DocumentCard({ doc, onRemove, isAccent = false }: { doc: ResumeDocument
       </CardHeader>
       <CardContent className="p-4 pt-2 space-y-4">
         <div className="space-y-1">
-          <h3 className="font-bold truncate text-foreground" title={doc.name}>{doc.name}</h3>
-          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Added {doc.uploadDate}</p>
+          <h3 className="font-bold truncate" title={doc.name}>{doc.name}</h3>
+          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Modified {doc.uploadDate}</p>
         </div>
         <Button asChild variant="secondary" size="sm" className="w-full text-xs bg-white/5 hover:bg-white/10 font-bold">
           <a href={doc.url} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="w-3 h-3 mr-2" />
-            {doc.type === 'file' ? 'View Document' : 'Open Link'}
+            {doc.type === 'file' ? 'View PDF' : 'Open Link'}
           </a>
         </Button>
       </CardContent>
@@ -388,9 +348,7 @@ function EmptyState({ type }: { type: string }) {
       </div>
       <div className="space-y-1">
         <p className="text-lg font-semibold">No {type} found</p>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Upload your first {type.slice(0, -1)} or link an external document to get started.
-        </p>
+        <p className="text-sm text-muted-foreground">Upload your first {type.slice(0, -1)} to your secure vault.</p>
       </div>
     </div>
   );

@@ -114,7 +114,7 @@ export const DEFAULT_PROFILE: UserProfile = {
 
 /**
  * ZUSTAND STORE: NO LOCAL PERSISTENCE.
- * Cloud is the absolute source of truth.
+ * Cloud (Firestore) is the absolute source of truth.
  */
 interface ProfileStore {
   profile: UserProfile;

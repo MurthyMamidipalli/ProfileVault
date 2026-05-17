@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -44,26 +45,26 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    console.log(`[View] Connecting to professional vault: shared-profiles/${id}`);
+    console.log(`[PublicView] Opening mirror for UID: ${id}`);
     const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data && data.profileData) {
-          console.log(`[View] Data Mapping Success:`, data.profileData);
+          console.log(`[PublicView] Vault Loaded Successfully`);
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
-          setError("Professional profile is currently empty.");
+          setError("Vault content is restricted or empty.");
         }
       } else {
-        setError("Vault not found for this identifier.");
+        setError("Professional vault not found for this identifier.");
       }
       setLoading(false);
     }, (err) => {
-      console.error(`[View] Access Error:`, err);
-      setError("Secure access restricted or profile is private.");
+      console.error(`[PublicView] Access Error:`, err);
+      setError("Secure access denied or vault is private.");
       setLoading(false);
     });
 
@@ -76,7 +77,7 @@ export default function PublicProfileView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Opening Vault...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Synchronizing Mirror...</p>
       </div>
     );
   }
