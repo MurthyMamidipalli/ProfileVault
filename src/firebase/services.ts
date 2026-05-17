@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -16,8 +15,7 @@ import {
   Unsubscribe,
   getDocs,
   writeBatch,
-  deleteField,
-  DocumentReference
+  deleteField
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
@@ -69,7 +67,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       'profileData.website': profile.website || '',
       'profileData.email': profile.email || '',
       publishedAt: serverTimestamp(),
-      // Nuclear Purge List
+      // Nuclear Purge List (Aggressive cleanup of legacy schema)
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),

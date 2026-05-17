@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -10,20 +9,15 @@ import {
   Loader2, 
   MapPin, 
   Mail, 
-  Phone, 
   GraduationCap, 
-  Briefcase, 
-  Link as LinkIcon, 
   ExternalLink,
-  Calendar,
   User as UserIcon,
   Building2,
   ShieldCheck,
   AlertCircle,
   Globe,
   FolderCode,
-  Package,
-  Award
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,9 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 /**
- * @fileOverview Professional Vault Public Mirror (Hardened Render-Time Deduplication)
+ * @fileOverview Professional Vault Public Mirror (Optimized Render-Time Identity Lock)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
- * Sections reordered: Projects and Products are now at the bottom.
+ * Projects and Products are positioned at the bottom of the layout.
  */
 
 export default function PublicProfileView() {
@@ -59,7 +53,7 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile (Ignore legacy array data - render exclusively from sub-collections)
+    // 1. Root Profile (Primary Identity)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -72,23 +66,22 @@ export default function PublicProfileView() {
         setError("Vault mirror not found.");
       }
       setLoading(false);
-    }, (err) => {
+    }, () => {
       setError("Secure access denied.");
       setLoading(false);
     });
 
-    // 2. Specialized Collection Fetcher (Atomic state updates)
+    // 2. Collection Fetchers (Optimized State Mapping)
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = collection(db, "shared-profiles", id, type);
       return onSnapshot(q, (snap) => {
         const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         
-        // Consistent Sorting
+        // Consistent Descending Temporal Sort
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
-            if (val?.updatedAt?.seconds) return val.updatedAt.seconds * 1000;
             return 0;
           };
           return getTime(b) - getTime(a);
@@ -114,15 +107,15 @@ export default function PublicProfileView() {
     };
   }, [id, db, mounted]);
 
-  // --- IDENTITY LOCK (Strict Render-Time Deduplication) ---
+  // --- IDENTITY LOCK (Render-Time Deduplication) ---
   const uniqueJobs = useMemo(() => Array.from(new Map(jobs.map(item => [item.id, item])).values()), [jobs]);
   const uniqueExperience = useMemo(() => Array.from(new Map(experience.map(item => [item.id, item])).values()), [experience]);
   const uniqueEducation = useMemo(() => Array.from(new Map(education.map(item => [item.id, item])).values()), [education]);
   const uniqueProjectsList = useMemo(() => Array.from(new Map(projects.map(item => [item.id, item])).values()), [projects]);
   const uniqueLinks = useMemo(() => Array.from(new Map(links.map(item => [item.id, item])).values()), [links]);
 
-  const uniqueProjects = uniqueProjectsList.filter(p => p.category === 'project');
-  const uniqueProducts = uniqueProjectsList.filter(p => p.category === 'product');
+  const projectsOnly = uniqueProjectsList.filter(p => p.category === 'project');
+  const productsOnly = uniqueProjectsList.filter(p => p.category === 'product');
 
   if (!mounted) return null;
 
@@ -315,11 +308,12 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {uniqueProjects.length > 0 && (
+          {/* Projects and Products Reordered to the Bottom */}
+          {projectsOnly.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {uniqueProjects.map((proj) => (
+                {projectsOnly.map((proj) => (
                   <Card key={proj.id} className="glass-card overflow-hidden group hover:border-primary/40 transition-smooth flex flex-col">
                     <div className="relative h-48 w-full border-b border-white/5">
                       {proj.imageUrl ? (
@@ -346,7 +340,7 @@ export default function PublicProfileView() {
                         )}
                         {proj.documentUrl && (
                           <Button asChild size="sm" variant="secondary" className="h-8 text-xs font-bold bg-white/5 hover:bg-white/10">
-                            <a href={proj.documentUrl} target="_blank" rel="noopener"><LinkIcon className="w-3 h-3 mr-2" /> Docs</a>
+                            <a href={proj.documentUrl} target="_blank" rel="noopener"><Globe className="w-3 h-3 mr-2" /> Docs</a>
                           </Button>
                         )}
                       </div>
@@ -357,11 +351,11 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {uniqueProducts.length > 0 && (
+          {productsOnly.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Digital Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {uniqueProducts.map((prod) => (
+                {productsOnly.map((prod) => (
                   <Card key={prod.id} className="glass-card overflow-hidden group hover:border-accent/40 transition-smooth flex flex-col">
                     <div className="relative h-48 w-full border-b border-white/5">
                       {prod.imageUrl ? (
@@ -388,7 +382,7 @@ export default function PublicProfileView() {
                         )}
                         {prod.documentUrl && (
                           <Button asChild size="sm" variant="secondary" className="h-8 text-xs font-bold bg-white/5 hover:bg-white/10">
-                            <a href={prod.documentUrl} target="_blank" rel="noopener"><LinkIcon className="w-3 h-3 mr-2" /> Tech Specs</a>
+                            <a href={prod.documentUrl} target="_blank" rel="noopener"><Globe className="w-3 h-3 mr-2" /> Tech Specs</a>
                           </Button>
                         )}
                       </div>
