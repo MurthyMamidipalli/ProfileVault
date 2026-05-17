@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -12,7 +13,8 @@ import {
   updateDoc,
   query,
   orderBy,
-  Unsubscribe
+  Unsubscribe,
+  Timestamp
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
@@ -35,11 +37,12 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
       await deleteDoc(ref);
     } else {
       // Ensure the mirror always has a timestamp for sorting in the public view
+      // We use serverTimestamp to ensure consistency, falling back to current Timestamp if needed
       await setDoc(ref, { 
         ...data, 
-        updatedAt: data.updatedAt || serverTimestamp(),
-        // If createdAt is missing in mirror, public view might skip doc in sorted queries
-        createdAt: data.createdAt || data.updatedAt || serverTimestamp()
+        updatedAt: serverTimestamp(),
+        // We preserve original createdAt if it exists, otherwise set it
+        createdAt: data.createdAt || serverTimestamp()
       }, { merge: true });
     }
   } catch (err) {

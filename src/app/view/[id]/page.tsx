@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { doc, onSnapshot, collection, query, orderBy, DocumentData } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, DocumentData } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
@@ -71,13 +72,22 @@ export default function PublicProfileView() {
       setLoading(false);
     });
 
-    // 2. Fetch distributed sub-collections (Bypasses 1MB limit)
-    // CRITICAL: Order by updatedAt because it is reliably set by mirrorToPublic
+    // 2. Fetch distributed sub-collections
+    // CRITICAL: We fetch without orderBy to avoid index requirement errors, sorting client-side instead.
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
-      const q = query(collection(db, "shared-profiles", id, type), orderBy('updatedAt', 'desc'));
+      const q = query(collection(db, "shared-profiles", id, type));
       return onSnapshot(q, (snap) => {
-        setter(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.warn(`[PublicView] Could not load ${type}:`, err));
+        const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        // Deterministic client-side sort by updatedAt timestamp
+        docs.sort((a: any, b: any) => {
+          const timeA = a.updatedAt?.seconds || 0;
+          const timeB = b.updatedAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        setter(docs);
+      }, (err) => {
+        console.warn(`[PublicView] Could not load ${type}:`, err);
+      });
     };
 
     const unsubJobs = fetchCollection('jobs', setJobs);
