@@ -16,12 +16,13 @@ import {
   Unsubscribe,
   getDocs,
   writeBatch,
-  deleteField
+  deleteField,
+  DocumentReference
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
 /**
- * @fileOverview Atomic Firestore Service Layer (Hardened Reconciliation)
+ * @fileOverview Atomic Firestore Service Layer (Nuclear Reconciliation)
  * Implements a destructive sync pattern to ensure public mirror exactly matches the private vault.
  */
 
@@ -44,23 +45,23 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
 }
 
 /**
- * Forcefully reconciles the public mirror with the private vault.
- * 1. Purges all legacy array fields from the root profile.
+ * Nuclear Reconcile: Performs a destructive purge of the public mirror.
+ * 1. Explicitly wipes all known legacy array fields from the root profile document.
  * 2. Deletes any record in the public sub-collections that doesn't exist in the private vault.
+ * 3. Re-syncs all active vault data.
  */
 export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
-  console.log("[Sync] Destructive Reconciliation & legacy Purge Start...");
+  console.log("[Nuclear Sync] Initiating Destructive Reconciliation...");
   
   const subCollections = [
     'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
   ];
 
   try {
-    // 1. MIRROR BASIC METADATA & DESTRUCTIVE PURGE OF LEGACY ARRAYS
     const profileRef = doc(db, 'shared-profiles', uid);
     
-    // Explicitly delete ALL possible legacy array names to clean up root document bloat
-    const legacyPurge = { 
+    // 1. WIPE ALL POSSIBLE LEGACY FIELDS (The "Ghost Data" source)
+    const legacyPurge: any = { 
       'profileData.fullName': profile.fullName || '',
       'profileData.bio': profile.bio || '',
       'profileData.avatarUrl': profile.avatarUrl || '',
@@ -68,7 +69,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       'profileData.website': profile.website || '',
       'profileData.email': profile.email || '',
       publishedAt: serverTimestamp(),
-      // Legacy Field Wipe
+      // Nuclear Purge List
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),
@@ -82,13 +83,18 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       Jobs: deleteField(),
       PortfolioLinks: deleteField(),
       Resumes: deleteField(),
-      CoverLetters: deleteField()
+      CoverLetters: deleteField(),
+      projectList: deleteField(),
+      experienceList: deleteField(),
+      educationList: deleteField(),
+      jobList: deleteField(),
+      linkList: deleteField()
     };
 
     try {
       await updateDoc(profileRef, legacyPurge);
     } catch (err) {
-      // Fallback if doc doesn't exist
+      // If document doesn't exist, create it clean
       await setDoc(profileRef, { 
         profileData: {
           fullName: profile.fullName || '',
@@ -102,20 +108,21 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       });
     }
 
-    // 2. RECONCILE SUB-COLLECTIONS (Orphan Removal)
+    // 2. ORPHAN EXTERMINATION (Sync Sub-collections)
     for (const colName of subCollections) {
-      // Get what SHOULD exist (Private Vault)
+      // Get Private (Source of Truth)
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
       const privateIds = new Set(privateSnap.docs.map(d => d.id));
 
-      // Get what CURRENTLY exists in Mirror
+      // Get Public (The Mirror)
       const publicColRef = collection(db, 'shared-profiles', uid, colName);
       const publicSnap = await getDocs(publicColRef);
 
-      // DESTRUCTIVE CLEANUP: Remove items in public mirror that NO LONGER exist in private vault
       const batch = writeBatch(db);
       let deletedCount = 0;
+
+      // Identify and delete orphans
       publicSnap.docs.forEach(docSnap => {
         if (!privateIds.has(docSnap.id)) {
           batch.delete(docSnap.ref);
@@ -125,17 +132,17 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       
       if (deletedCount > 0) {
         await batch.commit();
-        console.log(`[Sync] Cleaned ${deletedCount} orphaned records from public ${colName}`);
+        console.log(`[Nuclear Sync] Purged ${deletedCount} orphans from ${colName}`);
       }
 
-      // RE-SYNC: Ensure all existing private records are up-to-date in public mirror
+      // Re-upload current valid data
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
     }
-    console.log("[Sync] Reconciliation Complete. Public mirror is now in perfect sync.");
+    console.log("[Nuclear Sync] Success. Public mirror is now a perfect, single-source reflection.");
   } catch (error) {
-    console.error("[Sync] Reconciliation Failed:", error);
+    console.error("[Nuclear Sync] Critical Failure:", error);
     throw error;
   }
 }

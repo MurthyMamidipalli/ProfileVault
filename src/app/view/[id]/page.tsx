@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { doc, onSnapshot, collection, query, Timestamp } from "firebase/firestore";
+import { doc, onSnapshot, collection, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
@@ -31,8 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 /**
- * @fileOverview Professional Vault Public Mirror (Hardened & De-duplicated)
- * Implements strict ID-based filtering to ensure zero duplication of professional records.
+ * @fileOverview Professional Vault Public Mirror (Hardened Render-Time Deduplication)
+ * Implements strict ID-based identity locking to ensure zero duplication of records.
  */
 
 export default function PublicProfileView() {
@@ -58,7 +58,7 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    // 1. Root Profile Listener (Basic Metadata only)
+    // 1. Root Profile (Ignore any array data here - exclusively use sub-collections)
     const profileRef = doc(db, "shared-profiles", id);
     const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -80,27 +80,20 @@ export default function PublicProfileView() {
     const fetchCollection = (type: string, setter: (data: any[]) => void) => {
       const q = collection(db, "shared-profiles", id, type);
       return onSnapshot(q, (snap) => {
-        const docs = snap.docs.map(doc => {
-          const data = doc.data();
-          return { ...data, id: doc.id };
-        });
-
-        // Manual sort by timestamp (newest first)
+        const docs = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        
+        // Consistent Sorting
         docs.sort((a: any, b: any) => {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
             if (val?.updatedAt?.seconds) return val.updatedAt.seconds * 1000;
-            if (val?.createdAt?.seconds) return val.createdAt.seconds * 1000;
             return 0;
           };
           return getTime(b) - getTime(a);
         });
         
-        // Strict replacement - never use prev => [...prev, ...data] to avoid duplicates
         setter(docs);
-      }, (err) => {
-        console.warn(`[Sync Warning] Failed to fetch ${type} sub-collection`);
       });
     };
 
@@ -119,6 +112,13 @@ export default function PublicProfileView() {
       unsubLinks();
     };
   }, [id, db, mounted]);
+
+  // --- IDENTITY LOCK (Strict Render-Time Deduplication) ---
+  const uniqueJobs = useMemo(() => Array.from(new Map(jobs.map(item => [item.id, item])).values()), [jobs]);
+  const uniqueExperience = useMemo(() => Array.from(new Map(experience.map(item => [item.id, item])).values()), [experience]);
+  const uniqueProjectsAndProducts = useMemo(() => Array.from(new Map(projects.map(item => [item.id, item])).values()), [projects]);
+  const uniqueEducation = useMemo(() => Array.from(new Map(education.map(item => [item.id, item])).values()), [education]);
+  const uniqueLinks = useMemo(() => Array.from(new Map(links.map(item => [item.id, item])).values()), [links]);
 
   if (!mounted) return null;
 
@@ -146,19 +146,12 @@ export default function PublicProfileView() {
     );
   }
 
-  // --- STRICT DE-DUPLICATION (RENDER TIME LOCK) ---
-  const uniqueJobs = Array.from(new Map(jobs.map(item => [item.id, item])).values());
-  const uniqueExperience = Array.from(new Map(experience.map(item => [item.id, item])).values());
-  const uniqueProjectsAndProducts = Array.from(new Map(projects.map(item => [item.id, item])).values());
-  const uniqueEducation = Array.from(new Map(education.map(item => [item.id, item])).values());
-  const uniqueLinks = Array.from(new Map(links.map(item => [item.id, item])).values());
-
   const p = profile!;
   const fullName = p.fullName || "Vault Owner";
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner Section */}
+      {/* Hero Banner */}
       <div className="relative h-[350px] md:h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
@@ -198,11 +191,10 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-16">
-        {/* Identity Hub Sidebar */}
         <div className="lg:col-span-4 space-y-12">
           <Card className="glass-card border-none bg-white/[0.02]">
             <CardHeader className="pb-2 border-b border-white/5">
-              <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Contact & Reach</CardTitle>
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Contact Hub</CardTitle>
             </CardHeader>
             <CardContent className="space-y-8 pt-6">
               {p.email && (
@@ -223,7 +215,7 @@ export default function PublicProfileView() {
               )}
               {uniqueLinks.length > 0 && (
                 <div className="pt-4 border-t border-white/5 space-y-3">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-4">Professional Networks</p>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-4">Networks</p>
                   {uniqueLinks.map((link) => (
                     <a key={link.id} href={link.url} target="_blank" rel="noopener" className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-primary/5 transition-smooth group">
                       <span className="text-xs font-bold uppercase tracking-widest">{link.platform}</span>
@@ -236,11 +228,10 @@ export default function PublicProfileView() {
           </Card>
         </div>
 
-        {/* Main Professional Feed */}
         <div className="lg:col-span-8 space-y-24">
           {p.bio && (
             <section className="space-y-8">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Executive Summary</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Summary</h2>
               <p className="text-2xl md:text-3xl font-medium leading-relaxed italic text-foreground opacity-90">
                 "{p.bio}"
               </p>
@@ -249,7 +240,7 @@ export default function PublicProfileView() {
 
           {uniqueExperience.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Experience</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Experience</h2>
               <div className="space-y-12">
                 {uniqueExperience.map((exp) => (
                   <div key={exp.id} className="relative pl-10 border-l-2 border-primary/20">
@@ -276,7 +267,7 @@ export default function PublicProfileView() {
 
           {uniqueProjectsAndProducts.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects & Products</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Projects & Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {uniqueProjectsAndProducts.map((proj) => (
                   <Card key={proj.id} className="glass-card border-none bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-smooth h-full flex flex-col">
@@ -304,7 +295,7 @@ export default function PublicProfileView() {
                       {proj.url && (
                         <Button asChild size="sm" variant="secondary" className="w-full text-[10px] font-black">
                           <a href={proj.url} target="_blank" rel="noopener">
-                            <ExternalLink className="w-3.5 h-3.5 mr-2" /> LIVE PREVIEW
+                            <ExternalLink className="w-3.5 h-3.5 mr-2" /> LIVE VIEW
                           </a>
                         </Button>
                       )}
@@ -317,7 +308,7 @@ export default function PublicProfileView() {
 
           {uniqueEducation.length > 0 && (
             <section className="space-y-10">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Education</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
               <div className="space-y-12">
                 {uniqueEducation.map((edu) => (
                   <div key={edu.id} className="relative pl-10 border-l-2 border-accent/20">
