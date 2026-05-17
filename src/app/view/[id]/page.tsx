@@ -30,7 +30,7 @@ import Image from "next/image";
  * @fileOverview Professional Vault Public Mirror (Optimized Render-Time Identity Lock)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
  * Projects and Products are positioned at the bottom of the layout.
- * Hero section optimized for full profile picture visibility.
+ * Hero section optimized for full profile picture visibility, specifically preventing hair clipping on mobile.
  */
 
 export default function PublicProfileView() {
@@ -151,16 +151,22 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner (Height increased for mobile to prevent clipping) */}
-      <div className="relative min-h-[500px] md:h-[450px] overflow-hidden">
+      {/* Hero Banner (Optimized for full identity visibility) */}
+      <div className="relative min-h-[550px] md:min-h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-center md:justify-end pb-12 pt-16 md:pt-0 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-start md:justify-end pb-12 pt-24 md:pt-0 relative z-10">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-8 w-full text-center md:text-left">
             <div className="relative shrink-0 transition-smooth hover:scale-105">
-              <div className="w-40 h-40 md:w-48 md:h-48 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
+              <div className="w-44 h-44 md:w-52 md:h-52 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
                 {p.avatarUrl ? (
-                  <Image src={p.avatarUrl} alt={fullName} fill className="object-cover" priority />
+                  <Image 
+                    src={p.avatarUrl} 
+                    alt={fullName} 
+                    fill 
+                    className="object-cover object-top" 
+                    priority 
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-secondary">
                     <UserIcon className="w-20 h-20 text-muted-foreground/30" />
