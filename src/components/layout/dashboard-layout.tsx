@@ -21,7 +21,6 @@ import {
   GraduationCap, 
   Briefcase, 
   Link as LinkIcon, 
-  Sparkles, 
   LayoutDashboard, 
   Settings, 
   LogOut,
@@ -50,7 +49,6 @@ const NAV_ITEMS = [
   { name: "Job", href: "/dashboard/job", icon: Building2 },
   { name: "Resumes", href: "/dashboard/resumes", icon: Files },
   { name: "Portfolios & Links", href: "/dashboard/links", icon: LinkIcon },
-  { name: "Ai Summary", href: "/dashboard/ai-summary", icon: Sparkles },
   { name: "Portfolio Link", href: "/dashboard/share", icon: Share2 },
 ];
 
