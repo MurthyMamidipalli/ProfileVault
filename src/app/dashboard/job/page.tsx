@@ -126,6 +126,7 @@ export default function JobPage() {
                       value={formData.company}
                       onChange={e => setFormData({ ...formData, company: e.target.value })}
                       className="pl-10 bg-background/50"
+                      required
                     />
                   </div>
                 </div>
@@ -139,6 +140,7 @@ export default function JobPage() {
                       value={formData.role}
                       onChange={e => setFormData({ ...formData, role: e.target.value })}
                       className="pl-10 bg-background/50"
+                      required
                     />
                   </div>
                 </div>
@@ -152,6 +154,7 @@ export default function JobPage() {
                       value={formData.joiningDate}
                       onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
                       className="pl-10 bg-background/50"
+                      required
                     />
                   </div>
                 </div>

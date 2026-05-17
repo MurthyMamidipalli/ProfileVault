@@ -121,6 +121,8 @@ export default function ExperiencePage() {
     );
   }
 
+  const experienceList = profile.experience || [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -249,7 +251,7 @@ export default function ExperiencePage() {
       </div>
 
       <div className="space-y-6">
-        {profile.experience.map((exp) => (
+        {experienceList.map((exp) => (
           <Card key={exp.id} className="glass-card overflow-hidden group hover:border-accent/50 transition-smooth">
             <div className="flex flex-col">
               <div className="p-6 space-y-4">
@@ -311,7 +313,7 @@ export default function ExperiencePage() {
             </div>
           </Card>
         ))}
-        {profile.experience.length === 0 && (
+        {experienceList.length === 0 && (
           <div className="py-20 text-center border-2 border-dashed border-border rounded-xl bg-white/5">
             <div className="flex flex-col items-center gap-4">
               <div className="p-4 bg-secondary rounded-full">

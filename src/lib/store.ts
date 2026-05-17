@@ -87,7 +87,7 @@ export interface UserProfile {
   jobs: JobEntry[];
   sharedId?: string;
   lastSyncedAt?: string;
-  name?: string; // Fallback for migration
+  name?: string;
 }
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -112,10 +112,6 @@ export const DEFAULT_PROFILE: UserProfile = {
   coverLetters: []
 };
 
-/**
- * ZUSTAND STORE: NO LOCAL PERSISTENCE.
- * Cloud (Firestore) is the absolute source of truth.
- */
 interface ProfileStore {
   profile: UserProfile;
   _hasHydrated: boolean;
@@ -146,7 +142,7 @@ interface ProfileStore {
 }
 
 const generateId = () => {
-  return Math.random().toString(36).substring(2, 15);
+  return crypto.randomUUID?.() || Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
 };
 
 export const useProfileStore = create<ProfileStore>((set) => ({
@@ -157,10 +153,21 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   setProfile: (updates) => set((state) => ({ 
     profile: { ...state.profile, ...updates } 
   })),
-  replaceProfile: (fullProfile) => set({ 
-    profile: { ...DEFAULT_PROFILE, ...fullProfile },
+  replaceProfile: (fullProfile) => set((state) => ({ 
+    profile: { 
+      ...DEFAULT_PROFILE, 
+      ...fullProfile,
+      // Ensure arrays are initialized even if cloud returns null/undefined
+      jobs: fullProfile.jobs || [],
+      education: fullProfile.education || [],
+      experience: fullProfile.experience || [],
+      projects: fullProfile.projects || [],
+      portfolioLinks: fullProfile.portfolioLinks || [],
+      resumes: fullProfile.resumes || [],
+      coverLetters: fullProfile.coverLetters || []
+    },
     isCloudLoaded: true 
-  }),
+  })),
   addEducation: (entry) => set((state) => ({
     profile: {
       ...state.profile,
