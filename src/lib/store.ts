@@ -141,9 +141,7 @@ interface ProfileStore {
 }
 
 const generateId = () => {
-  return typeof crypto !== 'undefined' && crypto.randomUUID 
-    ? crypto.randomUUID() 
-    : Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
 };
 
 export const useProfileStore = create<ProfileStore>((set) => ({
@@ -156,18 +154,17 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   replaceProfile: (fullProfile) => set((state) => {
     const incoming = fullProfile || DEFAULT_PROFILE;
     
-    // Ensure all required arrays exist and handle legacy name field
     const merged: UserProfile = { 
       ...DEFAULT_PROFILE, 
       ...incoming,
       fullName: incoming.fullName || incoming.name || '',
-      jobs: Array.isArray(incoming.jobs) ? incoming.jobs : [],
-      education: Array.isArray(incoming.education) ? incoming.education : [],
-      experience: Array.isArray(incoming.experience) ? incoming.experience : [],
-      projects: Array.isArray(incoming.projects) ? incoming.projects : [],
-      portfolioLinks: Array.isArray(incoming.portfolioLinks) ? incoming.portfolioLinks : [],
-      resumes: Array.isArray(incoming.resumes) ? incoming.resumes : [],
-      coverLetters: Array.isArray(incoming.coverLetters) ? incoming.coverLetters : []
+      jobs: Array.isArray(incoming.jobs) ? [...incoming.jobs] : [],
+      education: Array.isArray(incoming.education) ? [...incoming.education] : [],
+      experience: Array.isArray(incoming.experience) ? [...incoming.experience] : [],
+      projects: Array.isArray(incoming.projects) ? [...incoming.projects] : [],
+      portfolioLinks: Array.isArray(incoming.portfolioLinks) ? [...incoming.portfolioLinks] : [],
+      resumes: Array.isArray(incoming.resumes) ? [...incoming.resumes] : [],
+      coverLetters: Array.isArray(incoming.coverLetters) ? [...incoming.coverLetters] : []
     };
     
     return { 
