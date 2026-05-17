@@ -30,7 +30,9 @@ import {
   Share2,
   Building2,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  CloudOff,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,18 +43,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useProfileStore } from "@/lib/store";
 
 const NAV_ITEMS = [
-  { name: "overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Personal profile", href: "/dashboard/profile", icon: User },
+  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Personal Profile", href: "/dashboard/profile", icon: User },
   { name: "Education", href: "/dashboard/education", icon: GraduationCap },
   { name: "Projects", href: "/dashboard/projects", icon: FolderCode },
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
-  { name: "Job", href: "/dashboard/job", icon: Building2 },
-  { name: "Resumes", href: "/dashboard/resumes", icon: Files },
+  { name: "Current Job", href: "/dashboard/job", icon: Building2 },
+  { name: "Document Vault", href: "/dashboard/resumes", icon: Files },
   { name: "Portfolios & Links", href: "/dashboard/links", icon: LinkIcon },
-  { name: "Portfolio Link", href: "/dashboard/share", icon: Share2 },
+  { name: "Public Share", href: "/dashboard/share", icon: Share2 },
 ];
 
-function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  syncStatus?: 'synced' | 'syncing' | 'error';
+}
+
+function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
@@ -70,7 +77,6 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isSynced = !!profile.lastSyncedAt;
   const displayName = profile.fullName || profile.name || "Vault Owner";
 
   return (
@@ -159,16 +165,22 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             </h2>
           </div>
           <div className="flex items-center gap-6">
-             <div className="hidden lg:flex flex-col items-end gap-0.5">
+             <div className="hidden lg:flex flex-col items-end gap-1">
                <span className="text-sm font-bold text-foreground leading-none">{displayName}</span>
                <div className="flex items-center gap-1.5">
-                 {isSynced ? (
+                 {syncStatus === 'synced' && (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
                      <CheckCircle2 className="w-3 h-3" /> Cloud Synced
                    </span>
-                 ) : (
+                 )}
+                 {syncStatus === 'syncing' && (
                    <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                     <RefreshCw className="w-3 h-3 animate-spin" /> Fetching Vault...
+                     <RefreshCw className="w-3 h-3 animate-spin" /> Syncing Vault...
+                   </span>
+                 )}
+                 {syncStatus === 'error' && (
+                   <span className="text-[10px] text-destructive font-bold uppercase tracking-wider flex items-center gap-1">
+                     <AlertCircle className="w-3 h-3" /> Sync Failed
                    </span>
                  )}
                </div>
@@ -191,10 +203,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({ children, syncStatus }: DashboardLayoutProps) {
   return (
     <SidebarProvider defaultOpen={false}>
-      <DashboardLayoutInner>
+      <DashboardLayoutInner syncStatus={syncStatus}>
         {children}
       </DashboardLayoutInner>
     </SidebarProvider>

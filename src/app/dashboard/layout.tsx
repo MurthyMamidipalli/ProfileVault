@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
 import { useProfileStore, DEFAULT_PROFILE, UserProfile } from "@/lib/store";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, RefreshCw, CloudCheck } from "lucide-react";
 import { subscribeToProfile, saveProfile } from "@/firebase/services";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   } = useProfileStore();
   const router = useRouter();
   
-  // Ref-based state tracking to prevent echo-loops while typing
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error'>('synced');
+  
+  // Ref-based state tracking to prevent echo-loops
   const lastCloudDataRef = useRef<string | null>(null);
   const currentLocalRef = useRef(profile);
 
@@ -52,18 +54,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const localDataStr = JSON.stringify(currentLocalRef.current);
         
         // HYDRATION & SYNC LOGIC:
-        // Only apply cloud data if:
-        // A) It's the first time we're loading (isCloudLoaded is false)
-        // B) The cloud data is different from our last known baseline AND our local changes are already in sync with that baseline
+        // We only overwrite local state if:
+        // A) We haven't loaded from cloud yet
+        // B) The cloud data is genuinely different from our last known baseline AND we have no local pending changes
         const isExternalChange = cloudDataStr !== lastCloudDataRef.current && localDataStr === lastCloudDataRef.current;
 
         if (!isCloudLoaded || isExternalChange) {
           console.log(`[Sync] Applying Cloud -> Local mirror for UID: ${user.uid}`);
           lastCloudDataRef.current = cloudDataStr;
           replaceProfile(cloudData || DEFAULT_PROFILE);
-        } else if (cloudDataStr !== lastCloudDataRef.current) {
-          // The cloud changed, but we have un-saved local changes. We wait for our local changes to be saved.
-          console.log(`[Sync] Cloud update acknowledged. Suppressing overwrite to preserve local edits.`);
         }
         
         setIsCloudLoaded(true);
@@ -77,41 +76,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [user, db, isCloudLoaded, replaceProfile, setIsCloudLoaded]);
 
-  // 3. Debounced Auto-Save (Write Path)
+  // 3. Debounced Auto-Save (Write Path) - Faster 500ms debounce
   useEffect(() => {
-    // CRITICAL: NEVER save until cloud is loaded to prevent blank overwrites
     if (!user || !db || !isCloudLoaded) return;
 
-    // Create a version of the profile without the 'lastSyncedAt' for comparison to prevent infinite loop
+    // Compare local vs last known baseline (ignoring the sync timestamp itself)
     const profileToCompare = { ...profile, lastSyncedAt: undefined };
     const currentLocalStr = JSON.stringify(profileToCompare);
     
-    // Also strip 'lastSyncedAt' from the baseline for accurate comparison
-    const lastCloudBaseline = lastCloudDataRef.current 
-      ? JSON.stringify({ ...JSON.parse(lastCloudDataRef.current), lastSyncedAt: undefined })
+    const parsedLastCloud = lastCloudDataRef.current ? JSON.parse(lastCloudDataRef.current) : null;
+    const lastCloudBaseline = parsedLastCloud 
+      ? JSON.stringify({ ...parsedLastCloud, lastSyncedAt: undefined })
       : null;
 
-    // Skip if local state matches the last known cloud state (no change)
     if (currentLocalStr === lastCloudBaseline) {
+      setSyncStatus('synced');
       return;
     }
+
+    setSyncStatus('syncing');
 
     const timer = setTimeout(async () => {
       try {
         const syncTimestamp = new Date().toISOString();
         const profileToSync = { ...profile, lastSyncedAt: syncTimestamp };
         
-        console.log(`[Firestore] Syncing change (Items: ${profileToSync.projects?.length || 0} Projects, ${profileToSync.jobs?.length || 0} Jobs)`);
+        console.log(`[Firestore] Syncing change (Projects: ${profileToSync.projects?.length || 0})`);
         
         await saveProfile(db, user.uid, profileToSync);
         
-        // Update the baseline AFTER successful save to match what we just sent
         lastCloudDataRef.current = JSON.stringify(profileToSync);
         markSynced(syncTimestamp);
+        setSyncStatus('synced');
       } catch (error) {
         console.error("[Firestore] Sync failed:", error);
+        setSyncStatus('error');
       }
-    }, 2000); // 2s debounce
+    }, 500); // 500ms for near-instant persistence
 
     return () => clearTimeout(timer);
   }, [profile, user, db, isCloudLoaded, markSynced]);
@@ -136,7 +137,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ShieldCheck className="w-5 h-5 text-accent" />
               Verifying Professional Vault
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Syncing your secure records...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Establishing secure link...</p>
           </div>
         </div>
       </div>
@@ -145,5 +146,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   if (!user) return null;
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <DashboardLayout syncStatus={syncStatus}>
+      {children}
+    </DashboardLayout>
+  );
 }
