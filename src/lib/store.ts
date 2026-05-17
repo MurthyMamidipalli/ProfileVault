@@ -110,6 +110,7 @@ interface ProfileStore {
   setIsCloudLoaded: (state: boolean) => void;
   setProfile: (profile: Partial<UserProfile>) => void;
   setJobs: (jobs: JobEntry[]) => void;
+  setEducation: (education: EducationEntry[]) => void;
   setExperience: (exp: ExperienceEntry[]) => void;
   setProjects: (proj: ProjectEntry[]) => void;
   setResumes: (resumes: ResumeDocument[]) => void;
@@ -127,6 +128,9 @@ export const useProfileStore = create<ProfileStore>((set) => ({
   })),
   setJobs: (jobs) => set((state) => ({
     profile: { ...state.profile, jobs }
+  })),
+  setEducation: (education) => set((state) => ({
+    profile: { ...state.profile, education }
   })),
   setExperience: (experience) => set((state) => ({
     profile: { ...state.profile, experience }

@@ -9,6 +9,7 @@ import { Loader2, ShieldCheck } from "lucide-react";
 import { 
   subscribeToProfileInfo, 
   subscribeToJobs, 
+  subscribeToEducation,
   subscribeToExperience, 
   subscribeToProjects,
   subscribeToResumes,
@@ -23,6 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     profile,
     setProfile, 
     setJobs, 
+    setEducation,
     setExperience, 
     setProjects,
     setResumes,
@@ -56,6 +58,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setJobs(data || []);
     });
 
+    const unsubEducation = subscribeToEducation(db, user.uid, (data) => {
+      setEducation(data || []);
+    });
+
     const unsubExp = subscribeToExperience(db, user.uid, (data) => {
       setExperience(data || []);
     });
@@ -82,13 +88,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => {
       unsubProfile();
       unsubJobs();
+      unsubEducation();
       unsubExp();
       unsubProjects();
       unsubResumes();
       unsubCoverLetters();
       clearTimeout(timer);
     };
-  }, [user, db, setProfile, setJobs, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded, markSynced]);
+  }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setIsCloudLoaded, markSynced]);
 
   // 3. Auto-Mirror to Public Vault
   useEffect(() => {

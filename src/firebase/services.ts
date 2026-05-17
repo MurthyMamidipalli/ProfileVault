@@ -14,7 +14,7 @@ import {
   orderBy,
   Unsubscribe
 } from 'firebase/firestore';
-import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument } from '@/lib/store';
+import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry } from '@/lib/store';
 
 // --- Logging Helpers ---
 const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
@@ -83,6 +83,49 @@ export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: Job
   });
 }
 
+// --- Education (Sub-collection) ---
+export async function addEducation(db: Firestore, uid: string, data: Omit<EducationEntry, 'id'>) {
+  try {
+    const colRef = collection(db, 'users', uid, 'education');
+    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
+    log('add education', `users/${uid}/education/${docRef.id}`);
+    return docRef.id;
+  } catch (error) {
+    logError('add education', `users/${uid}/education`, error);
+    throw error;
+  }
+}
+
+export async function updateEducation(db: Firestore, uid: string, eduId: string, data: Partial<EducationEntry>) {
+  try {
+    const docRef = doc(db, 'users', uid, 'education', eduId);
+    await updateDoc(docRef, data);
+    log('update education', `users/${uid}/education/${eduId}`);
+  } catch (error) {
+    logError('update education', `users/${uid}/education/${eduId}`, error);
+    throw error;
+  }
+}
+
+export async function deleteEducation(db: Firestore, uid: string, eduId: string) {
+  try {
+    const docRef = doc(db, 'users', uid, 'education', eduId);
+    await deleteDoc(docRef);
+    log('delete education', `users/${uid}/education/${eduId}`);
+  } catch (error) {
+    logError('delete education', `users/${uid}/education/${eduId}`, error);
+    throw error;
+  }
+}
+
+export function subscribeToEducation(db: Firestore, uid: string, onUpdate: (data: EducationEntry[]) => void): Unsubscribe {
+  const colRef = collection(db, 'users', uid, 'education');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => {
+    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as EducationEntry)));
+  });
+}
+
 // --- Experience (Sub-collection) ---
 export async function addExperience(db: Firestore, uid: string, data: Omit<ExperienceEntry, 'id'>) {
   try {
@@ -110,7 +153,7 @@ export async function updateExperience(db: Firestore, uid: string, expId: string
 export async function deleteExperience(db: Firestore, uid: string, expId: string) {
   try {
     const docRef = doc(db, 'users', uid, 'experience', expId);
-    await deleteDoc(docRef);
+    await deleteDoc(ref);
     log('delete experience', `users/${uid}/experience/${expId}`);
   } catch (error) {
     logError('delete experience', `users/${uid}/experience/${expId}`, error);

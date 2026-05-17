@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProfileStore, EducationEntry } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,13 +17,20 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Plus, Trash2, Calendar, Pencil } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Calendar, Pencil, Loader2 } from "lucide-react";
+import { useUser, useFirestore } from "@/firebase";
+import { addEducation, updateEducation, deleteEducation } from "@/firebase/services";
 
 export default function EducationPage() {
-  const { profile, addEducation, removeEducation, updateEducation } = useProfileStore();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { profile } = useProfileStore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState<Omit<EducationEntry, 'id'>>({
     institution: '',
     degree: '',
@@ -33,6 +39,10 @@ export default function EducationPage() {
     endDate: '',
     description: ''
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleOpen = (entry?: EducationEntry) => {
     if (entry) {
@@ -59,17 +69,45 @@ export default function EducationPage() {
     setIsOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateEducation(editingId, formData);
-      toast({ title: "Updated", description: "Education record updated." });
-    } else {
-      addEducation(formData);
-      toast({ title: "Added", description: "New education record added." });
+    if (!user || !db) return;
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        await updateEducation(db, user.uid, editingId, formData);
+        toast({ title: "Updated", description: "Education record updated." });
+      } else {
+        await addEducation(db, user.uid, formData);
+        toast({ title: "Added", description: "New education record added." });
+      }
+      setIsOpen(false);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not persist changes." });
+    } finally {
+      setIsSaving(false);
     }
-    setIsOpen(false);
   };
+
+  const handleDelete = async (id: string) => {
+    if (!user || !db) return;
+    try {
+      await deleteEducation(db, user.uid, id);
+      toast({ title: "Deleted", description: "Education record removed." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Delete Failed", description: "Could not remove record." });
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const educationList = profile.education || [];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -90,7 +128,7 @@ export default function EducationPage() {
               <DialogTitle>{editingId ? 'Edit' : 'Add'} Education</DialogTitle>
               <DialogDescription>Enter the details of your educational institution and degree.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <form onSubmit={handleSave} className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label>Institution</Label>
@@ -147,7 +185,9 @@ export default function EducationPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit">{editingId ? 'Save Changes' : 'Add Record'}</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (editingId ? 'Save Changes' : 'Add Record')}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -155,7 +195,7 @@ export default function EducationPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {profile.education.map((edu) => (
+        {educationList.map((edu) => (
           <Card key={edu.id} className="glass-card overflow-hidden group hover:border-primary/50 transition-smooth">
             <CardHeader className="bg-white/5 flex flex-row items-start justify-between">
               <div className="flex items-center gap-3">
@@ -171,7 +211,7 @@ export default function EducationPage() {
                 <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => handleOpen(edu)}>
                   <Pencil className="w-4 h-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeEducation(edu.id)}>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(edu.id)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -195,7 +235,7 @@ export default function EducationPage() {
             </CardContent>
           </Card>
         ))}
-        {profile.education.length === 0 && (
+        {educationList.length === 0 && (
           <div className="md:col-span-2 py-20 text-center border-2 border-dashed border-border rounded-xl bg-white/5">
             <div className="flex flex-col items-center gap-4">
               <div className="p-4 bg-secondary rounded-full">
