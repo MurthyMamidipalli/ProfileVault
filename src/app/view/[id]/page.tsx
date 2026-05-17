@@ -1,11 +1,10 @@
-
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy, DocumentData } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { UserProfile } from "@/lib/store";
+import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, SocialLink, EducationEntry } from "@/lib/store";
 import { 
   Loader2, 
   MapPin, 
@@ -33,7 +32,14 @@ export default function PublicProfileView() {
   const params = useParams();
   const id = params?.id as string;
   const db = useFirestore();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  
+  const [profile, setProfile] = useState<Partial<UserProfile> | null>(null);
+  const [jobs, setJobs] = useState<JobEntry[]>([]);
+  const [experience, setExperience] = useState<ExperienceEntry[]>([]);
+  const [projects, setProjects] = useState<ProjectEntry[]>([]);
+  const [education, setEducation] = useState<EducationEntry[]>([]);
+  const [links, setLinks] = useState<SocialLink[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -45,30 +51,48 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    console.log(`[PublicView] Opening mirror for UID: ${id}`);
+    console.log(`[PublicView] Synchronizing distributed mirror for UID: ${id}`);
+    
+    // 1. Fetch thinned root profile (Basic metadata)
     const profileRef = doc(db, "shared-profiles", id);
-
-    const unsubscribe = onSnapshot(profileRef, (snapshot) => {
+    const unsubProfile = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data && data.profileData) {
-          console.log(`[PublicView] Vault Loaded Successfully`);
-          setProfile(data.profileData as UserProfile);
+          setProfile(data.profileData);
           setError(null);
-        } else {
-          setError("Vault content is restricted or empty.");
         }
       } else {
-        setError("Professional vault not found for this identifier.");
+        setError("Vault mirror not found or is strictly private.");
       }
       setLoading(false);
     }, (err) => {
-      console.error(`[PublicView] Access Error:`, err);
-      setError("Secure access denied or vault is private.");
+      setError("Secure access denied.");
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // 2. Fetch distributed sub-collections (Bypasses 1MB limit)
+    const fetchCollection = (type: string, setter: (data: any[]) => void) => {
+      const q = query(collection(db, "shared-profiles", id, type), orderBy('createdAt', 'desc'));
+      return onSnapshot(q, (snap) => {
+        setter(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.warn(`[PublicView] Could not load ${type}:`, err));
+    };
+
+    const unsubJobs = fetchCollection('jobs', setJobs);
+    const unsubExp = fetchCollection('experience', setExperience);
+    const unsubProj = fetchCollection('projects', setProjects);
+    const unsubEdu = fetchCollection('education', setEducation);
+    const unsubLinks = fetchCollection('portfolioLinks', setLinks);
+
+    return () => {
+      unsubProfile();
+      unsubJobs();
+      unsubExp();
+      unsubProj();
+      unsubEdu();
+      unsubLinks();
+    };
   }, [id, db, mounted]);
 
   if (!mounted) return null;
@@ -77,7 +101,7 @@ export default function PublicProfileView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Synchronizing Mirror...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground animate-pulse">Establishing Distributed Link...</p>
       </div>
     );
   }
@@ -88,7 +112,7 @@ export default function PublicProfileView() {
         <div className="p-6 bg-destructive/10 rounded-full border border-destructive/20">
           <AlertCircle className="w-12 h-12 text-destructive" />
         </div>
-        <h1 className="text-3xl font-bold">Vault Inaccessible</h1>
+        <h1 className="text-3xl font-bold">Vault Mirror Restricted</h1>
         <p className="text-muted-foreground max-w-sm mx-auto">{error}</p>
         <Button asChild variant="outline">
           <a href="/">Return Home</a>
@@ -101,11 +125,6 @@ export default function PublicProfileView() {
   const fullName = p.fullName || p.name || "Vault Owner";
   const bio = p.bio || "";
   const avatarUrl = p.avatarUrl || "";
-  const education = p.education || [];
-  const experience = p.experience || [];
-  const projects = p.projects || [];
-  const jobs = p.jobs || [];
-  const links = p.portfolioLinks || [];
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary/30">
@@ -311,7 +330,7 @@ export default function PublicProfileView() {
       <footer className="mt-32 pt-16 border-t border-white/5 text-center">
         <div className="flex flex-col items-center gap-4 opacity-20">
           <FolderCode className="w-6 h-6" />
-          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE VAULT MIRROR</span>
+          <span className="font-black text-[10px] uppercase tracking-[0.4em]">PROFILEVAULT SECURE DISTRIBUTED MIRROR</span>
         </div>
       </footer>
     </div>

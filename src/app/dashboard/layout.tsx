@@ -104,18 +104,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     };
   }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setPortfolioLinks, setIsCloudLoaded, markSynced]);
 
-  // 3. Auto-Mirror to Public Vault
+  // 3. Mirroring to Public Vault
+  // We no longer mirror the entire profile on every change to avoid the 1MB limit.
+  // Mutations are now mirrored atomically in the service layer.
+  // This pulse only updates root metadata.
   useEffect(() => {
     if (!user || !db || !isCloudLoaded) return;
     
     const timer = setTimeout(() => {
       publishToPublicVault(db, user.uid, profile).catch(err => {
-        console.error("Auto-mirror failed", err);
+        console.error("Root metadata sync failed", err);
       });
-    }, 2000);
+    }, 5000);
 
     return () => clearTimeout(timer);
-  }, [profile, user, db, isCloudLoaded]);
+  }, [profile.fullName, profile.bio, profile.avatarUrl, user, db, isCloudLoaded]);
 
   // 4. Cleanup on Logout
   useEffect(() => {
@@ -134,9 +137,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-center space-y-2">
             <h3 className="text-xl font-bold flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent" />
-              Initializing Professional Vault
+              Establishing Professional Link
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Establishing cloud mirror...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Synchronizing distributed vault...</p>
           </div>
         </div>
       </div>
