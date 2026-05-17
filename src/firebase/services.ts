@@ -14,7 +14,6 @@ import {
   query,
   orderBy,
   Unsubscribe,
-  Timestamp,
   getDocs,
   writeBatch,
   deleteField
@@ -23,11 +22,8 @@ import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, E
 
 /**
  * @fileOverview Atomic Firestore Service Layer
- * Handles multi-item persistence with a distributed public mirroring system.
+ * Hardened to prevent duplication and legacy array leakage.
  */
-
-const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
-const logError = (action: string, path: string, error: any) => console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
 
 // --- Mirror Helpers ---
 async function mirrorToPublic(db: Firestore, uid: string, type: string, id: string, data: any, isDelete = false) {
@@ -43,41 +39,46 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
       }, { merge: true });
     }
   } catch (err) {
-    console.error(`[Mirror Error] Failed to mirror ${type} to public vault:`, err);
+    console.error(`[Mirror Error] Failed to mirror ${type}:`, err);
   }
 }
 
 /**
- * Performs a full reconciliation between the private vault and public mirror.
- * It deletes orphaned records in the public mirror that no longer exist in the private vault.
+ * Reconciles the public shared vault to perfectly match the private vault.
+ * Explicitly removes legacy root-level arrays that cause duplication.
  */
 export async function forceMirrorAll(db: Firestore, uid: string, profile: UserProfile) {
-  console.log("[Sync] Initializing Professional Vault Reconciliation...");
+  console.log("[Sync] Deep Reconciliation Start...");
   
-  const collections = [
+  const subCollections = [
     'jobs', 'education', 'experience', 'projects', 'portfolioLinks', 'resumes', 'coverLetters'
   ];
 
   try {
-    // 1. Mirror Basic Profile Metadata & Aggressively Purge Legacy Array Fields
+    // 1. MIRROR BASIC METADATA & PURGE LEGACY ARRAYS
+    // This step is critical: we use deleteField() to wipe out any old array data at the root.
     const profileRef = doc(db, 'shared-profiles', uid);
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profile;
     
-    // We MUST use deleteField() to ensure old data isn't lingering in the root doc
     await setDoc(profileRef, { 
       profileData: basicInfo,
       publishedAt: serverTimestamp(),
+      // Hard purge of legacy root fields
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),
       portfolioLinks: deleteField(),
       resumes: deleteField(),
       coverLetters: deleteField(),
-      jobs: deleteField()
+      jobs: deleteField(),
+      // Also check for common capitalized versions just in case
+      Projects: deleteField(),
+      Experience: deleteField(),
+      Education: deleteField()
     }, { merge: true });
 
-    // 2. Reconcile each sub-collection to ensure perfect parity
-    for (const colName of collections) {
+    // 2. RECONCILE SUB-COLLECTIONS
+    for (const colName of subCollections) {
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
       const privateIds = new Set(privateSnap.docs.map(d => d.id));
@@ -86,27 +87,24 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       const publicSnap = await getDocs(publicColRef);
 
       const batch = writeBatch(db);
-      let deleteCount = 0;
+      let removed = 0;
       
-      // Step A: Delete records that exist in the mirror but NOT in your private vault
+      // Remove any items in public mirror that don't exist in private
       publicSnap.docs.forEach(doc => {
         if (!privateIds.has(doc.id)) {
           batch.delete(doc.ref);
-          deleteCount++;
+          removed++;
         }
       });
       
-      if (deleteCount > 0) {
-        await batch.commit();
-        console.log(`[Sync] Purged ${deleteCount} orphaned records from public ${colName}`);
-      }
+      if (removed > 0) await batch.commit();
 
-      // Step B: Refresh/Upload all valid records to ensure they are current
+      // Refresh all valid records
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
     }
-    console.log("[Sync] Reconciliation Complete. Public mirror is now identical to private vault.");
+    console.log("[Sync] Reconciliation Complete. Duplicates purged.");
   } catch (error) {
     console.error("[Sync] Reconciliation Failed:", error);
     throw error;
@@ -115,7 +113,6 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
 
 // --- Profile Info ---
 export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<UserProfile>) {
-  const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
@@ -123,70 +120,43 @@ export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<
     
     await setDoc(ref, updateData, { merge: true });
     
-    // Mirror metadata to root shared profile
+    // Mirror basic metadata to root shared profile
     await setDoc(doc(db, 'shared-profiles', uid), { 
       profileData: updateData, 
       publishedAt: serverTimestamp() 
     }, { merge: true });
-    
-    log('save profile', path);
   } catch (error) {
-    logError('save profile', path, error);
     throw error;
   }
 }
 
 export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (data: any) => void): Unsubscribe {
   const ref = doc(db, 'users', uid, 'profile', 'basic');
-  return onSnapshot(ref, (snap) => {
-    onUpdate(snap.exists() ? snap.data() : null);
-  });
+  return onSnapshot(ref, (snap) => onUpdate(snap.exists() ? snap.data() : null));
 }
 
 // --- CRUD Factory ---
 async function addItem(db: Firestore, uid: string, collectionName: string, data: any) {
-  try {
-    const colRef = collection(db, 'users', uid, collectionName);
-    const timestamp = serverTimestamp();
-    const docData = { ...data, createdAt: timestamp, updatedAt: timestamp };
-    const docRef = await addDoc(colRef, docData);
-    
-    await mirrorToPublic(db, uid, collectionName, docRef.id, docData);
-    
-    log(`add ${collectionName}`, docRef.path);
-    return docRef.id;
-  } catch (error) {
-    logError(`add ${collectionName}`, `users/${uid}/${collectionName}`, error);
-    throw error;
-  }
+  const colRef = collection(db, 'users', uid, collectionName);
+  const timestamp = serverTimestamp();
+  const docData = { ...data, createdAt: timestamp, updatedAt: timestamp };
+  const docRef = await addDoc(colRef, docData);
+  await mirrorToPublic(db, uid, collectionName, docRef.id, docData);
+  return docRef.id;
 }
 
 async function updateItem(db: Firestore, uid: string, collectionName: string, id: string, data: any) {
-  try {
-    const docRef = doc(db, 'users', uid, collectionName, id);
-    const timestamp = serverTimestamp();
-    const updateData = { ...data, updatedAt: timestamp };
-    
-    await updateDoc(docRef, updateData);
-    await mirrorToPublic(db, uid, collectionName, id, updateData);
-    
-    log(`update ${collectionName}`, docRef.path);
-  } catch (error) {
-    logError(`update ${collectionName}`, `users/${uid}/${collectionName}/${id}`, error);
-    throw error;
-  }
+  const docRef = doc(db, 'users', uid, collectionName, id);
+  const timestamp = serverTimestamp();
+  const updateData = { ...data, updatedAt: timestamp };
+  await updateDoc(docRef, updateData);
+  await mirrorToPublic(db, uid, collectionName, id, updateData);
 }
 
 async function deleteItem(db: Firestore, uid: string, collectionName: string, id: string) {
-  try {
-    const docRef = doc(db, 'users', uid, collectionName, id);
-    await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, collectionName, id, null, true);
-    log(`delete ${collectionName}`, docRef.path);
-  } catch (error) {
-    logError(`delete ${collectionName}`, `users/${uid}/${collectionName}/${id}`, error);
-    throw error;
-  }
+  const docRef = doc(db, 'users', uid, collectionName, id);
+  await deleteDoc(docRef);
+  await mirrorToPublic(db, uid, collectionName, id, null, true);
 }
 
 // --- Professional Services ---
@@ -246,13 +216,7 @@ export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (d
 }
 
 export async function publishToPublicVault(db: Firestore, uid: string, profileData: UserProfile) {
-  try {
-    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profileData;
-    const ref = doc(db, 'shared-profiles', uid);
-    await setDoc(ref, { profileData: basicInfo, publishedAt: serverTimestamp() }, { merge: true });
-    log('publish metadata', `shared-profiles/${uid}`);
-  } catch (error) {
-    logError('publish profile', `shared-profiles/${uid}`, error);
-    throw error;
-  }
+  const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profileData;
+  const ref = doc(db, 'shared-profiles', uid);
+  await setDoc(ref, { profileData: basicInfo, publishedAt: serverTimestamp() }, { merge: true });
 }
