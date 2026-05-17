@@ -243,7 +243,7 @@ export default function ExperiencePage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit">{editingId ? 'Save Changes' : 'Add Record'}</Button>
+                <Button type="submit">Add Record</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -297,11 +297,7 @@ export default function ExperiencePage() {
                       {exp.projectLinks.map((link) => (
                         <Button key={link.id} variant="outline" size="sm" asChild className="bg-white/5 hover:bg-white/10 h-8">
                           <a href={link.url} target="_blank" rel="noopener noreferrer">
-                            {link.name.toLowerCase().includes('github') ? (
-                              <Github className="w-3.5 h-3.5 mr-2" />
-                            ) : (
-                              <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                            )}
+                            <ExternalLink className="w-3.5 h-3.5 mr-2" />
                             {link.name}
                           </a>
                         </Button>

@@ -31,7 +31,6 @@ import {
   Upload, 
   Link as LinkIcon,
   FileSearch,
-  AlertCircle,
   Loader2,
   ScrollText,
   FolderOpen
@@ -166,7 +165,7 @@ export default function ResumesPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-headline font-bold flex items-center gap-3">
-            Document Vault
+            Documents
             <FolderOpen className="w-7 h-7 text-primary" />
           </h1>
           <p className="text-muted-foreground">Manage your professional CVs and targeted cover letters in secure cloud folders.</p>

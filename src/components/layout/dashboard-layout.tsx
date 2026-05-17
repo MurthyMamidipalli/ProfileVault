@@ -31,7 +31,6 @@ import {
   Building2,
   CheckCircle2,
   RefreshCw,
-  CloudOff,
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
@@ -49,7 +48,7 @@ const NAV_ITEMS = [
   { name: "Projects", href: "/dashboard/projects", icon: FolderCode },
   { name: "Experience", href: "/dashboard/experience", icon: Briefcase },
   { name: "Current Job", href: "/dashboard/job", icon: Building2 },
-  { name: "Document Vault", href: "/dashboard/resumes", icon: Files },
+  { name: "Documents", href: "/dashboard/resumes", icon: Files },
   { name: "Portfolios & Links", href: "/dashboard/links", icon: LinkIcon },
   { name: "Public Share", href: "/dashboard/share", icon: Share2 },
 ];
