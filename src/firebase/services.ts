@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -66,6 +67,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
       'profileData.address': profile.address || '',
       'profileData.website': profile.website || '',
       'profileData.email': profile.email || '',
+      'profileData.phone': profile.phone || '',
       publishedAt: serverTimestamp(),
       // Nuclear Purge List (Aggressive cleanup of legacy schema)
       education: deleteField(),
@@ -100,7 +102,8 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
           avatarUrl: profile.avatarUrl || '',
           address: profile.address || '',
           website: profile.website || '',
-          email: profile.email || ''
+          email: profile.email || '',
+          phone: profile.phone || ''
         },
         publishedAt: serverTimestamp()
       });

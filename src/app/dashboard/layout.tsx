@@ -118,7 +118,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }, 10000); // 10s debounce to prevent unnecessary writes
 
     return () => clearTimeout(timer);
-  }, [profile.fullName, profile.bio, profile.avatarUrl, user, db, isCloudLoaded]);
+  }, [
+    profile.fullName, 
+    profile.bio, 
+    profile.avatarUrl, 
+    profile.phone, 
+    profile.address, 
+    profile.website, 
+    profile.email, 
+    user, 
+    db, 
+    isCloudLoaded
+  ]);
 
   // 4. Cleanup on Logout
   useEffect(() => {

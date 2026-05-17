@@ -10,6 +10,7 @@ import {
   Loader2, 
   MapPin, 
   Mail, 
+  Phone,
   GraduationCap, 
   ExternalLink,
   User as UserIcon,
@@ -149,7 +150,7 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner - Increased height for mobile to prevent picture clipping */}
+      {/* Hero Banner */}
       <div className="relative h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
@@ -200,6 +201,14 @@ export default function PublicProfileView() {
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Email</p>
                   <p className="text-sm font-bold flex items-center gap-2 truncate">
                     <Mail className="w-3.5 h-3.5 text-primary" /> {p.email}
+                  </p>
+                </div>
+              )}
+              {p.phone && (
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Phone</p>
+                  <p className="text-sm font-bold flex items-center gap-2 truncate">
+                    <Phone className="w-3.5 h-3.5 text-accent" /> {p.phone}
                   </p>
                 </div>
               )}
@@ -309,7 +318,6 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {/* Projects and Products Reordered to the Bottom */}
           {projectsOnly.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Technical Projects</h2>
