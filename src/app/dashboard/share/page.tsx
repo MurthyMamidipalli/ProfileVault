@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
-import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw, Database } from "lucide-react";
+import { Share2, Globe, Copy, ExternalLink, Loader2, CheckCircle2, Shield, Zap, RefreshCw, Database, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { forceMirrorAll } from "@/firebase/services";
 
@@ -41,16 +41,17 @@ export default function SharePage() {
     if (!user || !db) return;
     setSyncing(true);
     try {
+      // Performs a destructive cleanup of the mirror to match the private vault exactly
       await forceMirrorAll(db, user.uid, profile);
       toast({ 
-        title: "Vault Deep Sync Complete", 
-        description: "All professional records are now mirrored to your public vault." 
+        title: "Vault Reconciliation Complete", 
+        description: "Public mirror is now perfectly synchronized with your vault. Any orphaned data has been removed." 
       });
     } catch (err) {
       toast({ 
         variant: "destructive", 
         title: "Sync Failed", 
-        description: "Could not mirror data to the public vault." 
+        description: "Could not reconcile mirror. Please try again." 
       });
     } finally {
       setSyncing(false);
@@ -78,25 +79,29 @@ export default function SharePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        <div className="p-6 bg-accent/5 border border-accent/20 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-accent/20 rounded-full">
-            <Zap className="w-6 h-6 text-accent animate-pulse" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-accent">Real-Time Sync Active</p>
-            <p className="text-xs text-muted-foreground">Every edit you make is instantly saved and shared via your unique UID-based link.</p>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleForceSync} 
-            disabled={syncing}
-            className="border-accent/20 hover:bg-accent/10"
-          >
-            {syncing ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Database className="w-4 h-4 mr-2" />}
-            {syncing ? "Syncing..." : "Force Sync All"}
-          </Button>
-        </div>
+        <Card className="border-accent/20 bg-accent/5">
+          <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
+            <div className="p-4 bg-accent/20 rounded-full shrink-0">
+              <RefreshCw className={cn("w-8 h-8 text-accent", syncing && "animate-spin")} />
+            </div>
+            <div className="flex-1 text-center md:text-left space-y-2">
+              <h3 className="font-bold text-accent">Clean Sync & Reconciliation</h3>
+              <p className="text-sm text-muted-foreground">
+                If your public link is showing deleted data or is out of sync, use this button to perform a deep reconciliation. This will remove any orphaned records and ensure a perfect match.
+              </p>
+            </div>
+            <Button 
+              size="lg"
+              variant="default"
+              onClick={handleForceSync} 
+              disabled={syncing}
+              className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0 font-bold"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              {syncing ? "Reconciling..." : "Force Sync All"}
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card className="glass-card border-primary/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-12 -mr-8 -mt-8 bg-primary/10 rounded-full blur-3xl" />

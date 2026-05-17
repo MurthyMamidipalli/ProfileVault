@@ -16,7 +16,8 @@ import {
   Unsubscribe,
   Timestamp,
   getDocs,
-  writeBatch
+  writeBatch,
+  deleteField
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
@@ -35,8 +36,6 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
     if (isDelete) {
       await deleteDoc(ref);
     } else {
-      // Ensure we don't mirror massive blobs if they accidentally slip in, 
-      // though our UI handles base64 limits.
       await setDoc(ref, { 
         ...data, 
         updatedAt: serverTimestamp(),
@@ -60,8 +59,23 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
   ];
 
   try {
-    // 1. Mirror Basic Profile Metadata
-    await saveProfileInfo(db, uid, profile);
+    // 1. Mirror Basic Profile Metadata & Purge Legacy Fields
+    const profileRef = doc(db, 'shared-profiles', uid);
+    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profile;
+    
+    // Explicitly delete any legacy fields that might still be in the root doc
+    await setDoc(profileRef, { 
+      profileData: basicInfo,
+      publishedAt: serverTimestamp(),
+      // Ensure the root doc doesn't contain the arrays anymore (legacy cleanup)
+      education: deleteField(),
+      experience: deleteField(),
+      projects: deleteField(),
+      portfolioLinks: deleteField(),
+      resumes: deleteField(),
+      coverLetters: deleteField(),
+      jobs: deleteField()
+    }, { merge: true });
 
     // 2. Reconcile each sub-collection
     for (const colName of collections) {
@@ -85,9 +99,12 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
           deleteCount++;
         }
       });
-      if (deleteCount > 0) await batch.commit();
+      if (deleteCount > 0) {
+        await batch.commit();
+        console.log(`[Sync] Removed ${deleteCount} orphaned records from public ${colName}`);
+      }
 
-      // Upload/Refresh all private records to mirror
+      // Upload/Refresh all private records to mirror to ensure latest content
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }
@@ -104,7 +121,6 @@ export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<
   const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
-    // Extract only basic fields to avoid 1MB limit on the root doc
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
     const updateData = { ...cleanData, updatedAt: serverTimestamp() };
     
