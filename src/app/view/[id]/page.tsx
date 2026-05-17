@@ -18,7 +18,6 @@ import {
   Calendar,
   User as UserIcon,
   Building2,
-  Clock,
   ShieldCheck,
   AlertCircle,
   Globe,
@@ -55,7 +54,6 @@ export default function PublicProfileView() {
         const data = snapshot.data();
         console.log("[View] Full Document Data:", data);
         
-        // Critical requirement: Read from doc.data().profileData
         if (data && data.profileData) {
           console.log("[View] profileData found:", data.profileData);
           setProfile(data.profileData as UserProfile);
@@ -106,7 +104,7 @@ export default function PublicProfileView() {
     );
   }
 
-  // Unified data mapping with legacy fallbacks
+  // Unified data mapping
   const pData = profile;
   const fullName = pData?.fullName || pData?.name || "Vault Owner";
   const bio = pData?.bio || "";
@@ -118,6 +116,7 @@ export default function PublicProfileView() {
   const jobs = pData?.jobs || [];
   const projects = pData?.projects || [];
   const experience = pData?.experience || [];
+  const education = pData?.education || [];
   const portfolioLinks = pData?.portfolioLinks || [];
 
   return (
@@ -276,6 +275,38 @@ export default function PublicProfileView() {
                       {exp.description && (
                         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line opacity-80">
                           {exp.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {education.length > 0 && (
+            <section className="space-y-8">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Academic Background</h2>
+              <div className="space-y-10">
+                {education.map((edu) => (
+                  <div key={edu.id} className="relative pl-8 border-l-2 border-accent/20">
+                    <div className="absolute top-0 left-[-6px] w-2.5 h-2.5 rounded-full bg-accent" />
+                    <div className="space-y-2">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <h3 className="text-xl font-bold">{edu.institution}</h3>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">
+                          {edu.startDate.split('-')[0]} — {edu.endDate ? edu.endDate.split('-')[0] : 'PRESENT'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-accent" />
+                        <p className="text-sm font-bold text-foreground opacity-90">
+                          {edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
+                        </p>
+                      </div>
+                      {edu.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed opacity-70 italic border-l border-white/10 pl-4 py-1">
+                          {edu.description}
                         </p>
                       )}
                     </div>
