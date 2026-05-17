@@ -67,7 +67,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
     await setDoc(profileRef, { 
       profileData: basicInfo,
       publishedAt: serverTimestamp(),
-      // Ensure the root doc doesn't contain the arrays anymore (legacy cleanup)
+      // Force deletion of legacy array fields to prevent data mismatch
       education: deleteField(),
       experience: deleteField(),
       projects: deleteField(),
@@ -99,6 +99,7 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
           deleteCount++;
         }
       });
+      
       if (deleteCount > 0) {
         await batch.commit();
         console.log(`[Sync] Removed ${deleteCount} orphaned records from public ${colName}`);

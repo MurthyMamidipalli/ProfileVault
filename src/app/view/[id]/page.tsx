@@ -82,7 +82,6 @@ export default function PublicProfileView() {
           const getTime = (val: any) => {
             if (val instanceof Timestamp) return val.toMillis();
             if (val?.seconds) return val.seconds * 1000;
-            // Fallback for missing timestamps
             return 0;
           };
           const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
@@ -99,7 +98,7 @@ export default function PublicProfileView() {
 
     const unsubJobs = fetchCollection('jobs', setJobs);
     const unsubExp = fetchCollection('experience', setExperience);
-    const unsubProj = fetchCollection('projects', setProjects);
+    const unsubProj = fetchCollection('projects', setProjects); // FIXED: Was setJobs
     const unsubEdu = fetchCollection('education', setEducation);
     const unsubLinks = fetchCollection('portfolioLinks', setLinks);
 
