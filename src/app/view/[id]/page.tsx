@@ -30,6 +30,7 @@ import Image from "next/image";
  * @fileOverview Professional Vault Public Mirror (Optimized Render-Time Identity Lock)
  * Implements strict ID-based identity locking to ensure zero duplication of records.
  * Projects and Products are positioned at the bottom of the layout.
+ * Hero section optimized for full profile picture visibility.
  */
 
 export default function PublicProfileView() {
@@ -150,19 +151,19 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-primary/30">
-      {/* Hero Banner */}
-      <div className="relative h-[450px] overflow-hidden">
+      {/* Hero Banner (Height increased for mobile to prevent clipping) */}
+      <div className="relative min-h-[500px] md:h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 h-full flex items-center md:items-end pb-12 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 h-full flex flex-col justify-center md:justify-end pb-12 pt-16 md:pt-0 relative z-10">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-8 w-full text-center md:text-left">
-            <div className="relative shrink-0">
-              <div className="w-32 h-32 md:w-44 md:h-44 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
+            <div className="relative shrink-0 transition-smooth hover:scale-105">
+              <div className="w-40 h-40 md:w-48 md:h-48 rounded-3xl md:rounded-[2.5rem] bg-card border-4 border-background shadow-2xl overflow-hidden relative">
                 {p.avatarUrl ? (
-                  <Image src={p.avatarUrl} alt={fullName} fill className="object-cover" />
+                  <Image src={p.avatarUrl} alt={fullName} fill className="object-cover" priority />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-secondary">
-                    <UserIcon className="w-16 h-16 text-muted-foreground/30" />
+                    <UserIcon className="w-20 h-20 text-muted-foreground/30" />
                   </div>
                 )}
               </div>
@@ -171,7 +172,7 @@ export default function PublicProfileView() {
               </Badge>
             </div>
             <div className="space-y-4 pb-2">
-              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground">{fullName}</h1>
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground leading-tight">{fullName}</h1>
               <div className="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-3 text-muted-foreground font-semibold text-sm">
                 {uniqueJobs.length > 0 && (
                   <span className="flex items-center gap-2">
