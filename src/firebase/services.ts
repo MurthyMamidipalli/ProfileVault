@@ -46,7 +46,7 @@ export async function saveProfile(db: Firestore, uid: string, data: UserProfile)
 }
 
 /**
- * Load profile once (useful for initial hydration)
+ * Load profile once (initial hydration)
  */
 export async function loadProfile(db: Firestore, uid: string): Promise<UserProfile | null> {
   const ref = getProfileRef(db, uid);

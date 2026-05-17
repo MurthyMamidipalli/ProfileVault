@@ -44,26 +44,26 @@ export default function PublicProfileView() {
   useEffect(() => {
     if (!id || !db || !mounted) return;
 
-    console.log(`[View] Connecting to public vault: shared-profiles/${id}`);
+    console.log(`[View] Connecting to professional vault: shared-profiles/${id}`);
     const profileRef = doc(db, "shared-profiles", id);
 
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data && data.profileData) {
-          console.log(`[View] Vault Data Received`, data.profileData);
+          console.log(`[View] Data Mapping Success:`, data.profileData);
           setProfile(data.profileData as UserProfile);
           setError(null);
         } else {
-          setError("This vault is currently empty.");
+          setError("Professional profile is currently empty.");
         }
       } else {
-        setError("Professional vault not found for this ID.");
+        setError("Vault not found for this identifier.");
       }
       setLoading(false);
     }, (err) => {
-      console.error(`[View] Connection Error:`, err);
-      setError("Secure access restricted or vault is private.");
+      console.error(`[View] Access Error:`, err);
+      setError("Secure access restricted or profile is private.");
       setLoading(false);
     });
 
@@ -96,7 +96,6 @@ export default function PublicProfileView() {
     );
   }
 
-  // Safe data mapping
   const p = profile!;
   const fullName = p.fullName || p.name || "Vault Owner";
   const bio = p.bio || "";
@@ -109,7 +108,6 @@ export default function PublicProfileView() {
 
   return (
     <div className="min-h-screen bg-background pb-20 selection:bg-primary/30">
-      {/* Hero Header */}
       <div className="relative h-[350px] md:h-[450px] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
@@ -149,7 +147,6 @@ export default function PublicProfileView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 mt-16">
-        {/* Contact & Links Sidebar */}
         <div className="lg:col-span-4 space-y-12">
           <Card className="glass-card">
             <CardHeader className="pb-2 border-b border-white/5">
@@ -207,7 +204,6 @@ export default function PublicProfileView() {
           )}
         </div>
 
-        {/* Main Feed */}
         <div className="lg:col-span-8 space-y-16">
           {bio && (
             <section className="space-y-8">
@@ -220,7 +216,6 @@ export default function PublicProfileView() {
 
           <Separator className="opacity-10" />
 
-          {/* Career Experience Section */}
           {experience.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Professional Journey</h2>
@@ -248,7 +243,6 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {/* Education Section */}
           {education.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Academic Background</h2>
@@ -281,7 +275,6 @@ export default function PublicProfileView() {
             </section>
           )}
 
-          {/* Signature Projects Section */}
           {projects.length > 0 && (
             <section className="space-y-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Featured Projects</h2>

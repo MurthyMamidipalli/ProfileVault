@@ -41,7 +41,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !db) return;
 
-    console.log(`[Auth] Authenticated as: ${user.uid}`);
+    console.log(`[Auth] Authenticated as UID: ${user.uid}`);
 
     const unsubscribe = subscribeToProfile(
       db, 
@@ -115,17 +115,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   if (authLoading || (user && !isCloudLoaded)) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center gap-6">
           <div className="relative p-8 bg-card border border-primary/20 rounded-3xl shadow-2xl">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-bold flex items-center justify-center gap-2 text-foreground">
+            <h3 className="text-xl font-bold flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent" />
               Verifying Professional Vault
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Syncing your cross-device records...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Syncing your secure records...</p>
           </div>
         </div>
       </div>
