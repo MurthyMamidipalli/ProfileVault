@@ -16,12 +16,17 @@ import {
 } from 'firebase/firestore';
 import { UserProfile, JobEntry, ExperienceEntry, ProjectEntry, ResumeDocument, EducationEntry, SocialLink } from '@/lib/store';
 
+/**
+ * @fileOverview Atomic Firestore Service Layer
+ * Handles multi-item persistence using sub-collections to avoid the 1MB limit.
+ */
+
 // --- Logging Helpers ---
 const log = (action: string, path: string) => console.log(`[Firestore] ${action.toUpperCase()} success at ${path}`);
 const logError = (action: string, path: string, error: any) => console.error(`[Firestore Error] ${action.toUpperCase()} failed at ${path}:`, error);
 
 // --- Mirror Helpers ---
-// This ensures data is mirrored to the public path for "Unlimited" storage support
+// Distributed mirroring to public vault to bypass 1MB document limit
 async function mirrorToPublic(db: Firestore, uid: string, type: string, id: string, data: any, isDelete = false) {
   const path = `shared-profiles/${uid}/${type}/${id}`;
   try {
@@ -41,12 +46,14 @@ export async function saveProfileInfo(db: Firestore, uid: string, data: Partial<
   const path = `users/${uid}/profile/basic`;
   try {
     const ref = doc(db, 'users', uid, 'profile', 'basic');
-    const updateData = { ...data, updatedAt: serverTimestamp() };
+    // Ensure we don't accidentally save huge nested arrays to the basic profile doc
+    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...cleanData } = data as any;
+    const updateData = { ...cleanData, updatedAt: serverTimestamp() };
+    
     await setDoc(ref, updateData, { merge: true });
     
-    // Mirror basic info to the root of the shared profile (excluding large arrays)
-    const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = updateData as any;
-    await setDoc(doc(db, 'shared-profiles', uid), { profileData: basicInfo, publishedAt: serverTimestamp() }, { merge: true });
+    // Mirror basic metadata to the root of the shared profile
+    await setDoc(doc(db, 'shared-profiles', uid), { profileData: updateData, publishedAt: serverTimestamp() }, { merge: true });
     
     log('save profile', path);
   } catch (error) {
@@ -62,303 +69,115 @@ export function subscribeToProfileInfo(db: Firestore, uid: string, onUpdate: (da
   });
 }
 
-// --- Jobs (Sub-collection) ---
-export async function addJob(db: Firestore, uid: string, data: Omit<JobEntry, 'id'>) {
+// --- CRUD Factory for Sub-collections ---
+// Generic handler for multi-item sub-collections (Jobs, Education, Experience, Projects, Links)
+
+async function addItem(db: Firestore, uid: string, collectionName: string, data: any) {
   try {
-    const colRef = collection(db, 'users', uid, 'jobs');
+    const colRef = collection(db, 'users', uid, collectionName);
     const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, 'jobs', docRef.id, data);
-    log('add job', `users/${uid}/jobs/${docRef.id}`);
+    await mirrorToPublic(db, uid, collectionName, docRef.id, data);
+    log(`add ${collectionName}`, docRef.path);
     return docRef.id;
   } catch (error) {
-    logError('add job', `users/${uid}/jobs`, error);
+    logError(`add ${collectionName}`, `users/${uid}/${collectionName}`, error);
     throw error;
   }
 }
 
-export async function updateJob(db: Firestore, uid: string, jobId: string, data: Partial<JobEntry>) {
+async function updateItem(db: Firestore, uid: string, collectionName: string, id: string, data: any) {
   try {
-    const docRef = doc(db, 'users', uid, 'jobs', jobId);
-    await updateDoc(docRef, data);
-    await mirrorToPublic(db, uid, 'jobs', jobId, data);
-    log('update job', `users/${uid}/jobs/${jobId}`);
+    const docRef = doc(db, 'users', uid, collectionName, id);
+    await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
+    await mirrorToPublic(db, uid, collectionName, id, data);
+    log(`update ${collectionName}`, docRef.path);
   } catch (error) {
-    logError('update job', `users/${uid}/jobs/${jobId}`, error);
+    logError(`update ${collectionName}`, `users/${uid}/${collectionName}/${id}`, error);
     throw error;
   }
 }
 
-export async function deleteJob(db: Firestore, uid: string, jobId: string) {
+async function deleteItem(db: Firestore, uid: string, collectionName: string, id: string) {
   try {
-    const docRef = doc(db, 'users', uid, 'jobs', jobId);
+    const docRef = doc(db, 'users', uid, collectionName, id);
     await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, 'jobs', jobId, null, true);
-    log('delete job', `users/${uid}/jobs/${jobId}`);
+    await mirrorToPublic(db, uid, collectionName, id, null, true);
+    log(`delete ${collectionName}`, docRef.path);
   } catch (error) {
-    logError('delete job', `users/${uid}/jobs/${jobId}`, error);
+    logError(`delete ${collectionName}`, `users/${uid}/${collectionName}/${id}`, error);
     throw error;
   }
 }
 
-export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: JobEntry[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'jobs');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as JobEntry)));
-  });
+// --- Exported Professional Services ---
+
+// Jobs
+export const addJob = (db: Firestore, uid: string, data: Omit<JobEntry, 'id'>) => addItem(db, uid, 'jobs', data);
+export const updateJob = (db: Firestore, uid: string, id: string, data: Partial<JobEntry>) => updateItem(db, uid, 'jobs', id, data);
+export const deleteJob = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'jobs', id);
+export function subscribeToJobs(db: Firestore, uid: string, onUpdate: (data: JobEntry[]) => void) {
+  const q = query(collection(db, 'users', uid, 'jobs'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as JobEntry))));
 }
 
-// --- Education (Sub-collection) ---
-export async function addEducation(db: Firestore, uid: string, data: Omit<EducationEntry, 'id'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'education');
-    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, 'education', docRef.id, data);
-    log('add education', `users/${uid}/education/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add education', `users/${uid}/education`, error);
-    throw error;
-  }
+// Education
+export const addEducation = (db: Firestore, uid: string, data: Omit<EducationEntry, 'id'>) => addItem(db, uid, 'education', data);
+export const updateEducation = (db: Firestore, uid: string, id: string, data: Partial<EducationEntry>) => updateItem(db, uid, 'education', id, data);
+export const deleteEducation = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'education', id);
+export function subscribeToEducation(db: Firestore, uid: string, onUpdate: (data: EducationEntry[]) => void) {
+  const q = query(collection(db, 'users', uid, 'education'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as EducationEntry))));
 }
 
-export async function updateEducation(db: Firestore, uid: string, eduId: string, data: Partial<EducationEntry>) {
-  try {
-    const docRef = doc(db, 'users', uid, 'education', eduId);
-    await updateDoc(docRef, data);
-    await mirrorToPublic(db, uid, 'education', eduId, data);
-    log('update education', `users/${uid}/education/${eduId}`);
-  } catch (error) {
-    logError('update education', `users/${uid}/education/${eduId}`, error);
-    throw error;
-  }
+// Experience
+export const addExperience = (db: Firestore, uid: string, data: Omit<ExperienceEntry, 'id'>) => addItem(db, uid, 'experience', data);
+export const updateExperience = (db: Firestore, uid: string, id: string, data: Partial<ExperienceEntry>) => updateItem(db, uid, 'experience', id, data);
+export const deleteExperience = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'experience', id);
+export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (data: ExperienceEntry[]) => void) {
+  const q = query(collection(db, 'users', uid, 'experience'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ExperienceEntry))));
 }
 
-export async function deleteEducation(db: Firestore, uid: string, eduId: string) {
-  try {
-    const docRef = doc(db, 'users', uid, 'education', eduId);
-    await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, 'education', eduId, null, true);
-    log('delete education', `users/${uid}/education/${eduId}`);
-  } catch (error) {
-    logError('delete education', `users/${uid}/education/${eduId}`, error);
-    throw error;
-  }
+// Projects & Products
+export const addProject = (db: Firestore, uid: string, data: Omit<ProjectEntry, 'id'>) => addItem(db, uid, 'projects', data);
+export const updateProject = (db: Firestore, uid: string, id: string, data: Partial<ProjectEntry>) => updateItem(db, uid, 'projects', id, data);
+export const deleteProject = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'projects', id);
+export function subscribeToProjects(db: Firestore, uid: string, onUpdate: (data: ProjectEntry[]) => void) {
+  const q = query(collection(db, 'users', uid, 'projects'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProjectEntry))));
 }
 
-export function subscribeToEducation(db: Firestore, uid: string, onUpdate: (data: EducationEntry[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'education');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as EducationEntry)));
-  });
+// Portfolio Links
+export const addPortfolioLink = (db: Firestore, uid: string, data: Omit<SocialLink, 'id'>) => addItem(db, uid, 'portfolioLinks', data);
+export const deletePortfolioLink = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'portfolioLinks', id);
+export function subscribeToPortfolioLinks(db: Firestore, uid: string, onUpdate: (data: SocialLink[]) => void) {
+  const q = query(collection(db, 'users', uid, 'portfolioLinks'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as SocialLink))));
 }
 
-// --- Experience (Sub-collection) ---
-export async function addExperience(db: Firestore, uid: string, data: Omit<ExperienceEntry, 'id'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'experience');
-    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, 'experience', docRef.id, data);
-    log('add experience', `users/${uid}/experience/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add experience', `users/${uid}/experience`, error);
-    throw error;
-  }
+// Resumes & Cover Letters
+export const addResume = (db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) => 
+  addItem(db, uid, 'resumes', { ...data, uploadDate: new Date().toLocaleDateString() });
+export const deleteResume = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'resumes', id);
+export function subscribeToResumes(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void) {
+  const q = query(collection(db, 'users', uid, 'resumes'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ResumeDocument))));
 }
 
-export async function updateExperience(db: Firestore, uid: string, expId: string, data: Partial<ExperienceEntry>) {
-  try {
-    const docRef = doc(db, 'users', uid, 'experience', expId);
-    await updateDoc(docRef, data);
-    await mirrorToPublic(db, uid, 'experience', expId, data);
-    log('update experience', `users/${uid}/experience/${expId}`);
-  } catch (error) {
-    logError('update experience', `users/${uid}/experience/${expId}`, error);
-    throw error;
-  }
+export const addCoverLetter = (db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) => 
+  addItem(db, uid, 'coverLetters', { ...data, uploadDate: new Date().toLocaleDateString() });
+export const deleteCoverLetter = (db: Firestore, uid: string, id: string) => deleteItem(db, uid, 'coverLetters', id);
+export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void) {
+  const q = query(collection(db, 'users', uid, 'coverLetters'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map(d => ({ ...d.data(), id: d.id } as ResumeDocument))));
 }
 
-export async function deleteExperience(db: Firestore, uid: string, expId: string) {
-  try {
-    const docRef = doc(db, 'users', uid, 'experience', expId);
-    await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, 'experience', expId, null, true);
-    log('delete experience', `users/${uid}/experience/${expId}`);
-  } catch (error) {
-    logError('delete experience', `users/${uid}/experience/${expId}`, error);
-    throw error;
-  }
-}
-
-export function subscribeToExperience(db: Firestore, uid: string, onUpdate: (data: ExperienceEntry[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'experience');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExperienceEntry)));
-  });
-}
-
-// --- Projects (Sub-collection) ---
-export async function addProject(db: Firestore, uid: string, data: Omit<ProjectEntry, 'id'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'projects');
-    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, 'projects', docRef.id, data);
-    log('add project', `users/${uid}/projects/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add project', `users/${uid}/projects`, error);
-    throw error;
-  }
-}
-
-export async function updateProject(db: Firestore, uid: string, projId: string, data: Partial<ProjectEntry>) {
-  try {
-    const docRef = doc(db, 'users', uid, 'projects', projId);
-    await updateDoc(docRef, data);
-    await mirrorToPublic(db, uid, 'projects', projId, data);
-    log('update project', `users/${uid}/projects/${projId}`);
-  } catch (error) {
-    logError('update project', `users/${uid}/projects/${projId}`, error);
-    throw error;
-  }
-}
-
-export async function deleteProject(db: Firestore, uid: string, projId: string) {
-  try {
-    const docRef = doc(db, 'users', uid, 'projects', projId);
-    await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, 'projects', projId, null, true);
-    log('delete project', `users/${uid}/projects/${projId}`);
-  } catch (error) {
-    logError('delete project', `users/${uid}/projects/${projId}`, error);
-    throw error;
-  }
-}
-
-export function subscribeToProjects(db: Firestore, uid: string, onUpdate: (data: ProjectEntry[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'projects');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ProjectEntry)));
-  });
-}
-
-// --- Portfolio Links (Sub-collection) ---
-export async function addPortfolioLink(db: Firestore, uid: string, data: Omit<SocialLink, 'id'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'portfolioLinks');
-    const docRef = await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
-    await mirrorToPublic(db, uid, 'portfolioLinks', docRef.id, data);
-    log('add portfolio link', `users/${uid}/portfolioLinks/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add portfolio link', `users/${uid}/portfolioLinks`, error);
-    throw error;
-  }
-}
-
-export async function deletePortfolioLink(db: Firestore, uid: string, linkId: string) {
-  try {
-    const docRef = doc(db, 'users', uid, 'portfolioLinks', linkId);
-    await deleteDoc(docRef);
-    await mirrorToPublic(db, uid, 'portfolioLinks', linkId, null, true);
-    log('delete portfolio link', linkId);
-  } catch (error) {
-    logError('delete portfolio link', linkId, error);
-    throw error;
-  }
-}
-
-export function subscribeToPortfolioLinks(db: Firestore, uid: string, onUpdate: (data: SocialLink[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'portfolioLinks');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as SocialLink)));
-  });
-}
-
-// --- Resumes & Cover Letters ---
-export async function addResume(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'resumes');
-    const docRef = await addDoc(colRef, { 
-      ...data, 
-      uploadDate: new Date().toLocaleDateString(),
-      createdAt: serverTimestamp() 
-    });
-    log('add resume', `users/${uid}/resumes/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add resume', `users/${uid}/resumes`, error);
-    throw error;
-  }
-}
-
-export async function deleteResume(db: Firestore, uid: string, id: string) {
-  try {
-    await deleteDoc(doc(db, 'users', uid, 'resumes', id));
-    log('delete resume', id);
-  } catch (error) {
-    logError('delete resume', id, error);
-    throw error;
-  }
-}
-
-export function subscribeToResumes(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'resumes');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument)));
-  });
-}
-
-export async function addCoverLetter(db: Firestore, uid: string, data: Omit<ResumeDocument, 'id' | 'uploadDate'>) {
-  try {
-    const colRef = collection(db, 'users', uid, 'coverLetters');
-    const docRef = await addDoc(colRef, { 
-      ...data, 
-      uploadDate: new Date().toLocaleDateString(),
-      createdAt: serverTimestamp() 
-    });
-    log('add cover letter', `users/${uid}/coverLetters/${docRef.id}`);
-    return docRef.id;
-  } catch (error) {
-    logError('add cover letter', `users/${uid}/coverLetters`, error);
-    throw error;
-  }
-}
-
-export async function deleteCoverLetter(db: Firestore, uid: string, id: string) {
-  try {
-    await deleteDoc(doc(db, 'users', uid, 'coverLetters', id));
-    log('delete cover letter', id);
-  } catch (error) {
-    logError('delete cover letter', id, error);
-    throw error;
-  }
-}
-
-export function subscribeToCoverLetters(db: Firestore, uid: string, onUpdate: (data: ResumeDocument[]) => void): Unsubscribe {
-  const colRef = collection(db, 'users', uid, 'coverLetters');
-  const q = query(colRef, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ResumeDocument)));
-  });
-}
-
-// --- Bulk Mirror (Initial Sync Only) ---
+// Bulk Mirroring metadata only
 export async function publishToPublicVault(db: Firestore, uid: string, profileData: UserProfile) {
   try {
-    // We only update the thinned basic profile info here to avoid the 1MB limit
     const { education, experience, projects, portfolioLinks, resumes, coverLetters, jobs, ...basicInfo } = profileData;
     const ref = doc(db, 'shared-profiles', uid);
-    await setDoc(ref, { 
-      profileData: basicInfo, 
-      publishedAt: serverTimestamp() 
-    }, { merge: true });
+    await setDoc(ref, { profileData: basicInfo, publishedAt: serverTimestamp() }, { merge: true });
     log('publish metadata', `shared-profiles/${uid}`);
   } catch (error) {
     logError('publish profile', `shared-profiles/${uid}`, error);

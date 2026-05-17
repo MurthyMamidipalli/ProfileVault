@@ -18,6 +18,11 @@ import {
   publishToPublicVault
 } from "@/firebase/services";
 
+/**
+ * @fileOverview Dashboard Sync Orchestrator
+ * Manages real-time subscriptions for all professional sub-collections.
+ */
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
@@ -46,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, router]);
 
-  // 2. Real-Time Sync (Listeners)
+  // 2. Real-Time Sync (Granular Sub-collection Listeners)
   useEffect(() => {
     if (!user || !db) return;
 
@@ -84,7 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setPortfolioLinks(data || []);
     });
 
-    // Mark as loaded once initial listeners have likely fired
+    // Stabilize and mark as loaded
     const timer = setTimeout(() => {
       setIsCloudLoaded(true);
       setSyncStatus('synced');
@@ -104,16 +109,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     };
   }, [user, db, setProfile, setJobs, setEducation, setExperience, setProjects, setResumes, setCoverLetters, setPortfolioLinks, setIsCloudLoaded, markSynced]);
 
-  // 3. Mirroring to Public Vault
-  // We no longer mirror the entire profile on every change to avoid the 1MB limit.
-  // Mutations are now mirrored atomically in the service layer.
-  // This pulse only updates root metadata.
+  // 3. Mirroring to Public Metadata
   useEffect(() => {
     if (!user || !db || !isCloudLoaded) return;
     
     const timer = setTimeout(() => {
       publishToPublicVault(db, user.uid, profile).catch(err => {
-        console.error("Root metadata sync failed", err);
+        console.error("Mirror metadata update failed", err);
       });
     }, 5000);
 
@@ -137,9 +139,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-center space-y-2">
             <h3 className="text-xl font-bold flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5 text-accent" />
-              Establishing Professional Link
+              Verifying Professional Link
             </h3>
-            <p className="text-sm text-muted-foreground animate-pulse">Synchronizing distributed vault...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Syncing distributed professional vault...</p>
           </div>
         </div>
       </div>

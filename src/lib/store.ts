@@ -1,7 +1,11 @@
-
 "use client";
 
 import { create } from 'zustand';
+
+/**
+ * @fileOverview Zustand Global State Store
+ * Acts as a local mirror for Firestore sub-collections.
+ */
 
 export interface ProjectLink {
   id: string;
@@ -84,7 +88,6 @@ export interface UserProfile {
   coverLetters: ResumeDocument[];
   jobs: JobEntry[];
   lastSyncedAt?: string;
-  name?: string; 
 }
 
 export const DEFAULT_PROFILE: UserProfile = {
