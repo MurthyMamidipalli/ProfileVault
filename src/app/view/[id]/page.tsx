@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Globe,
   FolderCode,
-  Package
+  Package,
+  Fingerprint
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -295,20 +296,27 @@ export default function PublicProfileView() {
                             <span>{edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}</span>
                           </div>
                         </div>
-                        {(edu.cgpa || edu.percentage) && (
-                          <div className="flex flex-wrap gap-2">
-                            {edu.cgpa && (
-                              <Badge className="bg-accent/10 text-accent border-accent/20 font-black text-[10px]">
-                                CGPA: {edu.cgpa}
-                              </Badge>
-                            )}
-                            {edu.percentage && (
-                              <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px]">
-                                SCORE: {edu.percentage}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(edu.cgpa || edu.percentage) && (
+                            <div className="flex flex-wrap gap-2">
+                              {edu.cgpa && (
+                                <Badge className="bg-accent/10 text-accent border-accent/20 font-black text-[10px]">
+                                  CGPA: {edu.cgpa}
+                                </Badge>
+                              )}
+                              {edu.percentage && (
+                                <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px]">
+                                  SCORE: {edu.percentage}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          {edu.idNumber && (
+                            <Badge variant="outline" className="border-white/10 text-muted-foreground font-black text-[10px]">
+                              <Fingerprint className="w-3 h-3 mr-1" /> ID: {edu.idNumber}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                         {edu.startDate} — {edu.endDate || 'PRESENT'}

@@ -24,6 +24,7 @@ export interface EducationEntry {
   description?: string;
   cgpa?: string;
   percentage?: string;
+  idNumber?: string;
 }
 
 export interface ExperienceEntry {

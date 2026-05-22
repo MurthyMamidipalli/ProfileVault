@@ -18,7 +18,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Plus, Trash2, Calendar, Pencil, Loader2, Award } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Calendar, Pencil, Loader2, Award, Fingerprint } from "lucide-react";
 import { useUser, useFirestore } from "@/firebase";
 import { addEducation, updateEducation, deleteEducation } from "@/firebase/services";
 
@@ -40,7 +40,8 @@ export default function EducationPage() {
     endDate: '',
     description: '',
     cgpa: '',
-    percentage: ''
+    percentage: '',
+    idNumber: ''
   });
 
   useEffect(() => {
@@ -58,7 +59,8 @@ export default function EducationPage() {
         endDate: entry.endDate || '',
         description: entry.description || '',
         cgpa: entry.cgpa || '',
-        percentage: entry.percentage || ''
+        percentage: entry.percentage || '',
+        idNumber: entry.idNumber || ''
       });
     } else {
       setEditingId(null);
@@ -70,7 +72,8 @@ export default function EducationPage() {
         endDate: '',
         description: '',
         cgpa: '',
-        percentage: ''
+        percentage: '',
+        idNumber: ''
       });
     }
     setIsOpen(true);
@@ -164,6 +167,14 @@ export default function EducationPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>ID Number / Student ID (Optional)</Label>
+                  <Input 
+                    placeholder="e.g. SID-12345" 
+                    value={formData.idNumber}
+                    onChange={e => setFormData({...formData, idNumber: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Start Date</Label>
                   <Input 
                     required 
@@ -245,22 +256,30 @@ export default function EducationPage() {
                   <Calendar className="w-4 h-4" />
                   <span>{edu.startDate} — {edu.endDate || 'Present'}</span>
                 </div>
-                {(edu.cgpa || edu.percentage) && (
-                  <div className="flex flex-wrap gap-3">
-                    {edu.cgpa && (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">
-                        <Award className="w-3.5 h-3.5" />
-                        CGPA: {edu.cgpa}
-                      </div>
-                    )}
-                    {edu.percentage && (
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-accent bg-accent/10 px-2 py-1 rounded-md">
-                        <Award className="w-3.5 h-3.5" />
-                        Score: {edu.percentage}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {(edu.cgpa || edu.percentage) && (
+                    <div className="flex flex-wrap gap-2">
+                      {edu.cgpa && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">
+                          <Award className="w-3.5 h-3.5" />
+                          CGPA: {edu.cgpa}
+                        </div>
+                      )}
+                      {edu.percentage && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-accent bg-accent/10 px-2 py-1 rounded-md">
+                          <Award className="w-3.5 h-3.5" />
+                          Score: {edu.percentage}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {edu.idNumber && (
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground bg-white/5 px-2 py-1 rounded-md border border-white/5">
+                      <Fingerprint className="w-3.5 h-3.5" />
+                      ID: {edu.idNumber}
+                    </div>
+                  )}
+                </div>
               </div>
               {edu.fieldOfStudy && (
                 <div className="text-sm">

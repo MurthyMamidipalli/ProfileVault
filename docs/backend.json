@@ -71,6 +71,7 @@
         "description": { "type": "string" },
         "cgpa": { "type": "string" },
         "percentage": { "type": "string" },
+        "idNumber": { "type": "string" },
         "userId": { "type": "string" }
       }
     },
