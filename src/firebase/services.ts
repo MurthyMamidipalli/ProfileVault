@@ -39,7 +39,7 @@ async function mirrorToPublic(db: Firestore, uid: string, type: string, id: stri
       }, { merge: true });
     }
   } catch (err) {
-    // We avoid console.error to prevent dev overlay triggers on expected low-priority failures
+    // Suppressed: Low-priority failures during background sync
   }
 }
 
@@ -109,19 +109,16 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
 
     // 2. ORPHAN EXTERMINATION (Sync Sub-collections)
     for (const colName of subCollections) {
-      // Get Private (Source of Truth)
       const privateColRef = collection(db, 'users', uid, colName);
       const privateSnap = await getDocs(privateColRef);
       const privateIds = new Set(privateSnap.docs.map(d => d.id));
 
-      // Get Public (The Mirror)
       const publicColRef = collection(db, 'shared-profiles', uid, colName);
       const publicSnap = await getDocs(publicColRef);
 
       const batch = writeBatch(db);
       let deletedCount = 0;
 
-      // Identify and delete orphans
       publicSnap.docs.forEach(docSnap => {
         if (!privateIds.has(docSnap.id)) {
           batch.delete(docSnap.ref);
@@ -133,7 +130,6 @@ export async function forceMirrorAll(db: Firestore, uid: string, profile: UserPr
         await batch.commit();
       }
 
-      // Re-upload current valid data
       for (const d of privateSnap.docs) {
         await mirrorToPublic(db, uid, colName, d.id, d.data());
       }

@@ -102,6 +102,7 @@ export default function SignupPage() {
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-background/50" 
@@ -114,6 +115,7 @@ export default function SignupPage() {
                   id="password" 
                   type={showPassword ? "text" : "password"} 
                   required
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-background/50 pr-10" 
@@ -133,6 +135,7 @@ export default function SignupPage() {
                 id="confirmPassword" 
                 type="password" 
                 required
+                placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="bg-background/50" 

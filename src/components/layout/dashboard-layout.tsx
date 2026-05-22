@@ -251,6 +251,7 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
                <div className="flex items-center gap-1.5">
                  {syncStatus === 'synced' && (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
+                     <Bug className="w-3 h-3 sr-only" /> 
                      <CheckCircle2 className="w-3 h-3" /> Cloud Synced
                    </span>
                  )}
