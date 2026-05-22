@@ -98,7 +98,6 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
             }
             side="left"
           >
-            {/* Mobile Accessibility Fixed: Adding required Title and Description for screen readers */}
             <div className="sr-only">
               <SheetHeader>
                 <SheetTitle>Navigation Menu</SheetTitle>
@@ -251,7 +250,6 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
                <div className="flex items-center gap-1.5">
                  {syncStatus === 'synced' && (
                    <span className="text-[10px] text-accent font-bold uppercase tracking-wider flex items-center gap-1">
-                     <Bug className="w-3 h-3 sr-only" /> 
                      <CheckCircle2 className="w-3 h-3" /> Cloud Synced
                    </span>
                  )}
@@ -269,7 +267,6 @@ function DashboardLayoutInner({ children, syncStatus = 'synced' }: DashboardLayo
              </div>
              <Link href="/dashboard/profile" className="transition-smooth hover:scale-110 active:scale-95">
                <Avatar className="w-10 h-10 border-2 border-primary/20 hover:border-primary transition-smooth shadow-lg">
-                  {/* Fixed Header Avatar: Object-top prioritized to prevent hair clipping */}
                   <AvatarImage src={profile.avatarUrl} className="object-cover object-top" />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm font-black">
                     {displayName.charAt(0)}
